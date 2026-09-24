@@ -119,7 +119,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 
 <div class="wrap">
 <header class="hero">
-  <span class="eyebrow">Product &amp; engineering roadmap, v4.7 · Sep 2026</span>
+  <span class="eyebrow">Product &amp; engineering roadmap, v4.8 · Sep 2026</span>
   <h1>Lynk Roadmap</h1>
   <p class="lede">A personal chat app for friends and family that remembers the plan. Messaging comes first. Plans, to-dos, memories and search that finds things again are what make it different, and every one of them respects who can see what.</p>
   <div class="flow" aria-label="Product thesis">
@@ -133,7 +133,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 
 <section id="progress">
   <div class="sec-head"><span class="eyebrow">Where things stand</span><h2>Progress so far</h2>
-  <p>The web frontend for phases 0, 1 and 4, and the user-facing half of phase 2, is complete, running on mock data kept in the browser. Nothing on the server side exists yet. Everything below lives in <code>apps/web</code> and passes type-check, lint and a production build (26 routes).</p></div>
+  <p>The web frontend for phases 0, 1 and 4, the user-facing half of phase 2, and sample versions of the phase 5–6 smart features are complete, running on mock data kept in the browser. No model is called yet: the smart features run on rules and sample data, and say so. Nothing on the server side exists yet. Everything below lives in <code>apps/web</code> and passes type-check, lint and a production build (26 routes).</p></div>
   <div class="two">
     <div class="card"><h3>Done</h3>
       <ul class="check">
@@ -191,6 +191,15 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
             <li>Shared lists in a new Lists tab: create from a starter (Shopping, Packing, Ideas), add, tick off with progress, remove, clear ticked, delete.</li>
             <li>Saved messages: a bookmark on any message, and <code>/app/saved</code> with search, unsave and "Show in chat", which opens the chat and flashes the message.</li>
             <li>An in-app calendar at <code>/app/calendar</code>: every plan from every chat on a month grid, a day agenda with RSVPs, "Coming up", new plans on any day, and "Export all" as one <code>.ics</code>. It's in the dock, ⌘K and the phone header.</li>
+          </ul>
+        </li>
+        <li><b>Phases 5–6 smart features, as sample interactions:</b>
+          <ul>
+            <li>"Find it again" (Ask Lynk, from ✨ or ⌘K): ask in plain words and get an answer where every sentence cites its message; sources jump to the message, including side chats and voice-note transcripts. Keyword search with synonyms, names read as "said by", and a boost for messages with places or times. Plain matches only when smart features are off.</li>
+            <li>Suggestions inside the chat: "Save this plan?" and "Add to your to-dos?" cards under the source message with Save, Edit and Dismiss, following the Plans and To-dos settings. Rule-based spotting turns messages you send with a day and a time ("Dinner Friday 8pm at Nando's?") into a suggestion.</li>
+            <li>Memories can be edited in place or forgotten.</li>
+            <li>Voice notes: record in the browser with a live waveform, play back with 1×/1.5×/2× speed, and a transcript you can tap to jump. Live transcripts come from the browser's speech recognition where available; the sample note is labelled.</li>
+            <li>Translate a message in place with "View original": Chrome's on-device translator when present, otherwise labelled sample translations for the demo messages.</li>
           </ul>
         </li>
         <li><b>Deep links</b> to chats (<code>/app?chat=…</code>), so reload, back and shared links land in the right conversation.</li>
@@ -577,23 +586,23 @@ flowchart LR
       <p class="exit"><b>Exit:</b> the beta group uses plans and lists without any smart features.</p>
     </article>
     <article class="phase">
-      <div class="phase-top"><span class="n">5</span><h3>Find it again</h3><span class="pill weeks">Weeks 24–28</span></div>
+      <div class="phase-top"><span class="n">5</span><h3>Find it again</h3><span class="pill weeks">Weeks 24–28</span><span class="pill done">Sample UI done</span><span class="pill">Server not started</span></div>
       <div class="cols"><div><ol class="ms">
         <li>Provider interfaces, embeddings worker, pgvector, backfill.</li>
-        <li>Hybrid search inside <code>visible_messages</code>, answers with sources.</li>
+        <li>Hybrid search inside <code>visible_messages</code>, answers with sources (the Ask Lynk screen and cited answers are done as a sample on browser data).</li>
         <li>Per-user and per-chat smart-feature settings and budgets.</li>
         <li>Eval set, leak tests in CI.</li>
       </ol></div></div>
       <p class="exit"><b>Exit:</b> recall@10 of at least 0.85, every citation valid, zero leaks.</p>
     </article>
     <article class="phase">
-      <div class="phase-top"><span class="n">6</span><h3>Smart features</h3><span class="pill weeks">Weeks 29–35</span></div>
+      <div class="phase-top"><span class="n">6</span><h3>Smart features</h3><span class="pill weeks">Weeks 29–35</span><span class="pill done">Sample UI done</span><span class="pill">Models not started</span></div>
       <div class="cols"><div><ol class="ms">
-        <li>Plan and to-do spotting with save and dismiss.</li>
-        <li>Memories with sources, editing and removal.</li>
-        <li>Catch-up for busy groups.</li>
-        <li>Voice-note transcripts and jump-to-moment search.</li>
-        <li>Translation with "View original".</li>
+        <li>Plan and to-do spotting with save and dismiss (<s>cards in the chat, rule-based plan spotting</s> done; Haiku extraction to come).</li>
+        <li><s>Memories with sources, editing and removal</s> (done in the browser).</li>
+        <li>Catch-up for busy groups (screen done since phase 0; summaries need a model).</li>
+        <li>Voice-note transcripts and jump-to-moment search (<s>recording, playback, tap-to-jump transcripts</s> done; faster-whisper on the server to come).</li>
+        <li>Translation with "View original" (<s>in-place UI, on-device where the browser supports it</s> done; cached server translation to come).</li>
       </ol></div></div>
       <p class="exit"><b>Exit:</b> plan spotting precision of at least 0.8, and the beta group keeps catch-up switched on.</p>
     </article>
@@ -637,7 +646,7 @@ flowchart LR
   </ol>
 </section>
 
-<footer>Roadmap v4.7, September 2026. Phase 4 on the web: side chats, plans made by hand with RSVPs and .ics export, shared lists, saved messages, and an in-app calendar. Supersedes v3 (workplace direction).</footer>
+<footer>Roadmap v4.8, September 2026. Phases 5–6 as sample interactions on the web: Ask Lynk with cited answers, suggestion cards and rule-based plan spotting, editable memories, recorded voice notes with transcripts, and in-place translation. Supersedes v3 (workplace direction).</footer>
 </div>
 
 <script>
