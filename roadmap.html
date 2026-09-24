@@ -119,7 +119,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 
 <div class="wrap">
 <header class="hero">
-  <span class="eyebrow">Product &amp; engineering roadmap, v4.5 · Sep 2026</span>
+  <span class="eyebrow">Product &amp; engineering roadmap, v4.6 · Sep 2026</span>
   <h1>Lynk Roadmap</h1>
   <p class="lede">A personal chat app for friends and family that remembers the plan. Messaging comes first. Plans, to-dos, memories and search that finds things again are what make it different, and every one of them respects who can see what.</p>
   <div class="flow" aria-label="Product thesis">
@@ -133,7 +133,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 
 <section id="progress">
   <div class="sec-head"><span class="eyebrow">Where things stand</span><h2>Progress so far</h2>
-  <p>The web frontend for phases 0 and 1 is complete, running on mock data kept in the browser. Nothing on the server side exists yet. Everything below lives in <code>apps/web</code> and passes type-check, lint and a production build (24 routes).</p></div>
+  <p>The web frontend for phases 0 and 1, and the user-facing half of phase 2, is complete, running on mock data kept in the browser. Nothing on the server side exists yet. Everything below lives in <code>apps/web</code> and passes type-check, lint and a production build (24 routes).</p></div>
   <div class="two">
     <div class="card"><h3>Done</h3>
       <ul class="check">
@@ -173,19 +173,29 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
             <li>A ⌘K palette that springs open over a blurred backdrop.</li>
           </ul>
         </li>
+        <li><b>Phase 2 reliability, as the user sees it (on the web):</b>
+          <ul>
+            <li>An offline outbox: messages sent without a connection appear at once, marked "Waiting to send" with a Retry button, and are saved with the chat.</li>
+            <li>Reconnect sync: waiting messages send by themselves when the connection returns, oldest first. The message id is the idempotency key, so nothing sends twice. A send cut off by a reload goes back to the outbox and retries on load.</li>
+            <li>A connection pill ("You're offline · 2 messages will send when you reconnect", then "Back online"), and ⌘K › Test offline mode to try it without turning off Wi-Fi.</li>
+            <li>Notification permission asked in context, the first time you open a chat, never on page load. "Not now" is remembered.</li>
+            <li>Browser alerts for new messages while the tab is in the background, following your settings (one-to-one chats, groups all or mentions only, previews, sounds; muted chats stay quiet), one alert per chat.</li>
+            <li>A notifications list behind a bell in the chat list: one row per chat ("and 2 more"), mentions of you marked, a badge until you look. Settings › Notifications shows and turns on this browser's alerts.</li>
+          </ul>
+        </li>
         <li><b>Deep links</b> to chats (<code>/app?chat=…</code>), so reload, back and shared links land in the right conversation.</li>
         <li><b>Profile photos</b> for the demo friends in <code>public/people</code>.</li>
         <li><b>Logo and app icon:</b> two interlocking rings, one blue and one silver, drawn as a vector in <code>Logo.tsx</code>. The silver ring turns graphite on light backgrounds. The site uses <code>icon.svg</code> and a 180px <code>apple-icon.png</code>, and there's a 1024px master in <code>public/app-icon-1024.png</code> for the stores.</li>
         <li><b>GitHub repo</b> at <code>rahulg2893/lynk</code> (private, branch <code>main</code>): <code>apps/web</code>, <code>design-system</code>, this roadmap and a README. Local tooling (<code>.claude/</code>, <code>graphify-out/</code>, <code>prompt.txt</code>) and <code>.env</code> files are ignored.</li>
-        <li><b>Quality fixes:</b> no hydration mismatches, reduced motion respected everywhere, lighter scroll performance.</li>
+        <li><b>Quality fixes:</b> no hydration mismatches, reduced motion respected everywhere, lighter scroll performance. Jumping to a message no longer shifts the whole app frame.</li>
       </ul></div>
     <div class="card"><h3>Not started</h3>
       <ul class="check">
         <li>Go server, PostgreSQL, Redis, NATS and Docker Compose.</li>
         <li>Real sign-in on the server (go-webauthn passkeys, Apple and Google) and real accounts. The screens exist and run on a browser-only mock.</li>
-        <li>Actual notifications, and uploads to real storage (photos are shrunk and kept in the browser for now; other files last until you reload).</li>
+        <li>Web Push (alerts with Lynk closed), and uploads to real storage (photos are shrunk and kept in the browser for now; other files last until you reload).</li>
         <li>Real-time messaging over WebSockets, and the <code>packages/protocol</code> schemas.</li>
-        <li>Local message cache and offline outbox (planned for phases 1 and 2).</li>
+        <li>Server side of reliability: the NATS outbox and relay, gap replay by per-chat <code>seq</code>, rate limits, metrics and load tests. The browser outbox runs on <code>localStorage</code> until then.</li>
         <li>Mobile app, push notifications, smart features and private chats.</li>
       </ul>
       <h3 style="margin-top:8px">Decisions made along the way</h3>
@@ -526,11 +536,11 @@ flowchart LR
       <p class="exit"><b>Exit:</b> five friends chat on the web for a week without problems.</p>
     </article>
     <article class="phase">
-      <div class="phase-top"><span class="n">2</span><h3>Reliability</h3><span class="pill weeks">Weeks 10–13</span></div>
+      <div class="phase-top"><span class="n">2</span><h3>Reliability</h3><span class="pill weeks">Weeks 10–13</span><span class="pill done">User-facing done</span><span class="pill">Server not started</span></div>
       <div class="cols"><div><ol class="ms">
         <li>Outbox, relay and NATS fan-out across two gateway nodes.</li>
-        <li>Reconnect sync, offline outbox, duplicate handling.</li>
-        <li>Web Push notifications with sensible grouping.</li>
+        <li>Reconnect sync, offline outbox, duplicate handling (<s>offline outbox, retry and client-side dedupe</s> done in the browser; gap replay needs the server).</li>
+        <li>Web Push notifications with sensible grouping (<s>in-context permission ask, in-tab alerts grouped per chat, notifications list</s> done; push with the tab closed needs the server).</li>
         <li>Rate limits, metrics, dashboards, k6 load tests.</li>
       </ol></div></div>
       <p class="exit"><b>Exit:</b> no lost or duplicated messages in chaos tests, p95 delivery under 250 ms.</p>
@@ -616,7 +626,7 @@ flowchart LR
   </ol>
 </section>
 
-<footer>Roadmap v4.5, September 2026. The app redesigned with the website's motion language, and the reduced-motion decision recorded. Supersedes v3 (workplace direction).</footer>
+<footer>Roadmap v4.6, September 2026. The user-facing half of phase 2 on the web: an offline outbox with retry, reconnect sync, a connection banner, in-context notification permission, in-tab alerts and a notifications list. Supersedes v3 (workplace direction).</footer>
 </div>
 
 <script>
