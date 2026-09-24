@@ -1,0 +1,619 @@
+<title>Lynk Roadmap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F4F5F6; --surface:#FFFFFF; --ink:#0E1013; --muted:#565C66; --line:#DDE0E4;
+  --accent:#C2410C; --accent-fill:#FF5A1F; --accent-soft:#FFE6DC; --bubble:#ECEEF0; --on-accent:#0E1013;
+  --ok:#1E8A5A; --ok-soft:#E1F3EA; --warn:#9A5B00; --warn-soft:#FBF0DC; --crit:#B42318; --crit-soft:#FDE7E4;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;--bg:#0C0D10;--surface:#15171B;--ink:#EEF0F2;--muted:#9AA0A9;--line:#262930;
+  --accent:#FF7A45;--accent-fill:#FF6A33;--accent-soft:#3A1D12;--bubble:#1C1F24;--ok:#5CCB94;--ok-soft:#15302A;--warn:#E9B45A;--warn-soft:#33291A;--crit:#F07A7A;--crit-soft:#3A1A1A;}}
+:root[data-theme="dark"]{
+  color-scheme:dark;--bg:#0C0D10;--surface:#15171B;--ink:#EEF0F2;--muted:#9AA0A9;--line:#262930;
+  --accent:#FF7A45;--accent-fill:#FF6A33;--accent-soft:#3A1D12;--bubble:#1C1F24;--ok:#5CCB94;--ok-soft:#15302A;--warn:#E9B45A;--warn-soft:#33291A;--crit:#F07A7A;--crit-soft:#3A1A1A;}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--body);padding-inline:20px;padding-block:0 80px}
+.wrap{max-width:1080px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(2.3rem,5vw,3.5rem);font-weight:700;letter-spacing:-.025em}
+h2{font-size:1.75rem;font-weight:700;letter-spacing:-.01em}
+h3{font-size:1.08rem;font-weight:600}
+p{margin:0;max-width:70ch}
+code,.mono{font-family:var(--mono);font-size:.86em}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.eyebrow{font:500 .75rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+header.hero{padding-block:56px 32px;display:grid;gap:18px}
+.hero .lede{font-size:1.15rem;color:var(--muted)}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;font:500 .85rem var(--mono)}
+.flow span{padding:6px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--line)}
+.flow span.hot{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.flow i{font-style:normal;color:var(--muted)}
+
+nav.toc{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-block:1px solid var(--line);padding-block:10px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+nav.toc a{flex:none;font:500 .82rem var(--body);color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:999px}
+nav.toc a:hover{background:var(--accent-soft);color:var(--accent)}
+
+section{padding-block:52px 8px;display:grid;gap:22px;scroll-margin-top:56px}
+.sec-head{display:grid;gap:8px}
+.sec-head p{color:var(--muted)}
+
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:.92rem}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font:500 .72rem var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--bubble)}
+td.layer{font-weight:600;white-space:nowrap}
+td .ver{font-family:var(--mono);font-size:.8rem;background:var(--accent-soft);color:var(--accent);padding:2px 7px;border-radius:6px;white-space:nowrap}
+td.why{color:var(--muted)}
+.group-row td{background:var(--bg);font:600 .72rem var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);padding-block:8px}
+.tag{display:inline-block;font:600 .68rem var(--mono);text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:6px;white-space:nowrap}
+.tag.keep{background:var(--ok-soft);color:var(--ok)}
+.tag.change{background:var(--warn-soft);color:var(--warn)}
+.tag.new{background:var(--accent-soft);color:var(--accent)}
+.tag.drop{background:var(--crit-soft);color:var(--crit)}
+
+.diagram{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto}
+.diagram pre{margin:0}
+
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:10px;align-content:start}
+ul.check{list-style:none;padding:0;margin:0;display:grid;gap:7px}
+ul.check li{padding-left:22px;position:relative;font-size:.93rem}
+ul.check li::before{content:"";position:absolute;left:2px;top:.55em;width:9px;height:9px;border-radius:2px;border:1.5px solid var(--accent)}
+.label{font:600 .72rem var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+
+.conflict{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.conflict .vs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.conflict .vs div{background:var(--bg);border-radius:10px;padding:10px 12px;font-size:.9rem}
+.conflict .vs b{display:block;font:600 .7rem var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.conflict .call{border-left:3px solid var(--accent-fill);padding:4px 0 4px 12px;font-size:.93rem}
+.conflict .call b{color:var(--accent)}
+
+.code{font:400 .8rem/1.55 var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow-x:auto;margin:0;white-space:pre}
+
+.phases{display:grid;gap:16px}
+.phase{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:grid;gap:14px}
+.phase-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 14px}
+.phase-top .n{font:700 1.8rem/1 var(--display);color:var(--accent)}
+.pill{font:500 .74rem var(--mono);padding:3px 10px;border-radius:999px;background:var(--bubble);color:var(--muted)}
+.pill.weeks{background:var(--accent-soft);color:var(--accent)}
+.pill.done{background:var(--ok-soft);color:var(--ok)}
+.phase .goal{color:var(--muted)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+ol.ms{margin:0;padding-left:1.3em;display:grid;gap:6px;font-size:.93rem}
+ol.ms li::marker{font-family:var(--mono);color:var(--muted);font-size:.8rem}
+.exit{border-top:1px dashed var(--line);padding-top:12px;font-size:.92rem;max-width:none}
+.exit b{color:var(--ok)}
+
+.gantt{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.g-grid{display:grid;grid-template-columns:190px repeat(42,minmax(14px,1fr));min-width:760px;row-gap:8px;align-items:center;font-size:.84rem}
+.g-grid .wk{font:400 .66rem var(--mono);color:var(--muted)}
+.g-grid .row{font-weight:600}
+.bar{height:20px;border-radius:5px;background:var(--accent-fill)}
+.bar.alt{background:var(--ok)}
+.bar.soft{background:var(--warn)}
+
+.risk{display:grid;grid-template-columns:56px 1fr;gap:4px 12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.risk:last-child{border-bottom:0}
+.sev{font:600 .66rem var(--mono);padding:3px 0;text-align:center;border-radius:6px;height:fit-content;text-transform:uppercase}
+.sev.h{background:var(--crit-soft);color:var(--crit)}
+.sev.m{background:var(--warn-soft);color:var(--warn)}
+.sev.l{background:var(--ok-soft);color:var(--ok)}
+.risk p{font-size:.92rem;color:var(--muted);grid-column:2}
+
+.adr{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 18px;counter-reset:adr;padding:0;margin:0;list-style:none}
+.adr li{counter-increment:adr;font-size:.92rem;padding:8px 0;border-bottom:1px solid var(--line)}
+.adr li::before{content:"ADR-" counter(adr, decimal-leading-zero);font:500 .74rem var(--mono);color:var(--accent);margin-right:8px}
+.note{font-size:.88rem;color:var(--muted)}
+footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:.85rem}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <span class="eyebrow">Product &amp; engineering roadmap, v4.2 · Sep 2026</span>
+  <h1>Lynk Roadmap</h1>
+  <p class="lede">A personal chat app for friends and family that remembers the plan. Messaging comes first. Plans, to-dos, memories and search that finds things again are what make it different, and every one of them respects who can see what.</p>
+  <div class="flow" aria-label="Product thesis">
+    <span>Chat</span><i>→</i><span>Messages</span><i>→</i><span class="hot">Plans</span><span class="hot">To-dos &amp; lists</span><span class="hot">Memories</span><span class="hot">Side chats</span><span class="hot">Voice notes</span><i>→</i><span>Find it again</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <a href="#progress">Progress</a><a href="#changes">What changed</a><a href="#conflicts">Conflicts</a><a href="#stack">Stack</a><a href="#architecture">Architecture</a><a href="#repo">Repo</a><a href="#schema">Schema</a><a href="#protocol">Protocol</a><a href="#authz">Privacy model</a><a href="#jobs">Jobs</a><a href="#ai">Smart features</a><a href="#risks">Risks</a><a href="#phases">Milestones</a><a href="#timeline">Timeline</a><a href="#adrs">ADRs</a>
+</nav>
+
+<section id="progress">
+  <div class="sec-head"><span class="eyebrow">Where things stand</span><h2>Progress so far</h2>
+  <p>The web frontend is complete for phase 0 and 1 screens, running on mock data. Nothing on the server side exists yet. Everything below lives in <code>apps/web</code> and passes type-check, lint and a production build (24 routes).</p></div>
+  <div class="two">
+    <div class="card"><h3>Done</h3>
+      <ul class="check">
+        <li><b>Web app scaffold:</b> Next.js 16.3, React 19.2, Tailwind 4, Motion, Phosphor icons.</li>
+        <li><b>Design system</b> in <code>design-system/lynk/MASTER.md</code>: Apple system greys, one blue accent, the platform font, a pill-and-card shape system, contrast checked in both themes.</li>
+        <li><b>Theme toggle</b> with System, Light and Dark, applied before first paint so it never flashes.</li>
+        <li><b>Landing page:</b> serif hero with a fan of friend photo cards, a live plan demo, feature tiles, a pinned scroll story for "How it works", privacy settings and footer.</li>
+        <li><b>Chat app prototype</b> at <code>/app</code>:
+          <ul>
+            <li>A chat list with pinned and recent chats, filters and search.</li>
+            <li>The rail-style conversation with delivery markers, replies, reactions and typing, plus simulated sending and replies.</li>
+            <li>Side-chat chips and a panel for plans, to-dos and memories, with confirm, reject and jump-to-source.</li>
+            <li>A catch-up screen, the ⌘K command palette, a phone layout, and loading and empty states.</li>
+          </ul>
+        </li>
+        <li><b>Sign in and sign up</b> at <code>/sign-in</code> and <code>/sign-up</code>: passkey first, then Continue with Apple and Google, no passwords anywhere. Sign-up is three steps: name and username with a live availability check, choose how to sign in, then a welcome with a photo and your invite link. <code>/app</code> sends signed-out visitors to sign-in.</li>
+        <li><b>Profile</b> at <code>/app/profile</code>: photo, name, username and about line, your invite link, and "What Lynk remembers about you" with remove and undo (conflict 2).</li>
+        <li><b>Contact profiles</b> at <code>/app/people/[id]</code>: shared groups, memories from chats you're both in, block and report.</li>
+        <li><b>Settings</b> at <code>/app/settings</code>, seven panes: Account, Sign-in &amp; security (passkeys, Apple and Google, sessions, recent activity), Privacy (who can reach you, last seen, read receipts, blocked), Notifications, Smart features, Appearance, and Your data (JSON download, delete now or in 30 days). ⌘, opens it from anywhere.</li>
+        <li><b>Invite links</b> at <code>/invite/[code]</code> for groups and people, a plain-language <code>/privacy</code> overview, and a 404 page.</li>
+        <li><b>Deep links</b> to chats (<code>/app?chat=…</code>), so reload, back and shared links land in the right conversation.</li>
+        <li><b>Profile photos</b> for the demo friends in <code>public/people</code>.</li>
+        <li><b>Quality fixes:</b> no hydration mismatches, reduced motion respected everywhere, lighter scroll performance.</li>
+      </ul></div>
+    <div class="card"><h3>Not started</h3>
+      <ul class="check">
+        <li>Git repository and monorepo layout (<code>apps/web</code> is its own repo for now).</li>
+        <li>Go server, PostgreSQL, Redis, NATS and Docker Compose.</li>
+        <li>Real sign-in on the server (go-webauthn passkeys, Apple and Google) and real accounts. The screens exist and run on a browser-only mock.</li>
+        <li>QR codes for invite links, starting new chats, and actual notifications.</li>
+        <li>Real-time messaging over WebSockets, and the <code>packages/protocol</code> schemas.</li>
+        <li>Local message cache and offline outbox (planned for phases 1 and 2).</li>
+        <li>Mobile app, push notifications, smart features and private chats.</li>
+      </ul>
+      <h3 style="margin-top:8px">Decisions made along the way</h3>
+      <ul class="check">
+        <li>Personal chat, not a workplace tool (v3 to v4).</li>
+        <li>Removed the prompt.txt effects and Lenis smooth scrolling in favour of a few purposeful animations.</li>
+        <li>Moved from pink and plum to Apple greys with a blue accent.</li>
+        <li>Account screens run on a mock store shaped like the future API (<code>src/lib/account.ts</code>), so wiring the server changes data calls, not pages.</li>
+        <li>The theme switch moved from the app dock into Settings › Appearance, with Match system as the default.</li>
+        <li>A red token for destructive actions only: <code>--danger</code> #D70015 (white text 5.38:1) and <code>--danger-ink</code> #FF6961 in dark (6.03:1).</li>
+        <li>"Nearby mode" (chatting with no internet over Bluetooth and Wi-Fi) is possible in the mobile app but deferred until after v1.</li>
+      </ul></div>
+  </div>
+  <p class="note">Next up: the backend half of phase 0. Set up git and the monorepo first (the whole frontend is still uncommitted), then the Go server skeleton and Docker Compose, then connect the existing sign-in screens to real passkeys, Apple and Google.</p>
+</section>
+
+<section id="changes">
+  <div class="sec-head"><span class="eyebrow">Verification</span><h2>What changed from v3</h2>
+  <p>v3 followed the product spec closely, which made Lynk a workplace tool. v4 keeps the engineering core of that spec (real-time delivery, retrieval that respects permissions, suggestions that people confirm) and rebuilds the product around friends, family and group chats.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Area</th><th>v3 (workplace)</th><th>v4 (personal)</th><th>Status</th></tr></thead>
+    <tbody>
+    <tr><td class="layer">Audience</td><td>Teams and communities</td><td>Friends, family, flatmates, clubs</td><td><span class="tag change">Change</span></td></tr>
+    <tr><td class="layer">Structure</td><td>Workspaces, channels, private channels</td><td>One-to-one chats and group chats, pinned chats</td><td><span class="tag change">Change</span></td></tr>
+    <tr><td class="layer">Roles</td><td>Owner, Admin, Moderator, Member, Guest</td><td>Group admin and member only</td><td><span class="tag change">Change</span></td></tr>
+    <tr><td class="layer">Audit log</td><td>Workspace audit events</td><td>Personal security log: sessions, devices, sign-ins</td><td><span class="tag change">Change</span></td></tr>
+    <tr><td class="layer">Decisions</td><td>Decisions with history</td><td><b>Plans</b>: what, when, where, who is coming, with calendar export</td><td><span class="tag change">Change</span></td></tr>
+    <tr><td class="layer">Action items</td><td>Assigned work items</td><td><b>To-dos</b> and shared <b>lists</b> (shopping, packing)</td><td><span class="tag change">Change</span></td></tr>
+    <tr><td class="layer">Shared memory</td><td>Project facts</td><td><b>Memories</b>: birthdays, allergies, favourite places, kept inside the chat they came from</td><td><span class="tag change">Change</span></td></tr>
+    <tr><td class="layer">Branches</td><td>Branches and a conversation map</td><td><b>Side chats</b>. The map is cut.</td><td><span class="tag change">Change</span></td></tr>
+    <tr><td class="layer">Context capsules</td><td>Shareable conversation packages</td><td>Cut for v1. Forwarding a saved plan covers the personal case.</td><td><span class="tag drop">Drop</span></td></tr>
+    <tr><td class="layer">Knowledge graph</td><td>Entities and relationships</td><td>Cut for v1. Memories cover what people need.</td><td><span class="tag drop">Drop</span></td></tr>
+    <tr><td class="layer">Catch-up</td><td>Workplace digest</td><td>Busy group chats: mentions, plans to confirm, your to-dos</td><td><span class="tag keep">Keep</span></td></tr>
+    <tr><td class="layer">Search</td><td>Semantic Time Machine</td><td>"Find it again": ask in plain words, answer links to the message</td><td><span class="tag keep">Keep</span></td></tr>
+    <tr><td class="layer">Voice notes</td><td>Transcripts and timestamps</td><td>Same, and more important for personal chat</td><td><span class="tag keep">Keep</span></td></tr>
+    <tr><td class="layer">Translation</td><td>Optional</td><td>Optional, useful for families spread across languages</td><td><span class="tag keep">Keep</span></td></tr>
+    <tr><td class="layer">Mobile app</td><td>After v1</td><td>Phase 3, straight after the messaging core</td><td><span class="tag change">Change</span></td></tr>
+    <tr><td class="layer">Contacts</td><td>Workspace invites</td><td>Usernames, invite links, QR codes, blocking and reporting</td><td><span class="tag new">New</span></td></tr>
+    <tr><td class="layer">Private chats</td><td>No E2EE</td><td>An end-to-end encrypted chat mode with smart features off</td><td><span class="tag new">New</span></td></tr>
+    <tr><td class="layer">Backend and data</td><td>Go, Postgres, pgvector, Redis, NATS, S3</td><td>Unchanged</td><td><span class="tag keep">Keep</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="conflicts">
+  <div class="sec-head"><h2>Conflicts and how they are resolved</h2>
+  <p>A personal app raises different trade-offs than a workplace one. These five decide the shape of v1.</p></div>
+
+  <div class="conflict">
+    <h3>1. Smart features vs end-to-end encryption</h3>
+    <div class="vs"><div><b>People expect</b>Personal chats to be private, and many expect end-to-end encryption.</div><div><b>Smart features need</b>The server to read messages to find plans, memories and answers.</div></div>
+    <p class="call"><b>Two chat modes, chosen per chat and shown clearly.</b> Normal chats get TLS, encryption at rest, strict membership checks and smart features. Private chats use end-to-end encryption (libsignal), and every smart feature is off because the server cannot read them. The mode is visible in the chat header, and switching needs everyone's agreement.</p>
+  </div>
+
+  <div class="conflict">
+    <h3>2. Memories about other people</h3>
+    <div class="vs"><div><b>Useful</b>"Mei is vegetarian" helps when planning a dinner.</div><div><b>Risky</b>A fact said in one chat must not surface in another chat Mei is not part of.</div></div>
+    <p class="call"><b>Memories live inside the chat they came from.</b> They are visible only to that chat's current members, disappear when the source message is deleted, and the person a memory is about can see and remove it. Nothing is shared across chats in v1.</p>
+  </div>
+
+  <div class="conflict">
+    <h3>3. Web first vs phone first</h3>
+    <div class="vs"><div><b>Built so far</b>A web client and landing page.</div><div><b>Reality</b>Personal chat happens on phones, with push notifications.</div></div>
+    <p class="call"><b>Web for the messaging core, then the Expo app immediately after.</b> The protocol is generated for both clients, so the mobile app reuses the same server with no API changes. Anyone testing Lynk with friends needs the phone app before the smart features matter.</p>
+  </div>
+
+  <div class="conflict">
+    <h3>4. The spec's workplace features</h3>
+    <div class="vs"><div><b>Spec asks for</b>Workspaces, five roles, audit logs, capsules, a knowledge graph, a conversation map.</div><div><b>Personal chat needs</b>Groups, a few admin controls, and privacy people can understand.</div></div>
+    <p class="call"><b>Cut or shrink them.</b> Group admin and member are the only roles, auditing becomes a personal security log, and capsules, the graph and the map wait until real use shows a need. The engineering ideas behind them (permission-aware retrieval, sourced suggestions) stay.</p>
+  </div>
+
+  <div class="conflict">
+    <h3>5. AI cost without business customers</h3>
+    <div class="vs"><div><b>Cost</b>Every smart feature spends tokens or GPU time.</div><div><b>Users</b>People expect personal chat to be free.</div></div>
+    <p class="call"><b>Keep the free tier cheap and never show ads.</b> Cheap rules run before any model call, extraction uses Claude Haiku 4.5 through the Batch API, embeddings and transcription are self-hosted, and each user has a monthly budget. A later "Lynk Plus" subscription can raise the limits.</p>
+  </div>
+</section>
+
+<section id="stack">
+  <div class="sec-head"><span class="eyebrow">What to install</span><h2>Stack and versions</h2>
+  <p>The same engineering stack as v3, with the mobile app and push back in. Web versions are already installed in <code>apps/web</code>.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Layer</th><th>Choice</th><th>Version</th><th>Why</th></tr></thead>
+    <tbody>
+    <tr class="group-row"><td colspan="4">Clients</td></tr>
+    <tr><td class="layer">Web</td><td>Next.js App Router + React, Tailwind, Radix primitives</td><td><span class="ver">Next 16.3 · React 19.2 · TW 4</span></td><td class="why">Already running the landing page and the client prototype.</td></tr>
+    <tr><td class="layer">Mobile</td><td>Expo (React Native, New Architecture)</td><td><span class="ver">SDK 54+ · RN 0.81+</span></td><td class="why">One app for iOS and Android, sharing types and design tokens with the web.</td></tr>
+    <tr><td class="layer">Local cache</td><td>IndexedDB (web) · expo-sqlite (mobile)</td><td><span class="ver">latest</span></td><td class="why">Instant open, offline reading, and an outbox for messages sent offline.</td></tr>
+    <tr><td class="layer">Client state</td><td>TanStack Query + Zustand, TanStack Virtual / FlashList</td><td><span class="ver">Query 5 · Zustand 5</span></td><td class="why">Optimistic sends and smooth long timelines.</td></tr>
+    <tr class="group-row"><td colspan="4">Backend</td></tr>
+    <tr><td class="layer">Language</td><td>Go modular monolith</td><td><span class="ver">1.25+</span></td><td class="why">Long-lived WebSocket connections, one binary, portfolio goal.</td></tr>
+    <tr><td class="layer">HTTP and WebSockets</td><td><code>net/http</code> + coder/websocket</td><td><span class="ver">stdlib · 1.8+</span></td><td class="why">No framework needed.</td></tr>
+    <tr><td class="layer">Database access</td><td>pgx + sqlc, goose migrations</td><td><span class="ver">pgx 5 · sqlc 1.x · goose 3</span></td><td class="why">Type-safe Go from hand-written SQL.</td></tr>
+    <tr><td class="layer">Auth</td><td>Server sessions, passkeys (go-webauthn), Apple and Google sign-in</td><td><span class="ver">latest</span></td><td class="why">No passwords. One session per device, listed in settings.</td></tr>
+    <tr><td class="layer">Private chats</td><td>libsignal</td><td><span class="ver">latest</span></td><td class="why">Proven end-to-end encryption for the private mode. Never home-made crypto.</td></tr>
+    <tr class="group-row"><td colspan="4">Data and infrastructure</td></tr>
+    <tr><td class="layer">Database</td><td>PostgreSQL + pgvector</td><td><span class="ver">PG 18 · pgvector 0.8</span></td><td class="why">Messages, memberships and vectors in one transactional store.</td></tr>
+    <tr><td class="layer">Ephemeral state</td><td>Redis (or Valkey)</td><td><span class="ver">8.x</span></td><td class="why">Presence, typing, rate limits. Never messages.</td></tr>
+    <tr><td class="layer">Events and jobs</td><td>NATS JetStream + Postgres outbox</td><td><span class="ver">2.11+</span></td><td class="why">Fan-out between gateways and durable background jobs.</td></tr>
+    <tr><td class="layer">Media</td><td>SeaweedFS or Garage (S3 API)</td><td><span class="ver">latest</span></td><td class="why">Self-hosted photos, videos and voice notes with signed URLs.</td></tr>
+    <tr><td class="layer">Push</td><td>Web Push (VAPID), APNs, FCM</td><td><span class="ver">—</span></td><td class="why">Sent directly from the worker. Previews hidden for private chats.</td></tr>
+    <tr><td class="layer">Metrics</td><td>OpenTelemetry, Prometheus, Grafana</td><td><span class="ver">latest</span></td><td class="why">Delivery latency, queue depth, AI latency and cost.</td></tr>
+    <tr class="group-row"><td colspan="4">Smart features (behind provider interfaces)</td></tr>
+    <tr><td class="layer">Answers and catch-up</td><td>Claude Opus 5</td><td><span class="ver">claude-opus-5</span></td><td class="why">"Find it again" answers with sources, and catch-up summaries.</td></tr>
+    <tr><td class="layer">Plan, to-do and memory spotting</td><td>Claude Haiku 4.5</td><td><span class="ver">claude-haiku-4-5</span></td><td class="why">High volume, structured outputs, Batch API when latency allows.</td></tr>
+    <tr><td class="layer">Embeddings</td><td>bge-m3, self-hosted</td><td><span class="ver">1024-d</span></td><td class="why">Multilingual, no per-message cost. Anthropic does not offer embeddings.</td></tr>
+    <tr><td class="layer">Voice notes</td><td>faster-whisper, self-hosted</td><td><span class="ver">large-v3</span></td><td class="why">Transcripts with timestamps. Anthropic does not offer speech-to-text.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Model IDs are from the current Claude API model list (Sep 2026). Other versions reflect mid-2026; check release notes before pinning.</p>
+</section>
+
+<section id="architecture">
+  <div class="sec-head"><span class="eyebrow">How it fits together</span><h2>System architecture</h2>
+  <p>One Go binary in three roles: <b>api</b> (HTTP + WebSocket), <b>worker</b> (background jobs) and <b>relay</b> (outbox to NATS). Web and mobile speak the same protocol.</p></div>
+  <div class="diagram"><pre class="mermaid">
+flowchart LR
+  W[Web client<br/>IndexedDB + outbox] <-- WebSocket --> API
+  M[Expo app<br/>SQLite + outbox] <-- WebSocket --> API
+  subgraph GO[Go modular monolith]
+    API[api role<br/>HTTP + WS gateway]
+    RELAY[relay role<br/>outbox to NATS]
+    WORK[worker role<br/>smart features, media, push]
+  end
+  API -- tx: message + outbox --> PG[(PostgreSQL<br/>+ pgvector)]
+  RELAY --> N[(NATS JetStream)]
+  N -- fan-out --> API
+  N -- jobs --> WORK
+  API <--> R[(Redis)]
+  WORK --> PUSH[APNs / FCM / Web Push]
+  WORK --> AI[Claude, bge-m3,<br/>faster-whisper]
+  W -. signed upload .-> S3[(S3-compatible)]
+  M -. signed upload .-> S3
+  </pre></div>
+  <div class="two">
+    <div class="card"><h3>Send path (never waits for AI)</h3>
+      <ol class="ms">
+        <li>Client creates an idempotency key and shows the message as sending.</li>
+        <li>Gateway checks membership, blocks and rate limits.</li>
+        <li>One transaction: message with the next per-chat <code>seq</code>, plus an outbox event.</li>
+        <li>Ack the sender, then fan out to every member's devices through NATS.</li>
+        <li>Offline members get a push notification.</li>
+      </ol></div>
+    <div class="card"><h3>After the ack (normal chats only)</h3>
+      <ol class="ms">
+        <li>Embed the message for search.</li>
+        <li>Cheap rules look for times, places, questions to someone, and lists.</li>
+        <li>Only likely candidates go to the model, which suggests a plan, to-do or memory.</li>
+        <li>Suggestions appear for the chat to save or dismiss.</li>
+        <li>Voice notes are transcribed and messages translated for members who want it.</li>
+      </ol></div>
+  </div>
+</section>
+
+<section id="repo">
+  <div class="sec-head"><h2>Repository structure</h2></div>
+<pre class="code">lynk/
+├─ apps/
+│  ├─ web/                  Next.js client + landing (exists today)
+│  ├─ mobile/               Expo app (phase 3)
+│  └─ server/               Go modular monolith
+│     ├─ cmd/lynk/          `lynk api | worker | relay | migrate`
+│     └─ internal/
+│        ├─ platform/       config, pgx, redis, nats, s3, otel, slog
+│        ├─ access/         membership, blocks, join-time rules: the only place access is decided
+│        ├─ auth/  users/  contacts/  invites/  devices/
+│        ├─ chats/          one-to-one and group chats, admins, settings, private mode
+│        ├─ messages/  sidechats/  reactions/  pins/  saved/
+│        ├─ realtime/       ws gateway, protocol, presence, typing, sync
+│        ├─ outbox/  jobs/  push/  media/  voice/  translate/
+│        ├─ plans/  todos/  lists/  memories/  catchup/  search/
+│        └─ ai/             provider interfaces, adapters, versioned prompts
+├─ packages/
+│  ├─ protocol/             JSON Schema → generated Go + TypeScript
+│  └─ tokens/               design tokens for web and mobile
+├─ db/  migrations/  queries/
+├─ evals/                   datasets and runners for search and spotting
+├─ infra/                   compose.yaml, grafana, prometheus
+└─ docs/adr/</pre>
+</section>
+
+<section id="schema">
+  <div class="sec-head"><span class="eyebrow">PostgreSQL</span><h2>Schema</h2>
+  <p>Relational for everything people query. Every row a user can read is reachable through <code>chat_members</code>, which keeps access rules in one place.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Group</th><th>Tables</th><th>Key design points</th></tr></thead>
+    <tbody>
+    <tr><td class="layer">Identity</td><td class="mono">users, sessions, devices, passkeys, oauth_accounts, user_settings</td><td class="why">Sessions stored hashed. Devices hold push tokens. Settings hold language and smart-feature choices.</td></tr>
+    <tr><td class="layer">People</td><td class="mono">contacts, invites, blocks, reports, security_events</td><td class="why">Blocking hides both directions. Security events power the personal security log.</td></tr>
+    <tr><td class="layer">Chats</td><td class="mono">chats (kind: dm | group, mode: normal | private), chat_members (role, joined_at, last_read_seq, muted, pinned)</td><td class="why"><code>joined_at</code> decides which history a new member sees. <code>mode</code> switches smart features off for private chats.</td></tr>
+    <tr><td class="layer">Messages</td><td class="mono">messages, message_edits, reactions, mentions, pins, saved_messages</td><td class="why">Unique <code>(chat_id, seq)</code> and <code>(author_id, idempotency_key)</code>. Private-mode rows hold ciphertext only.</td></tr>
+    <tr><td class="layer">Side chats</td><td class="mono">side_chats (chat_id, parent_side_chat_id, root_message_id, name, created_by)</td><td class="why">Messages carry <code>side_chat_id</code>. Nesting through the parent column.</td></tr>
+    <tr><td class="layer">Plans</td><td class="mono">plans, plan_sources, plan_rsvps</td><td class="why">What, when, where, status (suggested, saved, cancelled), <code>replaces_id</code> for history, and an .ics export.</td></tr>
+    <tr><td class="layer">To-dos and lists</td><td class="mono">todos, todo_sources, lists, list_items</td><td class="why">Assignee, due, status, and the source message.</td></tr>
+    <tr><td class="layer">Memories</td><td class="mono">memories (chat_id, about_user_id, kind, value, status, confidence), memory_sources</td><td class="why">Always scoped to one chat. Deleted with their last source message. The person described can remove them.</td></tr>
+    <tr><td class="layer">Media and voice</td><td class="mono">attachments, voice_transcripts, voice_segments</td><td class="why">Segments carry <code>start_ms/end_ms</code> for jump-to-moment search.</td></tr>
+    <tr><td class="layer">Retrieval</td><td class="mono">embeddings (source_type, source_id, chat_id, created_at, vector), translations</td><td class="why"><code>chat_id</code> next to every vector so access filtering happens inside the search query.</td></tr>
+    <tr><td class="layer">Platform</td><td class="mono">notifications, outbox_events, job_failures, usage_budgets</td><td class="why">Budgets cap smart-feature spend per user per month.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="protocol">
+  <div class="sec-head"><span class="eyebrow">WebSocket</span><h2>Event protocol</h2>
+  <p>One authenticated socket per device. Every event is safe to process twice.</p></div>
+  <div class="two">
+<pre class="code">{
+  "v": 1,
+  "id": "evt_01J9…",      // unique, used to deduplicate
+  "type": "MESSAGE_CREATE",
+  "ts": "2026-09-24T14:03:11.402Z",
+  "chat_id": "ch_…",
+  "side_chat_id": null,
+  "seq": 4182,            // per-chat order
+  "correlation_id": "req_…",
+  "payload": { … }
+}</pre>
+    <div class="card"><h3>Event types</h3>
+      <p class="mono" style="font-size:.8rem;line-height:1.8">MESSAGE_CREATE · MESSAGE_UPDATE · MESSAGE_DELETE · REACTION_ADD · REACTION_REMOVE · TYPING_START · TYPING_STOP · PRESENCE_UPDATE · READ_UPDATE · CHAT_CREATE · CHAT_UPDATE · MEMBER_UPDATE · SIDECHAT_CREATE · PLAN_SUGGESTED · PLAN_SAVED · PLAN_RSVP · TODO_SUGGESTED · TODO_SAVED · TODO_DONE · LIST_UPDATE · MEMORY_SUGGESTED · MEMORY_SAVED · NOTIFICATION_CREATE · SYNC_REQUIRED</p>
+      <p class="note">Client to server: <code>HELLO</code> with resume cursors, <code>SEND</code>, <code>TYPING</code>, <code>ACK</code>, <code>PING</code>.</p>
+    </div>
+  </div>
+  <div class="card"><h3>Reconnect and ordering</h3>
+    <ul class="check">
+      <li><code>HELLO</code> carries the last <code>seq</code> per open chat. The server replays gaps, or sends <code>SYNC_REQUIRED</code> for large gaps.</li>
+      <li>Clients drop duplicate event IDs and buffer events that arrive ahead of a missing <code>seq</code>.</li>
+      <li>Unsent messages stay in the local outbox and retry under the same idempotency key.</li>
+    </ul></div>
+</section>
+
+<section id="authz">
+  <div class="sec-head"><h2>Privacy model</h2>
+  <p>Simpler than roles and capabilities: access comes from being in the chat. Smart features follow exactly the same rule.</p></div>
+  <div class="two">
+    <div class="card"><h3>Who can see what</h3>
+      <ul class="check">
+        <li>You can read a chat's messages from your <code>joined_at</code> onward, unless the group admin shares earlier history when adding you.</li>
+        <li>Group admins can rename the group, add or remove people, and change settings. Members can leave at any time.</li>
+        <li>Blocking hides messages, presence and invites in both directions.</li>
+        <li>Plans, to-dos, lists and memories inherit their chat's access. They never appear outside it.</li>
+      </ul></div>
+    <div class="card"><h3>Smart features that cannot leak</h3>
+      <ul class="check">
+        <li>One SQL function, <code>visible_messages(user_id)</code>, defines readable content, including join time, deletions and blocks.</li>
+        <li>Search and answers filter through it inside the query, so the model only sees permitted messages.</li>
+        <li>Private chats are never embedded, indexed or sent to a model.</li>
+        <li>Mandatory leak tests: people who left a group, were blocked, or joined late never retrieve content they should not.</li>
+      </ul></div>
+  </div>
+</section>
+
+<section id="jobs">
+  <div class="sec-head"><h2>Background jobs</h2></div>
+  <div class="two">
+    <div class="card"><h3>Flow</h3>
+      <ol class="ms">
+        <li>Writes add an outbox row in the same transaction.</li>
+        <li>The relay publishes to JetStream subjects such as <code>lynk.msg.created</code>.</li>
+        <li>Durable consumers: push, embed, spot, transcribe, translate, notify.</li>
+        <li>Jobs are idempotent, keyed by source ID and prompt version.</li>
+      </ol></div>
+    <div class="card"><h3>When things fail</h3>
+      <ul class="check">
+        <li>Retries with backoff, then a dead-letter stream and a replay view.</li>
+        <li>A circuit breaker per AI provider pauses smart features during outages.</li>
+        <li>Messaging never depends on AI, Redis or storage being up.</li>
+      </ul></div>
+  </div>
+</section>
+
+<section id="ai">
+  <div class="sec-head"><span class="eyebrow">Smart features</span><h2>How the smart features work</h2>
+  <p>Each one solves a real annoyance in group chats, suggests rather than decides, and links back to the messages behind it.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Feature</th><th>What it does</th><th>How</th></tr></thead>
+    <tbody>
+    <tr><td class="layer">Plans</td><td>Spots "Saturday 10am at Boulder Barn" once people agree</td><td class="why">Rules find times and places, Haiku returns a validated plan, the chat saves or dismisses it. Changes keep history.</td></tr>
+    <tr><td class="layer">To-dos and lists</td><td>"Can you bring the chalk bag?" becomes a to-do for you</td><td class="why">Only suggested. The assignee confirms. Shopping lists become shared checklists.</td></tr>
+    <tr><td class="layer">Memories</td><td>Birthdays, allergies, favourite places</td><td class="why">Scoped to the chat, sourced, editable, removable by the person described.</td></tr>
+    <tr><td class="layer">Find it again</td><td>"Where did Mei say that ramen place was?"</td><td class="why">Hybrid pgvector + full-text search inside <code>visible_messages</code>, reranked, answered by Opus 5 with source links. Falls back to plain results.</td></tr>
+    <tr><td class="layer">Catch-up</td><td>What you missed in busy groups</td><td class="why">Mentions, plans to confirm and your to-dos first, then the rest in a sentence or two.</td></tr>
+    <tr><td class="layer">Voice notes</td><td>Transcripts and jump-to-moment search</td><td class="why">faster-whisper with word timestamps. The original audio is always kept.</td></tr>
+    <tr><td class="layer">Translation</td><td>Each person reads in their language</td><td class="why">Cached per message and language, with "View original".</td></tr>
+    </tbody>
+  </table></div>
+  <div class="card"><h3>Evaluation</h3>
+    <ul class="check">
+      <li>A seeded set of synthetic friend and family chats with labelled plans, to-dos, memories and search questions.</li>
+      <li>Metrics: plan and to-do precision and recall, search recall@10, citation correctness, unsupported-claim rate.</li>
+      <li>Runs in CI when prompts, models or retrieval change. Leak tests run on every build.</li>
+    </ul></div>
+</section>
+
+<section id="risks">
+  <div class="sec-head"><span class="eyebrow">What could go wrong</span><h2>Risks</h2></div>
+  <div class="card">
+    <div class="risk"><span class="sev h">High</span><h3>Memories about people who never agreed</h3><p>Keep them scoped to one chat, visible to its members only, removable by the person described, and deleted with their source.</p></div>
+    <div class="risk"><span class="sev h">High</span><h3>Smart features leaking across chats</h3><p>Access filtering inside the search query, no cross-chat memories, and leak tests covering people who left, were blocked or joined late.</p></div>
+    <div class="risk"><span class="sev h">High</span><h3>Privacy expectations</h3><p>Say plainly which chats the server can read. Private mode must be real end-to-end encryption, with an external review before launch.</p></div>
+    <div class="risk"><span class="sev m">Med</span><h3>Spam and abuse</h3><p>Invite-based contact, rate limits on new accounts, blocking, and reporting from day one. Required for the app stores anyway.</p></div>
+    <div class="risk"><span class="sev m">Med</span><h3>AI cost on a free product</h3><p>Rules before models, Haiku and batching, self-hosted embeddings and transcription, and per-user budgets.</p></div>
+    <div class="risk"><span class="sev m">Med</span><h3>Prompt injection in messages</h3><p>Messages are treated as untrusted data. The model only suggests; every field is validated before saving, and it can never take actions.</p></div>
+    <div class="risk"><span class="sev l">Low</span><h3>Wrong suggestions</h3><p>Nothing is saved without a tap, and dismissing is one tap too.</p></div>
+  </div>
+</section>
+
+<section id="phases">
+  <div class="sec-head"><span class="eyebrow">What ships when</span><h2>Milestones</h2>
+  <p>Each phase ends with something friends can actually use, and the app stays runnable after every milestone.</p></div>
+  <div class="phases">
+    <article class="phase">
+      <div class="phase-top"><span class="n">0</span><h3>Foundation</h3><span class="pill weeks">Weeks 1–3</span><span class="pill done">Frontend done</span><span class="pill">Backend not started</span></div>
+      <div class="cols"><div><ol class="ms">
+        <li><s>Landing page, design system, theme toggle, web client prototype with mock data, profile photos</s> (done).</li>
+        <li><s>Sign-in and sign-up screens, settings, and the signed-in gate on the web</s> (done, on a browser mock).</li>
+        <li>Git repository and monorepo layout, moving the existing web app to <code>apps/web</code> inside it.</li>
+        <li>Monorepo, Docker Compose, Go skeleton with logging, tracing and health checks.</li>
+        <li>goose + sqlc, passkeys, Apple and Google sign-in.</li>
+        <li><code>packages/protocol</code> with generated Go and TypeScript.</li>
+      </ol></div></div>
+      <p class="exit"><b>Exit:</b> sign in on the web against the real Go server.</p>
+    </article>
+    <article class="phase">
+      <div class="phase-top"><span class="n">1</span><h3>Messaging core</h3><span class="pill weeks">Weeks 4–9</span><span class="pill done">Account screens ready</span></div>
+      <div class="cols"><div><ol class="ms">
+        <li>Profiles, usernames, invite links and QR codes, blocking and reporting. Screens are built except QR codes; they need the server.</li>
+        <li>One-to-one and group chats, group admins, pinned chats.</li>
+        <li>WebSocket gateway, per-chat <code>seq</code>, idempotent sends.</li>
+        <li>Replies, reactions, edits, deletes, mentions, read receipts, typing, presence.</li>
+        <li>Photos and files with signed uploads.</li>
+      </ol></div></div>
+      <p class="exit"><b>Exit:</b> five friends chat on the web for a week without problems.</p>
+    </article>
+    <article class="phase">
+      <div class="phase-top"><span class="n">2</span><h3>Reliability</h3><span class="pill weeks">Weeks 10–13</span></div>
+      <div class="cols"><div><ol class="ms">
+        <li>Outbox, relay and NATS fan-out across two gateway nodes.</li>
+        <li>Reconnect sync, offline outbox, duplicate handling.</li>
+        <li>Web Push notifications with sensible grouping.</li>
+        <li>Rate limits, metrics, dashboards, k6 load tests.</li>
+      </ol></div></div>
+      <p class="exit"><b>Exit:</b> no lost or duplicated messages in chaos tests, p95 delivery under 250 ms.</p>
+    </article>
+    <article class="phase">
+      <div class="phase-top"><span class="n">3</span><h3>Mobile app</h3><span class="pill weeks">Weeks 14–19</span></div>
+      <div class="cols"><div><ol class="ms">
+        <li>Expo app on the same protocol, with SQLite cache and offline outbox.</li>
+        <li>Push through APNs and FCM, reply from the notification.</li>
+        <li>Recording and playing voice notes.</li>
+        <li>TestFlight and Play internal testing with friends.</li>
+      </ol></div></div>
+      <p class="exit"><b>Exit:</b> a friends-and-family beta runs on phones every day.</p>
+    </article>
+    <article class="phase">
+      <div class="phase-top"><span class="n">4</span><h3>Structure without AI</h3><span class="pill weeks">Weeks 20–23</span></div>
+      <div class="cols"><div><ol class="ms">
+        <li>Side chats from any message.</li>
+        <li>Plans made by hand, with RSVPs and calendar export.</li>
+        <li>To-dos and shared lists, pins and saved messages.</li>
+        <li>⌘K search and jump on the web.</li>
+      </ol></div></div>
+      <p class="exit"><b>Exit:</b> the beta group uses plans and lists without any smart features.</p>
+    </article>
+    <article class="phase">
+      <div class="phase-top"><span class="n">5</span><h3>Find it again</h3><span class="pill weeks">Weeks 24–28</span></div>
+      <div class="cols"><div><ol class="ms">
+        <li>Provider interfaces, embeddings worker, pgvector, backfill.</li>
+        <li>Hybrid search inside <code>visible_messages</code>, answers with sources.</li>
+        <li>Per-user and per-chat smart-feature settings and budgets.</li>
+        <li>Eval set, leak tests in CI.</li>
+      </ol></div></div>
+      <p class="exit"><b>Exit:</b> recall@10 of at least 0.85, every citation valid, zero leaks.</p>
+    </article>
+    <article class="phase">
+      <div class="phase-top"><span class="n">6</span><h3>Smart features</h3><span class="pill weeks">Weeks 29–35</span></div>
+      <div class="cols"><div><ol class="ms">
+        <li>Plan and to-do spotting with save and dismiss.</li>
+        <li>Memories with sources, editing and removal.</li>
+        <li>Catch-up for busy groups.</li>
+        <li>Voice-note transcripts and jump-to-moment search.</li>
+        <li>Translation with "View original".</li>
+      </ol></div></div>
+      <p class="exit"><b>Exit:</b> plan spotting precision of at least 0.8, and the beta group keeps catch-up switched on.</p>
+    </article>
+    <article class="phase">
+      <div class="phase-top"><span class="n">7</span><h3>Private chats and launch</h3><span class="pill weeks">Weeks 36–42</span></div>
+      <div class="cols"><div><ol class="ms">
+        <li>Private chat mode on libsignal, with smart features off and clear labelling.</li>
+        <li>External security review, accessibility audit, failure drills.</li>
+        <li>App Store and Play submission, public web launch.</li>
+      </ol></div></div>
+      <p class="exit"><b>Exit:</b> approved in both stores, review findings closed.</p>
+    </article>
+  </div>
+  <p class="note">After v1: voice and video calls, "Ask Lynk" (a private assistant over your own chats), shared photo albums, Lynk Plus, and "Nearby mode" for chatting without internet over Bluetooth and Wi-Fi in the mobile app.</p>
+</section>
+
+<section id="timeline">
+  <div class="sec-head"><span class="eyebrow">42 weeks</span><h2>Timeline</h2>
+  <p>For one experienced developer working full time. A second person can build the mobile app alongside phase 2.</p></div>
+  <div class="gantt"><div class="g-grid" id="gantt"></div></div>
+</section>
+
+<section id="adrs">
+  <div class="sec-head"><h2>Architecture decision records</h2>
+  <p>Written before the code they govern, in <code>docs/adr/</code>.</p></div>
+  <ol class="adr">
+    <li>A personal app, not a workplace tool</li>
+    <li>PostgreSQL instead of MongoDB</li>
+    <li>WebSockets for delivery</li>
+    <li>Modular monolith in Go, shared generated protocol</li>
+    <li>NATS JetStream with a transactional outbox</li>
+    <li>Idempotency keys and per-chat seq</li>
+    <li>Reconnect and gap replay</li>
+    <li>Access from membership and join time</li>
+    <li>Normal and private chat modes</li>
+    <li>Memories scoped to one chat</li>
+    <li>Search that filters inside the query</li>
+    <li>Suggestions, never automatic actions</li>
+    <li>AI providers behind interfaces, and model choice</li>
+    <li>Web first, mobile in phase 3</li>
+  </ol>
+</section>
+
+<footer>Roadmap v4.2, September 2026. Adds the sign-in, profile, settings, invite and privacy screens to progress. Supersedes v3 (workplace direction).</footer>
+</div>
+
+<script>
+(function(){
+  var g=document.getElementById('gantt'); if(!g) return;
+  var rows=[
+    ['0 · Foundation',1,3,''],
+    ['1 · Messaging core',4,9,''],
+    ['2 · Reliability',10,13,''],
+    ['3 · Mobile app',14,19,'soft'],
+    ['4 · Structure without AI',20,23,'soft'],
+    ['5 · Find it again',24,28,'alt'],
+    ['6 · Smart features',29,35,'alt'],
+    ['7 · Private chats, launch',36,42,'']
+  ];
+  var h='';
+  for(var w=1;w<=42;w+=4) h+='<div class="wk" style="grid-row:1;grid-column:'+(w+1)+' / span '+Math.min(4,43-w)+'">W'+w+'</div>';
+  rows.forEach(function(r,i){
+    var row=i+2;
+    h+='<div class="row" style="grid-row:'+row+';grid-column:1">'+r[0]+'</div>';
+    h+='<div class="bar '+r[3]+'" style="grid-row:'+row+';grid-column:'+(r[1]+1)+' / '+(r[2]+2)+'" title="Weeks '+r[1]+'–'+r[2]+'"></div>';
+  });
+  g.innerHTML=h;
+})();
+</script>

@@ -1,0 +1,18 @@
+# Local tooling, not part of the product
+.claude/
+graphify-out/
+prompt.txt
+
+# OS and editors
+.DS_Store
+.vscode/
+.idea/
+
+# Secrets
+.env*
+*.pem
+
+# Dependencies and builds (apps have their own .gitignore too)
+node_modules/
+.next/
+*.tsbuildinfo

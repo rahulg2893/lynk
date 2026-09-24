@@ -1,0 +1,4 @@
+# Vendored Claude Code skills/config, not project code
+.claude/
+graphify-out/
+apps/web/public/people/
