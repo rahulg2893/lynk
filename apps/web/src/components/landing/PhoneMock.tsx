@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useInView } from "motion/react";
 import { CaretLeft, Check, Sparkle } from "@phosphor-icons/react";
 import { Avatar, TypingDots } from "@/components/chat/primitives";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 const SCRIPT = [
   { id: "amara", name: "Amara", text: "Saturday morning works for me" },
@@ -18,23 +17,21 @@ const SPRING = { type: "spring" as const, stiffness: 380, damping: 30 };
 /**
  * An iPhone-shaped frame playing the product's story once: the group talks,
  * someone types, and Lynk spots the plan. The Save button really works.
- * Reduced motion shows the finished conversation straight away.
  */
 export function PhoneMock({ className = "" }: { className?: string }) {
-  const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "0px 0px -15% 0px" });
   const [shown, setShown] = useState(0);
   const [saved, setSaved] = useState(false);
-  const count = reduce ? SCRIPT.length : shown;
-  const typing = !reduce && inView && shown < SCRIPT.length;
+  const count = shown;
+  const typing = inView && shown < SCRIPT.length;
   const spotted = count >= SCRIPT.length;
 
   useEffect(() => {
-    if (reduce || !inView || shown >= SCRIPT.length) return;
+    if (!inView || shown >= SCRIPT.length) return;
     const t = window.setTimeout(() => setShown((n) => n + 1), shown === 0 ? 700 : 1150);
     return () => window.clearTimeout(t);
-  }, [inView, shown, reduce]);
+  }, [inView, shown]);
 
   return (
     <div ref={ref} className={`relative ${className}`}>
@@ -65,8 +62,8 @@ export function PhoneMock({ className = "" }: { className?: string }) {
               {SCRIPT.slice(0, count).map((m, i) => (
                 <motion.li
                   key={i}
-                  layout={!reduce}
-                  initial={reduce ? false : { opacity: 0, y: 14, scale: 0.96 }}
+                  layout
+                  initial={{ opacity: 0, y: 14, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={SPRING}
                   className="flex items-end gap-1.5"
@@ -94,10 +91,10 @@ export function PhoneMock({ className = "" }: { className?: string }) {
               {spotted ? (
                 <motion.li
                   key="plan"
-                  layout={!reduce}
-                  initial={reduce ? false : { opacity: 0, y: 40, scale: 0.9, rotateX: 25 }}
+                  layout
+                  initial={{ opacity: 0, y: 40, scale: 0.9, rotateX: 25 }}
                   animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
-                  transition={{ type: "spring", stiffness: 220, damping: 18, delay: reduce ? 0 : 0.45 }}
+                  transition={{ type: "spring", stiffness: 220, damping: 18, delay: 0.45 }}
                   className="mt-1 rounded-2xl border border-black/5 bg-white p-3 shadow-[0_10px_30px_-10px_rgb(0_60_160/0.35)]"
                 >
                   <p className="flex items-center gap-1 text-[10px] font-semibold text-[#6e6e73]">

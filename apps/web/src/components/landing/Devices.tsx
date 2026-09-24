@@ -5,7 +5,6 @@ import { motion, useScroll, useSpring, useTransform } from "motion/react";
 import { AndroidLogo, AppleLogo, Globe } from "@phosphor-icons/react";
 import { Avatar } from "@/components/chat/primitives";
 import { FadeIn } from "@/components/motion/FadeIn";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 const ROWS = [
   { id: "amara", name: "Amara Okafor", text: "That ramen place Mei mentioned?", badge: 1 },
@@ -19,7 +18,6 @@ const ROWS = [
  * that slides in beside it. Honest about what exists today.
  */
 export function Devices() {
-  const reduce = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "center center"] });
   const p = useSpring(scrollYProgress, { stiffness: 80, damping: 20 });
@@ -39,7 +37,7 @@ export function Devices() {
         </FadeIn>
 
         <div className="relative mx-auto mt-16 max-w-5xl [perspective:1600px] md:mt-24">
-          <motion.div style={reduce ? undefined : { scale: laptopScale, rotateX: laptopRotate }} className="origin-bottom">
+          <motion.div style={{ scale: laptopScale, rotateX: laptopRotate }} className="origin-bottom">
             {/* Laptop */}
             <div className="rounded-t-[1.4rem] border-[10px] border-b-0 border-[#1d1d1f] bg-[#1d1d1f] shadow-[0_50px_120px_-40px_rgb(0_40_120/0.5)]">
               <div className="flex aspect-[16/10] overflow-hidden rounded-t-md bg-bg">
@@ -75,7 +73,7 @@ export function Devices() {
 
           {/* Phone */}
           <motion.div
-            style={reduce ? undefined : { x: phoneX, opacity: phoneOpacity }}
+            style={{ x: phoneX, opacity: phoneOpacity }}
             className="absolute -right-2 -bottom-8 w-[26%] min-w-[7.5rem] md:-right-10"
           >
             <div className="aspect-[9/19.5] rounded-[2rem] bg-[#0b0c10] p-[6px] shadow-[0_30px_80px_-20px_rgb(0_0_0/0.5)]">

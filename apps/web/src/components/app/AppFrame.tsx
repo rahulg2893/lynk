@@ -46,8 +46,13 @@ export function AppFrame({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex h-dvh bg-bg text-ink">
-      <Suspense fallback={<div className="hidden w-[4.5rem] shrink-0 border-r border-line md:block" />}>
+    <div className="relative isolate flex h-dvh overflow-hidden bg-bg text-ink">
+      {/* Atmosphere: two soft accent glows behind everything (decorative, ≤10% strength). */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-40 -left-32 size-[36rem] rounded-full bg-[radial-gradient(circle,color-mix(in_oklab,var(--accent)_10%,transparent),transparent_65%)]" />
+        <div className="absolute -right-40 -bottom-48 size-[40rem] rounded-full bg-[radial-gradient(circle,color-mix(in_oklab,var(--accent)_7%,transparent),transparent_65%)]" />
+      </div>
+      <Suspense fallback={<div className="hidden w-[5.25rem] shrink-0 md:block" />}>
         <AppDock />
       </Suspense>
       <div className="flex min-w-0 flex-1">{children}</div>

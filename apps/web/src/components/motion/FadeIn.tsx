@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { MOTION } from "@/lib/motion";
 
 /** A short fade and rise. Plays on mount by default, or once in view. */
@@ -20,8 +19,6 @@ export function FadeIn({
   y?: number;
   inView?: boolean;
 }) {
-  const reduce = useReducedMotion();
-  if (reduce) return <div className={className}>{children}</div>;
 
   const shown = { opacity: 1, y: 0 };
   return (

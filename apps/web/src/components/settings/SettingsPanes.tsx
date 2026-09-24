@@ -659,7 +659,7 @@ function AppearancePane() {
     <>
       <Section
         title="Theme"
-        footnote="Match system follows your device's light and dark setting, which is what most people want. Reduced motion, reduced transparency and text size always follow your device."
+        footnote="Match system follows your device's light and dark setting, which is what most people want. Reduced transparency and text size always follow your device."
       >
         <div className="px-5 py-5">
           <Segmented<ThemeChoice>

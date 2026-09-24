@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, At, GearSix, Lightbulb, ListChecks } from "@phosphor-icons/react";
+import { GearSix } from "@phosphor-icons/react";
 import { Logo } from "@/components/landing/Logo";
 import { useAccount } from "@/lib/account";
 import { Avatar } from "./primitives";
 import { NewChatDialog, type NewChatTab } from "./NewChatDialog";
+import { CatchUp } from "./CatchUp";
 import { loadChats, saveChats } from "@/lib/chat-store";
 import { ChatList } from "./ChatList";
 import { Thread } from "./Thread";
@@ -16,8 +17,6 @@ import { CommandPalette, type PaletteAction } from "./CommandPalette";
 import {
   PEOPLE,
   REPLIES,
-  displayName,
-  firstName,
   newId,
   type Attachment,
   type Chat,
@@ -319,7 +318,7 @@ export function ChatApp() {
     <div className="flex h-dvh min-w-0 flex-1">
       <aside
         className={[
-          "h-full w-full shrink-0 flex-col border-r border-line bg-surface/60 md:flex md:w-84",
+          "h-full w-full shrink-0 flex-col bg-surface/80 md:my-3 md:flex md:h-auto md:w-84 md:overflow-hidden md:rounded-[1.75rem] md:border md:border-line/70 md:shadow-soft",
           active ? "hidden" : "flex",
         ].join(" ")}
       >
@@ -354,7 +353,12 @@ export function ChatApp() {
         </div>
       </aside>
 
-      <main className={["min-w-0 flex-1", active ? "flex" : "hidden md:flex"].join(" ")}>
+      <main
+        className={[
+          "min-w-0 flex-1 md:m-3 md:overflow-hidden md:rounded-[1.75rem] md:border md:border-line/70 md:bg-surface/55 md:shadow-soft",
+          active ? "flex" : "hidden md:flex",
+        ].join(" ")}
+      >
         {active ? (
           <div className="min-w-0 flex-1">
             <Thread
@@ -373,7 +377,15 @@ export function ChatApp() {
             />
           </div>
         ) : (
-          <CatchUp chats={state.chats} loaded={state.loaded} onOpen={open} onNewChat={setNewChat} />
+          <CatchUp
+            chats={state.chats}
+            loaded={state.loaded}
+            name={(account?.profile.name ?? "there").split(" ")[0]}
+            onOpen={open}
+            onNewChat={setNewChat}
+            onDecision={(chatId, itemId, status) => dispatch({ type: "decision", id: chatId, itemId, status })}
+            onTask={(chatId, itemId, status) => dispatch({ type: "task", id: chatId, itemId, status })}
+          />
         )}
 
         {active && panel ? (
@@ -419,158 +431,5 @@ export function ChatApp() {
         onRun={runPalette}
       />
     </div>
-  );
-}
-
-/**
- * "While you were away": mentions, plans to confirm and things on your list
- * come first; everything links to the message behind it.
- */
-function CatchUp({
-  chats,
-  loaded,
-  onOpen,
-  onNewChat,
-}: {
-  chats: Chat[];
-  loaded: boolean;
-  onOpen: (chatId: string, messageId?: string) => void;
-  onNewChat: (tab: NewChatTab) => void;
-}) {
-  const data = useMemo(() => {
-    const mentions = chats
-      .filter((c) => c.mentions > 0)
-      .map((c) => {
-        const msg = [...c.messages].reverse().find((m) => m.from !== "me");
-        return { chat: c, msg };
-      });
-    const decisions = chats.flatMap((c) =>
-      c.decisions.filter((d) => d.status === "proposed").map((d) => ({ chat: c, d })),
-    );
-    const tasks = chats.flatMap((c) =>
-      c.tasks.filter((t) => t.assignee === "me" && t.status !== "done" && t.status !== "rejected").map((t) => ({ chat: c, t })),
-    );
-    const unread = chats.reduce((n, c) => n + (c.muted ? 0 : c.unread), 0);
-    return { mentions, decisions, tasks, unread };
-  }, [chats]);
-
-  if (!loaded) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-muted" role="status">
-        Syncing your chats
-      </div>
-    );
-  }
-
-  if (!chats.length) {
-    return (
-      <div className="flex min-w-0 flex-1 items-center justify-center px-6 py-10">
-        <div className="max-w-md text-center">
-          <p className="text-[12px] font-semibold text-muted">Welcome to Lynk</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight">Bring your people over.</h2>
-          <p className="mt-3 text-[15px] leading-relaxed text-muted">
-            Start a chat with someone on Lynk, make a group for the people you plan things with, or send your invite link.
-          </p>
-          <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <button type="button" onClick={() => onNewChat("chat")} className="inline-flex h-11 items-center rounded-full bg-accent px-5 font-medium text-on-accent">
-              Start a chat
-            </button>
-            <button type="button" onClick={() => onNewChat("group")} className="inline-flex h-11 items-center rounded-full border border-line bg-surface px-5 font-medium">
-              New group
-            </button>
-            <button type="button" onClick={() => onNewChat("invite")} className="inline-flex h-11 items-center rounded-full px-5 font-medium text-accent-ink hover:bg-accent-soft">
-              Show my QR code
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-w-0 flex-1 overflow-y-auto px-6 py-10 md:px-12">
-      <div className="mx-auto max-w-2xl">
-        <p className="text-[12px] font-semibold text-muted">
-          While you were away · {data.unread} unread
-        </p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight">Here&apos;s what you missed.</h2>
-
-        <Group title="You were mentioned" icon={<At size={16} weight="bold" />} empty="No new mentions.">
-          {data.mentions.map(({ chat, msg }) => (
-            <Row
-              key={chat.id}
-              onClick={() => onOpen(chat.id, msg?.id)}
-              title={msg ? `${firstName(msg.from)}: ${msg.text}` : displayName(chat)}
-              meta={displayName(chat)}
-            />
-          ))}
-        </Group>
-
-        <Group title="Plans to confirm" icon={<Lightbulb size={16} weight="fill" />} empty="No plans waiting.">
-          {data.decisions.map(({ chat, d }) => (
-            <Row key={d.id} onClick={() => onOpen(chat.id, d.sources.at(-1))} title={d.title} meta={`${displayName(chat)}, from ${d.sources.length} messages`} />
-          ))}
-        </Group>
-
-        <Group title="On your list" icon={<ListChecks size={16} weight="bold" />} empty="Nothing on your list.">
-          {data.tasks.map(({ chat, t }) => (
-            <Row
-              key={t.id}
-              onClick={() => onOpen(chat.id, t.sources[0])}
-              title={t.title}
-              meta={`${displayName(chat)}, ${t.due}${t.status === "proposed" ? ", not confirmed yet" : ""}`}
-            />
-          ))}
-        </Group>
-
-        <p className="mt-10 text-sm text-muted">
-          Press <kbd className="rounded-md border border-line px-1.5 text-[12px]">⌘K</kbd> to jump anywhere.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function Group({
-  title,
-  icon,
-  empty,
-  children,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  empty: string;
-  children: React.ReactNode[];
-}) {
-  return (
-    <section className="mt-8">
-      <h3 className="flex items-center gap-2 text-sm font-semibold">
-        <span className="text-accent-ink">{icon}</span>
-        {title}
-      </h3>
-      {children.length ? (
-        <ul className="mt-3 grid gap-2">{children}</ul>
-      ) : (
-        <p className="mt-2 text-sm text-muted">{empty}</p>
-      )}
-    </section>
-  );
-}
-
-function Row({ title, meta, onClick }: { title: string; meta: string; onClick: () => void }) {
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onClick}
-        className="group flex w-full items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3 text-left transition-colors hover:border-ink/30"
-      >
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium">{title}</span>
-          <span className="block truncate text-[13px] text-muted">{meta}</span>
-        </span>
-        <ArrowRight size={16} className="shrink-0 text-muted transition-transform group-hover:translate-x-0.5" aria-hidden />
-      </button>
-    </li>
   );
 }

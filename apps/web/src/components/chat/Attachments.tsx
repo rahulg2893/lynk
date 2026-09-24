@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { CaretLeft, CaretRight, DownloadSimple, FileText, X } from "@phosphor-icons/react";
 import { formatBytes, type Attachment } from "@/lib/chat";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { MOTION } from "@/lib/motion";
 
 /** Photos as a grid (one large, or tiles), files as cards with a download link. */
@@ -39,7 +38,7 @@ export function AttachmentList({
                   <img
                     src={p.url}
                     alt=""
-                    className={`w-full object-cover transition-transform duration-500 hover:scale-[1.03] ${photos.length === 1 ? "max-h-80" : "aspect-square"}`}
+                    className={`block w-full object-cover transition-transform duration-500 hover:scale-[1.03] ${photos.length === 1 ? "max-h-80" : "aspect-square"}`}
                   />
                 ) : (
                   <span className="flex aspect-square items-center justify-center px-3 text-center text-[12px] text-muted">
@@ -100,7 +99,6 @@ export function Lightbox({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const reduce = useReducedMotion();
   const open = index !== null;
   const photo = open ? photos[index] : null;
 
@@ -160,9 +158,9 @@ export function Lightbox({
                 key={photo.id}
                 src={photo.url}
                 alt={photo.name}
-                initial={reduce ? false : { opacity: 0, scale: 0.96 }}
+                initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={reduce ? undefined : { opacity: 0, scale: 0.98 }}
+                exit={{ opacity: 0, scale: 0.98 }}
                 transition={MOTION.item}
                 className="max-h-full max-w-full rounded-xl object-contain"
               />

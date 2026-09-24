@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowBendDownLeft,
   ChatCircleDots,
@@ -128,8 +129,6 @@ export function CommandPalette({
 
   const safeIndex = Math.min(index, Math.max(0, items.length - 1));
 
-  if (!open) return null;
-
   const run = (item: Item | undefined) => {
     if (!item || item.disabledReason || !item.action) return;
     onRun(item.action);
@@ -140,13 +139,26 @@ export function CommandPalette({
   let lastGroup = "";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/20 px-4 pt-[12vh] backdrop-blur-[2px]" onMouseDown={onClose}>
-      <div
+    <AnimatePresence>
+      {open ? (
+    <motion.div
+      key="palette"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.12 } }}
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 px-4 pt-[12vh] backdrop-blur-md"
+      onMouseDown={onClose}
+    >
+      <motion.div
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
         onMouseDown={(e) => e.stopPropagation()}
-        className="w-full max-w-xl overflow-hidden rounded-2xl border border-line bg-surface shadow-soft"
+        initial={{ opacity: 0, y: -24, scale: 0.94, filter: "blur(6px)" }}
+        animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+        exit={{ opacity: 0, y: -10, scale: 0.97, transition: { duration: 0.12 } }}
+        transition={{ type: "spring", stiffness: 420, damping: 30 }}
+        className="w-full max-w-xl overflow-hidden rounded-3xl border border-line bg-surface shadow-[0_30px_80px_-20px_rgb(0_0_0/0.45)]"
       >
         <div className="flex items-center gap-3 border-b border-line px-4">
           <MagnifyingGlass size={18} className="text-muted" aria-hidden />
@@ -197,7 +209,10 @@ export function CommandPalette({
                   {header ? (
                     <p className="px-3 pt-2 pb-1 text-[12px] font-semibold text-muted">{header}</p>
                   ) : null}
-                  <div
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 32, delay: Math.min(i, 10) * 0.018 }}
                     id={`pi-${item.id}`}
                     role="option"
                     aria-selected={i === safeIndex}
@@ -220,13 +235,15 @@ export function CommandPalette({
                     {i === safeIndex && !item.disabledReason ? (
                       <ArrowBendDownLeft size={15} className="text-muted" aria-hidden />
                     ) : null}
-                  </div>
+                  </motion.div>
                 </li>
               );
             })
           )}
         </ul>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }

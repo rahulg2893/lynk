@@ -7,7 +7,6 @@ import { ArrowRight, At, GitBranch, MagnifyingGlass, Sparkle } from "@phosphor-i
 import { Avatar } from "@/components/chat/primitives";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { DecisionPreview } from "./DecisionPreview";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 /**
  * Feature chapters in alternating rows: words on one side, a working piece
@@ -59,7 +58,6 @@ export function Chapters() {
 }
 
 function Chapter({ label, title, body, visual, flip = false }: { label: string; title: string; body: string; visual: ReactNode; flip?: boolean }) {
-  const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
   const y = useSpring(useTransform(scrollYProgress, [0, 1], [70, -70]), { stiffness: 80, damping: 20 });
@@ -76,7 +74,7 @@ function Chapter({ label, title, body, visual, flip = false }: { label: string; 
           <ArrowRight size={16} weight="bold" className="transition-transform group-hover:translate-x-1" aria-hidden />
         </Link>
       </FadeIn>
-      <motion.div style={reduce ? undefined : { y, rotate }} className={`relative ${flip ? "md:order-1" : ""}`}>
+      <motion.div style={{ y, rotate }} className={`relative ${flip ? "md:order-1" : ""}`}>
         <div aria-hidden className="absolute -inset-10 -z-10 rounded-[3rem] bg-[radial-gradient(50%_50%_at_50%_50%,color-mix(in_oklab,var(--accent)_18%,transparent),transparent_70%)]" />
         <Tilt>{visual}</Tilt>
       </motion.div>
@@ -86,15 +84,14 @@ function Chapter({ label, title, body, visual, flip = false }: { label: string; 
 
 /** Leans a card toward the pointer on a spring. */
 function Tilt({ children }: { children: ReactNode }) {
-  const reduce = useReducedMotion();
   const rx = useSpring(0, { stiffness: 150, damping: 15 });
   const ry = useSpring(0, { stiffness: 150, damping: 15 });
   return (
     <div className="[perspective:1200px]">
       <motion.div
-        style={reduce ? undefined : { rotateX: rx, rotateY: ry }}
+        style={{ rotateX: rx, rotateY: ry }}
         onPointerMove={(e) => {
-          if (reduce || e.pointerType !== "mouse") return;
+          if (e.pointerType !== "mouse") return;
           const r = e.currentTarget.getBoundingClientRect();
           ry.set(((e.clientX - r.left) / r.width - 0.5) * 10);
           rx.set(-((e.clientY - r.top) / r.height - 0.5) * 10);
@@ -112,7 +109,6 @@ function Tilt({ children }: { children: ReactNode }) {
 
 /** A mention that lights up, and side chats that branch off as you scroll. */
 function GroupsVisual() {
-  const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start 85%", "center 45%"] });
   const draw = useSpring(scrollYProgress, { stiffness: 90, damping: 22 });
@@ -138,13 +134,13 @@ function GroupsVisual() {
       </div>
       <div className="relative mt-6 pl-5">
         <svg aria-hidden className="absolute top-0 left-0 h-full w-5 overflow-visible" viewBox="0 0 20 100" preserveAspectRatio="none">
-          <motion.path d="M2 0 V100" fill="none" stroke="var(--accent)" strokeWidth="2" style={{ pathLength: reduce ? 1 : draw }} vectorEffect="non-scaling-stroke" />
+          <motion.path d="M2 0 V100" fill="none" stroke="var(--accent)" strokeWidth="2" style={{ pathLength: draw }} vectorEffect="non-scaling-stroke" />
         </svg>
         <ul className="grid gap-2.5">
           {branches.map((b, i) => (
             <motion.li
               key={b.name}
-              initial={reduce ? false : { opacity: 0, x: -16 }}
+              initial={{ opacity: 0, x: -16 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: "0px 0px -20% 0px" }}
               transition={{ type: "spring", stiffness: 260, damping: 22, delay: 0.15 + i * 0.12 }}
@@ -167,18 +163,17 @@ const QUESTION = "Where did Mei say that ramen place was?";
 
 /** The question types itself when it scrolls into view, then the answer arrives with its source. */
 function SearchVisual() {
-  const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "0px 0px -25% 0px" });
   const [typed, setTyped] = useState(0);
-  const count = reduce ? QUESTION.length : typed;
+  const count = typed;
   const done = count >= QUESTION.length;
 
   useEffect(() => {
-    if (reduce || !inView || typed >= QUESTION.length) return;
+    if (!inView || typed >= QUESTION.length) return;
     const t = window.setTimeout(() => setTyped((n) => n + 1), 32);
     return () => window.clearTimeout(t);
-  }, [inView, typed, reduce]);
+  }, [inView, typed]);
 
   return (
     <div ref={ref} className="stage-dark rounded-3xl p-6 shadow-soft md:p-8">
@@ -211,7 +206,6 @@ function SearchVisual() {
 
 /** Three memory cards that fan out as the section passes. */
 function MemoriesVisual() {
-  const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start 90%", "center 50%"] });
   const spread = useSpring(scrollYProgress, { stiffness: 70, damping: 18 });
@@ -223,7 +217,7 @@ function MemoriesVisual() {
   return (
     <div ref={ref} className="relative mx-auto h-[23rem] max-w-md">
       {cards.map((c, i) => (
-        <MemoryCard key={c.value} card={c} i={i} spread={spread} reduce={reduce} />
+        <MemoryCard key={c.value} card={c} i={i} spread={spread} />
       ))}
     </div>
   );
@@ -233,12 +227,10 @@ function MemoryCard({
   card,
   i,
   spread,
-  reduce,
 }: {
   card: { who: string; name: string; kind: string; value: string; from: string };
   i: number;
   spread: ReturnType<typeof useSpring>;
-  reduce: boolean;
 }) {
   const offset = i - 1;
   const rotate = useTransform(spread, [0, 1], [0, offset * 7]);
@@ -246,8 +238,8 @@ function MemoryCard({
   const y = useTransform(spread, [0, 1], [i * 10, i * 118]);
   return (
     <motion.div
-      style={reduce ? { top: i * 118 } : { rotate, x, y }}
-      drag={!reduce}
+      style={{ rotate, x, y }}
+      drag
       dragSnapToOrigin
       dragElastic={0.5}
       whileDrag={{ scale: 1.05, zIndex: 20 }}

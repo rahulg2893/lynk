@@ -2,7 +2,6 @@
 
 import { Prohibit, UsersThree } from "@phosphor-icons/react";
 import { motion } from "motion/react";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 import Image from "next/image";
 import { initials, PEOPLE, toneFor, type Chat, type Status } from "@/lib/chat";
 
@@ -51,7 +50,7 @@ export function Avatar({
           height={size * 2}
           // Uploaded photos are data URLs, which the optimiser can't fetch.
           unoptimized={photo.startsWith("data:")}
-          className="size-full object-cover"
+          className="block size-full object-cover"
           style={{ borderRadius: size * 0.32 }}
         />
       ) : (
@@ -104,7 +103,6 @@ const STATUS_LABEL: Record<Status, string> = {
  * delivered, and an accent diamond once read.
  */
 export function StatusNode({ status, className = "" }: { status: Status; className?: string }) {
-  const reduce = useReducedMotion();
   const look = {
     sending: "border border-dashed border-muted bg-bg",
     sent: "border border-ink/60 bg-bg",
@@ -117,21 +115,20 @@ export function StatusNode({ status, className = "" }: { status: Status; classNa
       aria-label={STATUS_LABEL[status]}
       title={STATUS_LABEL[status]}
       animate={{ rotate: status === "read" ? 45 : 0 }}
-      transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 190, damping: 18 }}
+      transition={{ type: "spring", stiffness: 190, damping: 18 }}
       className={`inline-block size-2.5 rounded-xs ${look} ${className}`}
     />
   );
 }
 
 export function TypingDots({ className = "" }: { className?: string }) {
-  const reduce = useReducedMotion();
   return (
     <span className={`inline-flex items-center gap-1 ${className}`} role="status" aria-label="Typing">
       {[0, 1, 2].map((i) => (
         <motion.span
           key={i}
           className="size-1.5 rounded-xs bg-current"
-          animate={reduce ? undefined : { opacity: [0.3, 1, 0.3], y: [0, -2, 0] }}
+          animate={{ opacity: [0.3, 1, 0.3], y: [0, -2, 0] }}
           transition={{ duration: 1, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
         />
       ))}

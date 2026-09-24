@@ -4,7 +4,6 @@ import { useRef, useState } from "react";
 import { AnimatePresence, motion, useInView } from "motion/react";
 import { Check, Sparkle, X } from "@phosphor-icons/react";
 import { Avatar } from "@/components/chat/primitives";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { MOTION } from "@/lib/motion";
 
 const LINES = [
@@ -22,10 +21,9 @@ type State = "proposed" | "confirmed" | "dismissed";
  */
 export function DecisionPreview() {
   const [state, setState] = useState<State>("proposed");
-  const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   // Plays once: the conversation arrives, then the plan is spotted.
-  const play = useInView(ref, { once: true, margin: "0px 0px -10% 0px" }) || reduce;
+  const play = useInView(ref, { once: true, margin: "0px 0px -10% 0px" });
 
   return (
     <div ref={ref} className="w-full overflow-hidden rounded-3xl border border-line bg-surface shadow-soft">
@@ -42,7 +40,7 @@ export function DecisionPreview() {
           {LINES.map((line, i) => (
             <motion.li
               key={i}
-              initial={reduce ? false : { opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={play ? { opacity: 1, y: 0 } : undefined}
               transition={{ ...MOTION.item, delay: 0.3 + i * 0.45 }}
               className="relative grid grid-cols-[32px_1fr] gap-3"
@@ -61,7 +59,7 @@ export function DecisionPreview() {
 
       <motion.div
         className="p-3"
-        initial={reduce ? false : { opacity: 0, y: 18 }}
+        initial={{ opacity: 0, y: 18 }}
         animate={play ? { opacity: 1, y: 0 } : undefined}
         transition={{ ...MOTION.item, delay: 0.3 + LINES.length * 0.45 + 0.2 }}
       >
@@ -69,7 +67,7 @@ export function DecisionPreview() {
           {state === "dismissed" ? (
             <motion.div
               key="dismissed"
-              initial={reduce ? false : { opacity: 0 }}
+              initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="flex items-center justify-between rounded-2xl bg-surface-2 px-4 py-3 text-sm text-muted"
@@ -82,8 +80,8 @@ export function DecisionPreview() {
           ) : (
             <motion.div
               key="card"
-              layout={!reduce}
-              initial={reduce ? false : { opacity: 0, y: 8 }}
+              layout
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={MOTION.item}

@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { Logo } from "./Logo";
 
 const LINKS = [
@@ -18,7 +17,6 @@ const LINKS = [
  * z-50 is the page's top layer.
  */
 export function Nav() {
-  const reduce = useReducedMotion();
   const { scrollY } = useScroll();
   const [hidden, setHidden] = useState(false);
   const [compact, setCompact] = useState(false);
@@ -33,7 +31,7 @@ export function Nav() {
   return (
     <motion.header
       className="fixed inset-x-0 top-0 z-50 px-4 pt-3 md:px-6"
-      animate={{ y: hidden && !reduce ? "-120%" : "0%" }}
+      animate={{ y: hidden ? "-120%" : "0%" }}
       transition={{ type: "spring", stiffness: 380, damping: 36 }}
     >
       <motion.nav

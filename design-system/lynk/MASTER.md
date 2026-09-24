@@ -57,6 +57,8 @@ backgrounds, or put the accent on decorative elements.
 - Avatars: rounded squares (32% of size) with a graphite gradient and white initials
   (4.5:1 or better).
 - Shadows: one soft shadow token (`shadow-soft`), used only on raised items.
+- App atmosphere: two soft accent glows behind the app (≤10% strength) and a pointer
+  glow behind conversations. Decorative only; never behind text at more than 10%.
 - Glass: the fixed nav only (`.glass`), with a solid fallback under
   `prefers-reduced-transparency`. Never in content.
 
@@ -70,10 +72,11 @@ backgrounds, or put the accent on decorative elements.
   fade up once in view.
 - App: messages slide in, panels and tabs animate position, status markers rotate
   when read.
-- `prefers-reduced-motion`: everything renders in its final state; the pinned story
-  becomes a static list.
-- Never: scroll listeners on `window`, infinite decorative loops, parallax without a
-  reason.
+- Reduced motion: by product decision (Sep 2026), the full motion plays for everyone;
+  the OS "Reduce motion" setting is not honoured. Revisit before launch (WCAG 2.3.3).
+- Physics: springs everywhere (pointer glows, magnetic buttons, draggable elements that
+  snap home, a magnifying dock, message launch, reaction bursts).
+- Never: infinite decorative loops, or motion that blocks reading.
 
 ## Accessibility floor
 

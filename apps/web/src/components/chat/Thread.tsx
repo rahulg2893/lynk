@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useAnimate, useMotionTemplate, useMotionValue, useSpring } from "motion/react";
 import {
   ArrowLeft,
   ArrowUUpLeft,
@@ -17,7 +17,6 @@ import {
   VideoCamera,
   X,
 } from "@phosphor-icons/react";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { Avatar, ChatAvatar, MessageBody, StatusNode, TypingDots } from "./primitives";
 import { AttachmentList, Lightbox } from "./Attachments";
 import { Button } from "@/components/ui/controls";
@@ -73,7 +72,6 @@ export function Thread({
   /** A message to scroll to and flash, e.g. from a decision's sources. */
   highlightId?: string | null;
 }) {
-  const reduce = useReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -89,6 +87,24 @@ export function Thread({
   const [toDelete, setToDelete] = useState<Message | null>(null);
   const [mention, setMention] = useState<{ query: string; start: number } | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
+  const [bursts, setBursts] = useState<{ key: number; messageId: string; emoji: string }[]>([]);
+  // Messages present when the chat opened settle in quietly; new ones get their own entrance.
+  const [initialIds] = useState(() => new Set(chat.messages.map((m) => m.id)));
+  const [plane, animatePlane] = useAnimate();
+  // A glow that follows the pointer behind the conversation.
+  const gx = useSpring(useMotionValue(50), { stiffness: 50, damping: 20 });
+  const gy = useSpring(useMotionValue(40), { stiffness: 50, damping: 20 });
+  const glow = useMotionTemplate`radial-gradient(520px circle at ${gx}% ${gy}%, color-mix(in oklab, var(--accent) 9%, transparent), transparent 70%)`;
+
+  const react = (messageId: string, emoji: string, burst: boolean) => {
+    onReact(messageId, emoji);
+    if (burst) setBursts((b) => [...b, { key: Date.now() + Math.random(), messageId, emoji }]);
+  };
+
+  const launchPlane = () => {
+    if (!plane.current) return;
+    void animatePlane(plane.current, { x: [0, 26, 0], y: [0, -22, 0], rotate: [0, -18, 0], scale: [1, 0.6, 1], opacity: [1, 0, 1] }, { duration: 0.55, times: [0, 0.5, 1], ease: "easeOut" });
+  };
 
   const names = useMemo(() => [...mentionables(chat).map((m) => m.name), me], [chat, me]);
   const mentionOptions = useMemo(() => {
@@ -123,8 +139,8 @@ export function Thread({
 
   useEffect(() => {
     if (!highlightId) return;
-    document.getElementById(`msg-${highlightId}`)?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
-  }, [highlightId, reduce]);
+    document.getElementById(`msg-${highlightId}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [highlightId]);
 
   const addFiles = async (files: File[]) => {
     if (!files.length) return;
@@ -158,6 +174,7 @@ export function Thread({
     const text = chat.draft.trim();
     if (!text && !pending.length) return;
     onSend(text, replyTo?.id, pending.length ? pending : undefined);
+    launchPlane();
     setReplyTo(null);
     setPending([]);
     setProblems([]);
@@ -194,7 +211,13 @@ export function Thread({
 
   return (
     <div
-      className="relative flex h-full min-h-0 flex-col"
+      className="relative isolate flex h-full min-h-0 flex-col"
+      onPointerMove={(e) => {
+        if (e.pointerType !== "mouse") return;
+        const r = e.currentTarget.getBoundingClientRect();
+        gx.set(((e.clientX - r.left) / r.width) * 100);
+        gy.set(((e.clientY - r.top) / r.height) * 100);
+      }}
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes("Files") || editing) return;
         e.preventDefault();
@@ -211,7 +234,8 @@ export function Thread({
         void addFiles(Array.from(e.dataTransfer.files));
       }}
     >
-      <header className="flex items-center gap-3 border-b border-line px-3 py-3 md:px-6">
+      <motion.div aria-hidden className="pointer-events-none absolute inset-0 -z-10" style={{ background: glow }} />
+      <header className="relative z-10 flex items-center gap-3 border-b border-line/70 px-3 py-3 md:px-6">
         <button
           type="button"
           onClick={onBack}
@@ -286,7 +310,7 @@ export function Thread({
               <Fragment key={message.id}>
                 {newDay ? (
                   <div className="relative grid grid-cols-[40px_1fr] items-center gap-3 py-4">
-                    <span className="flex justify-center">
+                    <span className="flex items-start justify-center">
                       <span className="size-1.5 rounded-xs bg-muted" aria-hidden />
                     </span>
                     <p className="text-[12px] font-semibold text-muted">{formatDayLabel(message.at, now)}</p>
@@ -295,10 +319,17 @@ export function Thread({
 
                 <motion.div
                   id={`msg-${message.id}`}
-                  layout={reduce ? false : "position"}
-                  initial={reduce ? false : { opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={MOTION.item}
+                  layout={"position"}
+                  initial={
+                    initialIds.has(message.id)
+                        ? { opacity: 0, y: 10 }
+                        : mine
+                          ? { opacity: 0, y: 90, x: 60, scale: 0.7, rotate: -3 }
+                          : { opacity: 0, x: -24, scale: 0.92 }
+                  }
+                  animate={{ opacity: 1, y: 0, x: 0, scale: 1, rotate: 0 }}
+                  transition={initialIds.has(message.id) ? MOTION.item : { type: "spring", stiffness: 260, damping: 20, mass: 0.8 }}
+                  style={{ transformOrigin: mine ? "left bottom" : "left center" }}
                   onClick={(e) => {
                     if (!window.matchMedia("(hover: none)").matches) return;
                     if ((e.target as HTMLElement).closest("button,a")) return;
@@ -306,11 +337,11 @@ export function Thread({
                   }}
                   className={`group relative grid scroll-mt-24 grid-cols-[40px_1fr] gap-3 rounded-2xl transition-colors duration-700 ${startsRun ? "pt-3" : "pt-1"} ${endsRun ? "pb-1" : ""} ${highlightId === message.id || editing?.id === message.id ? "bg-accent-soft/60" : ""}`}
                 >
-                  <div className="flex justify-center">
+                  <div className="flex items-start justify-center">
                     {mine ? (
                       <StatusNode status={message.status ?? "read"} className={startsRun ? "mt-8" : "mt-3"} />
                     ) : startsRun ? (
-                      <span className="rounded-[11px] bg-bg p-0.5">
+                      <span className="inline-flex rounded-[11px] bg-bg p-0.5">
                         <Avatar id={message.from} name={personName(message.from)} size={32} />
                       </span>
                     ) : null}
@@ -352,7 +383,7 @@ export function Thread({
                           <button
                             key={r.emoji}
                             type="button"
-                            onClick={() => onReact(message.id, r.emoji)}
+                            onClick={() => react(message.id, r.emoji, !r.mine)}
                             className={[
                               "inline-flex h-7 items-center gap-1 rounded-full border px-2 text-xs tabular-nums",
                               r.mine ? "border-accent/60 bg-accent-soft" : "border-line bg-surface",
@@ -369,7 +400,7 @@ export function Thread({
                       <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-muted">
                         <span className="flex -space-x-1.5" aria-hidden>
                           {seenBy.slice(0, 3).map((id) => (
-                            <span key={id} className="rounded-[7px] ring-2 ring-bg">
+                            <span key={id} className="inline-flex rounded-[7px] ring-2 ring-bg">
                               <Avatar id={id} name={personName(id)} size={16} />
                             </span>
                           ))}
@@ -381,24 +412,34 @@ export function Thread({
                     ) : null}
                   </div>
 
+                  {bursts
+                    .filter((b) => b.messageId === message.id)
+                    .map((b) => (
+                      <Burst key={b.key} emoji={b.emoji} onDone={() => setBursts((all) => all.filter((x) => x.key !== b.key))} />
+                    ))}
+
                   {/* Hover and keyboard actions */}
                   {message.deleted ? null : (
                     <div
-                      className={`absolute top-1 right-0 flex items-center gap-0.5 rounded-full border border-line bg-surface p-0.5 shadow-soft transition-opacity group-hover:opacity-100 focus-within:opacity-100 ${activeId === message.id ? "opacity-100" : "pointer-events-none opacity-0 [@media(hover:hover)]:pointer-events-auto"}`}
+                      className={`absolute top-1 right-0 z-10 flex origin-right items-center gap-0.5 rounded-full border border-line bg-surface p-0.5 shadow-soft transition-[opacity,transform] duration-300 ease-[cubic-bezier(.34,1.56,.64,1)] group-hover:scale-100 group-hover:opacity-100 focus-within:scale-100 focus-within:opacity-100 ${activeId === message.id ? "scale-100 opacity-100" : "pointer-events-none scale-75 opacity-0 [@media(hover:hover)]:pointer-events-auto"}`}
                     >
                       {QUICK_REACTIONS.map((emoji) => (
-                        <button
+                        <motion.button
                           key={emoji}
                           type="button"
+                          whileHover={{ scale: 1.35, y: -3 }}
+                          whileTap={{ scale: 0.85 }}
+                          transition={{ type: "spring", stiffness: 600, damping: 15 }}
                           onClick={() => {
-                            onReact(message.id, emoji);
+                            const adding = !message.reactions?.some((r) => r.emoji === emoji && r.mine);
+                            react(message.id, emoji, adding);
                             setActiveId(null);
                           }}
                           className="inline-flex size-8 items-center justify-center rounded-full text-sm hover:bg-surface-2"
                           aria-label={`React with ${emoji}`}
                         >
                           {emoji}
-                        </button>
+                        </motion.button>
                       ))}
                       <button
                         type="button"
@@ -447,14 +488,14 @@ export function Thread({
             {chat.typing ? (
               <motion.div
                 key="typing"
-                initial={reduce ? false : { opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={MOTION.item}
                 className="relative grid grid-cols-[40px_1fr] items-center gap-3 pt-3"
               >
-                <span className="flex justify-center">
-                  <span className="rounded-[11px] bg-bg p-0.5">
+                <span className="flex items-start justify-center">
+                  <span className="inline-flex rounded-[11px] bg-bg p-0.5">
                     <Avatar id={chat.typing} name={personName(chat.typing)} size={32} />
                   </span>
                 </span>
@@ -499,7 +540,7 @@ export function Thread({
                 id="mention-list"
                 role="listbox"
                 aria-label="Mention someone"
-                initial={reduce ? false : { opacity: 0, y: 6 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 6 }}
                 transition={MOTION.item}
@@ -560,7 +601,7 @@ export function Thread({
                   <li key={a.id} className="relative shrink-0">
                     {a.kind === "image" && a.url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={a.url} alt={a.name} className="size-16 rounded-xl object-cover" />
+                      <img src={a.url} alt={a.name} className="block size-16 rounded-xl object-cover" />
                     ) : (
                       <span className="flex h-16 w-40 items-center gap-2 rounded-xl bg-surface-2 px-2.5">
                         <FileText size={20} className="shrink-0 text-accent-ink" aria-hidden />
@@ -677,10 +718,12 @@ export function Thread({
               <button
                 type="submit"
                 disabled={!canSend}
-                className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-accent text-on-accent transition-[transform,background-color] active:scale-95 disabled:bg-surface-2 disabled:text-muted"
+                className="inline-flex size-10 shrink-0 items-center justify-center overflow-visible rounded-2xl bg-accent text-on-accent shadow-[0_6px_18px_-6px_color-mix(in_oklab,var(--accent)_80%,transparent)] transition-[transform,background-color,box-shadow] active:scale-90 disabled:bg-surface-2 disabled:text-muted disabled:shadow-none"
                 aria-label={editing ? "Save edit" : "Send message"}
               >
-                <PaperPlaneTilt size={18} weight="fill" />
+                <span ref={plane} className="inline-flex">
+                  <PaperPlaneTilt size={18} weight="fill" />
+                </span>
               </button>
             </div>
           </div>
@@ -722,5 +765,38 @@ export function Thread({
         </div>
       </Dialog>
     </div>
+  );
+}
+
+/**
+ * A little burst of the chosen emoji: a dozen copies fly out on random
+ * arcs, spin, shrink and fade. Purely decorative.
+ */
+function Burst({ emoji, onDone }: { emoji: string; onDone: () => void }) {
+  const [parts] = useState(() =>
+    Array.from({ length: 12 }, (_, i) => {
+      const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.5;
+      const dist = 40 + Math.random() * 50;
+      return { x: Math.cos(angle) * dist, y: Math.sin(angle) * dist - 30, r: (Math.random() - 0.5) * 120, s: 0.6 + Math.random() * 0.7 };
+    }),
+  );
+  useEffect(() => {
+    const t = window.setTimeout(onDone, 900);
+    return () => window.clearTimeout(t);
+  }, [onDone]);
+  return (
+    <span aria-hidden className="pointer-events-none absolute top-4 right-24 z-20">
+      {parts.map((p, i) => (
+        <motion.span
+          key={i}
+          className="absolute text-lg"
+          initial={{ x: 0, y: 0, scale: 0.2, opacity: 1, rotate: 0 }}
+          animate={{ x: p.x, y: [0, p.y, p.y + 40], scale: p.s, opacity: [1, 1, 0], rotate: p.r }}
+          transition={{ duration: 0.85, ease: [0.2, 0.8, 0.3, 1], times: [0, 0.6, 1] }}
+        >
+          {emoji}
+        </motion.span>
+      ))}
+    </span>
   );
 }

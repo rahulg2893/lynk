@@ -12,7 +12,6 @@ import { UsernameStatus, usernameError } from "@/components/account/UsernameStat
 import { OrDivider, ProviderButtons } from "./ProviderButtons";
 import { createAccount, updateAccount, useAccount, type SignInMethod } from "@/lib/account";
 import { useUsername } from "@/lib/use-username";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { MOTION } from "@/lib/motion";
 
 type Step = 1 | 2 | 3;
@@ -25,7 +24,6 @@ type Step = 1 | 2 | 3;
 export function SignUpFlow({ next }: { next: string }) {
   const router = useRouter();
   const account = useAccount();
-  const reduce = useReducedMotion();
   const [step, setStep] = useState<Step>(1);
   const [name, setName] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
@@ -61,9 +59,9 @@ export function SignUpFlow({ next }: { next: string }) {
   const inviteLink = typeof window !== "undefined" ? `${window.location.origin}/invite/${username.trim()}` : "";
 
   const variants = {
-    enter: { opacity: 0, x: reduce ? 0 : 24 },
+    enter: { opacity: 0, x: 24 },
     center: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: reduce ? 0 : -24 },
+    exit: { opacity: 0, x: -24 },
   };
 
   return (
@@ -96,7 +94,7 @@ export function SignUpFlow({ next }: { next: string }) {
           initial="enter"
           animate="center"
           exit="exit"
-          transition={reduce ? { duration: 0 } : { ...MOTION.item, opacity: { duration: 0.15 } }}
+          transition={{ ...MOTION.item, opacity: { duration: 0.15 } }}
         >
           {step === 1 ? (
             <form

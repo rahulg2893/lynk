@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { BellSlash, Command, MagnifyingGlass, NotePencil, PushPin, X } from "@phosphor-icons/react";
 import { ChatAvatar, StatusNode } from "./primitives";
 import { firstName, formatListTime, type Chat } from "@/lib/chat";
@@ -147,10 +148,14 @@ export function ChatList({
             </p>
           </div>
         ) : (
-          <>
-            <Section title="Pinned" chats={pinned} activeId={activeId} now={now} onSelect={onSelect} />
-            <Section title="Recent" chats={recent} activeId={activeId} now={now} onSelect={onSelect} />
-          </>
+          <LayoutGroup>
+            {filter === "all" && !query ? (
+              <PinnedStrip chats={pinned} activeId={activeId} onSelect={onSelect} />
+            ) : (
+              <Section title="Pinned" chats={pinned} activeId={activeId} now={now} onSelect={onSelect} />
+            )}
+            <Section title={filter === "all" && !query ? "All chats" : "Recent"} chats={recent} activeId={activeId} now={now} onSelect={onSelect} />
+          </LayoutGroup>
         )}
       </div>
     </div>
@@ -170,15 +175,23 @@ function Section({
   now: number;
   onSelect: (id: string) => void;
 }) {
+  const [hovered, setHovered] = useState<string | null>(null);
   if (!chats.length) return null;
   return (
     <section aria-label={title} className="mb-3">
-      <h2 className="px-3 pt-2 pb-1.5 text-[12px] font-semibold text-muted">
-        {title}
-      </h2>
-      <ul className="flex flex-col gap-0.5">
+      <h2 className="px-3 pt-2 pb-1.5 text-[12px] font-semibold text-muted">{title}</h2>
+      <ul className="flex flex-col gap-0.5" onPointerLeave={() => setHovered(null)}>
         {chats.map((chat) => (
-          <li key={chat.id}>
+          <li key={chat.id} className="relative" onPointerEnter={() => setHovered(chat.id)}>
+            {/* A highlight that glides from row to row with the pointer. */}
+            {hovered === chat.id && chat.id !== activeId ? (
+              <motion.span
+                layoutId={`spot-${title}`}
+                className="absolute inset-0 rounded-2xl bg-surface-2/70"
+                transition={{ type: "spring", stiffness: 500, damping: 38 }}
+                aria-hidden
+              />
+            ) : null}
             <Row chat={chat} active={chat.id === activeId} now={now} onSelect={onSelect} />
           </li>
         ))}
@@ -209,8 +222,8 @@ function Row({
       onClick={() => onSelect(chat.id)}
       aria-current={active ? "true" : undefined}
       className={[
-        "flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-colors",
-        active ? "border-line bg-surface shadow-soft" : "border-transparent hover:bg-surface-2/60",
+        "relative flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-colors",
+        active ? "border-line bg-surface shadow-soft" : "border-transparent [@media(hover:none)]:active:bg-surface-2/60",
       ].join(" ")}
     >
       <ChatAvatar chat={chat} size={40} />
@@ -251,7 +264,11 @@ function Row({
               </span>
             ) : null}
             {chat.unread ? (
-              <span
+              <motion.span
+                key={chat.unread}
+                initial={{ scale: 0.3 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 600, damping: 14 }}
                 className={[
                   "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[12px] font-semibold tabular-nums",
                   chat.muted ? "bg-surface-2 text-muted" : "bg-accent text-on-accent",
@@ -259,7 +276,7 @@ function Row({
                 aria-label={`${chat.unread} unread`}
               >
                 {chat.unread}
-              </span>
+              </motion.span>
             ) : null}
           </span>
         </span>
@@ -289,4 +306,66 @@ function attachmentSummary(items: { kind: string; name: string }[]) {
   const photos = items.filter((a) => a.kind === "image").length;
   if (photos) return photos === 1 ? "Photo" : `${photos} photos`;
   return items[0]?.name ?? "File";
+}
+
+/**
+ * Pinned chats as a row of large avatars, like favourites on a phone. Unread
+ * ones wear an accent ring; the open one lifts. Scrolls sideways if needed.
+ */
+function PinnedStrip({ chats, activeId, onSelect }: { chats: Chat[]; activeId: string | null; onSelect: (id: string) => void }) {
+  if (!chats.length) return null;
+  return (
+    <section aria-label="Pinned" className="mb-2">
+      <h2 className="px-3 pt-2 pb-2 text-[12px] font-semibold text-muted">Pinned</h2>
+      <ul className="no-scrollbar flex gap-1 overflow-x-auto px-1 pb-2">
+        <AnimatePresence initial={false}>
+          {chats.map((chat, i) => {
+            const hot = chat.unread > 0 && !chat.muted;
+            const active = chat.id === activeId;
+            return (
+              <motion.li
+                key={chat.id}
+                layout
+                initial={{ opacity: 0, scale: 0.8, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ type: "spring", stiffness: 420, damping: 26, delay: i * 0.04 }}
+                className="shrink-0"
+              >
+                <motion.button
+                  type="button"
+                  onClick={() => onSelect(chat.id)}
+                  aria-current={active ? "true" : undefined}
+                  aria-label={`${chat.name}${chat.unread ? `, ${chat.unread} unread` : ""}`}
+                  whileHover={{ y: -3 }}
+                  whileTap={{ scale: 0.94 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                  className={`flex w-[4.75rem] flex-col items-center gap-1.5 rounded-2xl px-1 py-2 ${active ? "bg-surface shadow-soft" : ""}`}
+                >
+                  <span className={`relative inline-flex rounded-[20px] p-[3px] ${hot ? "bg-linear-to-br from-accent to-[#6aa8ff]" : ""}`}>
+                    <span className="flex rounded-[17px] bg-surface p-[2px]">
+                      <ChatAvatar chat={chat} size={50} />
+                    </span>
+                    {chat.unread ? (
+                      <motion.span
+                        key={chat.unread}
+                        initial={{ scale: 0.3 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 600, damping: 14 }}
+                        className={`absolute -top-1 -right-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums ring-2 ring-surface ${chat.muted ? "bg-surface-2 text-muted" : "bg-accent text-on-accent"}`}
+                        aria-hidden
+                      >
+                        {chat.unread}
+                      </motion.span>
+                    ) : null}
+                  </span>
+                  <span className={`w-full truncate text-center text-[12px] ${hot ? "font-semibold" : "text-muted"}`}>{chat.name.split(" ")[0]}</span>
+                </motion.button>
+              </motion.li>
+            );
+          })}
+        </AnimatePresence>
+      </ul>
+    </section>
+  );
 }

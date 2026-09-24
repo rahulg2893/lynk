@@ -5,7 +5,6 @@ import Link from "next/link";
 import { motion, useScroll, useSpring, useTransform } from "motion/react";
 import { ArrowRight } from "@phosphor-icons/react";
 import { Magnetic } from "@/components/motion/physics";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 /**
  * The closing moment: the two rings from the logo drift in from either side
@@ -14,7 +13,6 @@ import { useReducedMotion } from "@/lib/use-reduced-motion";
  * is exactly the mark, blue over silver at the top crossing.
  */
 export function LinkUp() {
-  const reduce = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "center 55%"] });
   const p = useSpring(scrollYProgress, { stiffness: 60, damping: 16, mass: 1.2 });
@@ -29,7 +27,7 @@ export function LinkUp() {
     <section ref={ref} className="stage-dark relative isolate overflow-hidden px-5 py-28 md:px-8 md:py-40">
       <motion.div
         aria-hidden
-        style={{ opacity: reduce ? 1 : glow }}
+        style={{ opacity: glow }}
         className="absolute inset-0 -z-10 bg-[radial-gradient(45%_50%_at_50%_42%,rgb(47_123_255/0.35),transparent_70%)]"
       />
       <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
@@ -47,10 +45,10 @@ export function LinkUp() {
               <rect x="19" y="0" width="15" height="16" />
             </clipPath>
           </defs>
-          <motion.g style={reduce ? undefined : { x: ax, rotate: spin, originX: "16px", originY: "15px" }}>
+          <motion.g style={{ x: ax, rotate: spin, originX: "16px", originY: "15px" }}>
             <circle cx="16" cy="15" r="10" fill="none" stroke="url(#lu-a)" strokeWidth="5" />
           </motion.g>
-          <motion.g style={reduce ? undefined : { x: bx, rotate: spinB, originX: "29px", originY: "19px" }}>
+          <motion.g style={{ x: bx, rotate: spinB, originX: "29px", originY: "19px" }}>
             <circle cx="29" cy="19" r="10" fill="none" stroke="url(#lu-b)" strokeWidth="5" />
           </motion.g>
           {/* Once they meet, the blue ring passes over the silver one at the top. */}
@@ -62,7 +60,7 @@ export function LinkUp() {
             stroke="url(#lu-a)"
             strokeWidth="5"
             clipPath="url(#lu-over)"
-            style={{ opacity: reduce ? 1 : linked }}
+            style={{ opacity: linked }}
           />
         </svg>
 

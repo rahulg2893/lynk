@@ -190,7 +190,7 @@ body {
   color: #f5f5f7;
 }
 
-/* Dialogs rise slightly as they open; reduced motion collapses it below. */
+/* Dialogs rise slightly as they open. */
 @keyframes dialog-in {
   from {
     opacity: 0;
@@ -203,13 +203,4 @@ body {
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-  }
 }

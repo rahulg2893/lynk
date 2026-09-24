@@ -2,7 +2,6 @@
 
 import { useRef, type ReactNode } from "react";
 import { motion, useMotionValue, useSpring, type SpringOptions } from "motion/react";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 /** Soft, weighty springs for pointer-driven motion. */
 export const SPRING_SOFT: SpringOptions = { stiffness: 150, damping: 15, mass: 0.6 };
@@ -13,12 +12,9 @@ export const SPRING_LAZY: SpringOptions = { stiffness: 60, damping: 20, mass: 1 
  * Used on primary buttons so they feel physical, not flat.
  */
 export function Magnetic({ children, strength = 0.35, className = "" }: { children: ReactNode; strength?: number; className?: string }) {
-  const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const x = useSpring(useMotionValue(0), SPRING_SOFT);
   const y = useSpring(useMotionValue(0), SPRING_SOFT);
-
-  if (reduce) return <div className={className}>{children}</div>;
 
   return (
     <motion.div
@@ -60,9 +56,7 @@ export function SplitWords({
   /** Per-word classes, e.g. gradient text (background-clip can't span transformed words). */
   wordClassName?: string;
 }) {
-  const reduce = useReducedMotion();
   const words = text.split(" ");
-  if (reduce) return <span className={`${className} ${wordClassName}`}>{text}</span>;
   return (
     <span className={className}>
       <span className="sr-only">{text}</span>

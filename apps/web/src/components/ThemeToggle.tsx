@@ -3,7 +3,6 @@
 import { Desktop, Moon, Sun } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import { setTheme, useTheme, type ThemeChoice } from "@/lib/theme";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { MOTION } from "@/lib/motion";
 
 const OPTIONS: { value: ThemeChoice; label: string; icon: typeof Sun }[] = [
@@ -27,7 +26,6 @@ export function ThemeToggle({
   className?: string;
 }) {
   const theme = useTheme();
-  const reduce = useReducedMotion();
 
   return (
     <div
@@ -54,7 +52,7 @@ export function ThemeToggle({
             {active ? (
               <motion.span
                 layoutId={`${id}-pill`}
-                transition={reduce ? { duration: 0 } : MOTION.item}
+                transition={MOTION.item}
                 className="absolute inset-0 rounded-full bg-surface shadow-soft"
               />
             ) : null}

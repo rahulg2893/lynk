@@ -3,7 +3,6 @@
 import { useId, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { Check } from "@phosphor-icons/react";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { MOTION } from "@/lib/motion";
 
 type Variant = "primary" | "ink" | "secondary" | "ghost" | "danger" | "danger-quiet";
@@ -86,7 +85,6 @@ export function Switch({
   labelledBy?: string;
   describedBy?: string;
 }) {
-  const reduce = useReducedMotion();
   return (
     <button
       type="button"
@@ -105,7 +103,7 @@ export function Switch({
       <motion.span
         aria-hidden
         animate={{ x: checked ? 20 : 0 }}
-        transition={reduce ? { duration: 0 } : MOTION.item}
+        transition={MOTION.item}
         className="inline-flex size-[27px] items-center justify-center rounded-full bg-white text-accent shadow-[0_2px_6px_rgb(0_0_0/0.18)]"
       >
         {checked ? <Check size={13} weight="bold" /> : null}
@@ -133,7 +131,6 @@ export function Segmented<T extends string>({
   onChange: (value: T) => void;
   className?: string;
 }) {
-  const reduce = useReducedMotion();
   const id = useId();
   return (
     <fieldset className={className}>
@@ -163,7 +160,7 @@ export function Segmented<T extends string>({
                 {active ? (
                   <motion.span
                     layoutId={`${id}-pill`}
-                    transition={reduce ? { duration: 0 } : MOTION.item}
+                    transition={MOTION.item}
                     className="absolute inset-0 rounded-full bg-surface shadow-soft"
                   />
                 ) : null}

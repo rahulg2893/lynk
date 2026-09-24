@@ -15,7 +15,6 @@ import {
 import { ArrowRight, CalendarCheck, CheckCircle, Heart, ShieldCheck } from "@phosphor-icons/react";
 import { PhoneMock } from "./PhoneMock";
 import { Magnetic, SPRING_LAZY, SplitWords } from "@/components/motion/physics";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 const FRIENDS = [
   { photo: "/people/amara.jpg", name: "Amara", x: "-8%", y: "14%", depth: 38, size: 64 },
@@ -38,7 +37,6 @@ const CHIPS = [
  * springs home. Scrolling lifts the headline away and sinks the phone.
  */
 export function HeroStage() {
-  const reduce = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const px = useMotionValue(0.5);
@@ -63,14 +61,14 @@ export function HeroStage() {
       ref={ref}
       className="stage-dark relative isolate overflow-hidden"
       onPointerMove={(e) => {
-        if (reduce || e.pointerType !== "mouse") return;
+        if (e.pointerType !== "mouse") return;
         const r = e.currentTarget.getBoundingClientRect();
         px.set((e.clientX - r.left) / r.width);
         py.set((e.clientY - r.top) / r.height);
       }}
     >
       {/* Light that follows you, a faint grid, and a horizon glow. */}
-      <motion.div aria-hidden className="absolute inset-0 -z-10" style={{ background: reduce ? undefined : glow }} />
+      <motion.div aria-hidden className="absolute inset-0 -z-10" style={{ background: glow }} />
       <div
         aria-hidden
         className="absolute inset-0 -z-10 opacity-[0.07] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
@@ -79,9 +77,9 @@ export function HeroStage() {
       <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-[radial-gradient(60%_60%_at_50%_100%,rgb(31_95_224/0.35),transparent_70%)]" />
 
       <div className="mx-auto grid min-h-[100svh] max-w-7xl items-center gap-16 px-5 pt-28 pb-16 md:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:pt-24">
-        <motion.div style={reduce ? undefined : { y: copyY, opacity: copyOpacity }}>
+        <motion.div style={{ y: copyY, opacity: copyOpacity }}>
           <motion.p
-            initial={reduce ? false : { opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3.5 py-1.5 text-[13px] text-white/80 backdrop-blur"
@@ -95,7 +93,7 @@ export function HeroStage() {
             <SplitWords text="Keep the plan." delay={0.45} wordClassName="bg-linear-to-br from-[#8ec0ff] to-[#dfe7f7] bg-clip-text text-transparent" />
           </h1>
           <motion.p
-            initial={reduce ? false : { opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="mt-7 max-w-[46ch] text-lg leading-relaxed text-white/70 md:text-xl"
@@ -103,7 +101,7 @@ export function HeroStage() {
             The chat app for friends and family that quietly remembers plans, lists and the little things people tell you.
           </motion.p>
           <motion.div
-            initial={reduce ? false : { opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.95, ease: [0.16, 1, 0.3, 1] }}
             className="mt-10 flex flex-wrap items-center gap-3"
@@ -122,7 +120,7 @@ export function HeroStage() {
             </Link>
           </motion.div>
           <motion.div
-            initial={reduce ? false : { opacity: 0 }}
+            initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 1.2 }}
             className="mt-12 flex items-center gap-4"
@@ -143,22 +141,22 @@ export function HeroStage() {
         {/* The phone and everything floating around it */}
         <motion.div
           ref={stage}
-          style={reduce ? undefined : { y: phoneY, scale: phoneScale }}
+          style={{ y: phoneY, scale: phoneScale }}
           className="relative mx-auto w-full max-w-[17.5rem] [perspective:1400px] lg:max-w-[18.5rem]"
         >
           <motion.div
-            initial={reduce ? false : { opacity: 0, y: 80, rotateX: 30 }}
+            initial={{ opacity: 0, y: 80, rotateX: 30 }}
             animate={{ opacity: 1, y: 0, rotateX: 0 }}
             transition={{ type: "spring", stiffness: 70, damping: 16, delay: 0.3 }}
           >
-            <motion.div style={reduce ? undefined : { rotateX, rotateY, transformStyle: "preserve-3d" }}>
+            <motion.div style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}>
               <PhoneMock />
             </motion.div>
           </motion.div>
 
           <div aria-hidden className="pointer-events-none absolute inset-0 hidden sm:block">
             {FRIENDS.map((f, i) => (
-              <Floater key={f.name} x={f.x} y={f.y} depth={f.depth} sx={sx} sy={sy} delay={0.9 + i * 0.12} constraints={stage} reduce={reduce}>
+              <Floater key={f.name} x={f.x} y={f.y} depth={f.depth} sx={sx} sy={sy} delay={0.9 + i * 0.12} constraints={stage}>
                 <Image
                   src={f.photo}
                   alt=""
@@ -171,7 +169,7 @@ export function HeroStage() {
               </Floater>
             ))}
             {CHIPS.map((c, i) => (
-              <Floater key={c.text} x={c.x} y={c.y} depth={c.depth} sx={sx} sy={sy} delay={1.6 + i * 0.18} constraints={stage} reduce={reduce}>
+              <Floater key={c.text} x={c.x} y={c.y} depth={c.depth} sx={sx} sy={sy} delay={1.6 + i * 0.18} constraints={stage}>
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#11151f]/80 px-3.5 py-2 text-[13px] font-medium whitespace-nowrap text-white shadow-[0_20px_40px_-12px_rgb(0_0_0/0.6)] backdrop-blur-md">
                   <c.icon size={16} weight="fill" className={c.tint} />
                   {c.text}
@@ -202,7 +200,6 @@ function Floater({
   sy,
   delay,
   constraints,
-  reduce,
 }: {
   children: React.ReactNode;
   x: string;
@@ -212,25 +209,24 @@ function Floater({
   sy: MotionValue<number>;
   delay: number;
   constraints: React.RefObject<HTMLDivElement | null>;
-  reduce: boolean;
 }) {
   const dx = useTransform(sx, [0, 1], [depth, -depth]);
   const dy = useTransform(sy, [0, 1], [depth * 0.6, -depth * 0.6]);
 
   return (
-    <motion.div className="absolute" style={{ left: x, top: y, x: reduce ? 0 : dx, y: reduce ? 0 : dy }}>
+    <motion.div className="absolute" style={{ left: x, top: y, x: dx, y: dy }}>
       <motion.div
         className="pointer-events-auto cursor-grab active:cursor-grabbing"
-        initial={reduce ? false : { opacity: 0, scale: 0.4 }}
+        initial={{ opacity: 0, scale: 0.4 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: "spring", stiffness: 260, damping: 14, delay }}
-        drag={!reduce}
+        drag
         dragConstraints={constraints}
         dragElastic={0.7}
         dragSnapToOrigin
         dragTransition={{ bounceStiffness: 260, bounceDamping: 12 }}
         whileDrag={{ scale: 1.12, rotate: -4 }}
-        whileHover={reduce ? undefined : { scale: 1.06 }}
+        whileHover={{ scale: 1.06 }}
       >
         {children}
       </motion.div>
