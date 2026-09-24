@@ -5,9 +5,11 @@ import type { TranscriptSegment } from "./chat";
 
 /**
  * Voice notes recorded in the browser: MediaRecorder for the audio, an
- * AnalyserNode for the live waveform, and the Web Speech API (Chrome, Edge,
- * Safari) for a live transcript. Where speech recognition isn't available the
- * note still records and plays; it just has no transcript.
+ * AnalyserNode for the live waveform, and the Web Speech API for a live
+ * transcript, but only when the browser can recognise speech on the device.
+ * Every chat is end-to-end encrypted, so audio must never be sent to a
+ * speech service; without on-device recognition the note simply has no
+ * transcript.
  */
 
 export type Recording = {
@@ -25,6 +27,8 @@ type Recognition = {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
+  /** Chrome: recognise on the device instead of sending audio to a server. */
+  processLocally?: boolean;
   onresult: ((e: SpeechEvent) => void) | null;
   onerror: (() => void) | null;
   start: () => void;
@@ -32,10 +36,25 @@ type Recognition = {
   abort: () => void;
 };
 
-function speechRecognition(): Recognition | null {
-  const w = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
+type RecognitionCtor = {
+  new (): Recognition;
+  available?: (o: { langs: string[]; processLocally: boolean }) => Promise<string>;
+};
+
+/** A recognizer that runs on the device, or null. Never one that uploads audio. */
+async function onDeviceRecognition(lang: string): Promise<Recognition | null> {
+  const w = window as unknown as { SpeechRecognition?: RecognitionCtor; webkitSpeechRecognition?: RecognitionCtor };
   const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-  return Ctor ? new Ctor() : null;
+  if (!Ctor?.available) return null;
+  try {
+    if ((await Ctor.available({ langs: [lang], processLocally: true })) !== "available") return null;
+    const rec = new Ctor();
+    if (!("processLocally" in rec)) return null;
+    rec.processLocally = true;
+    return rec;
+  } catch {
+    return null;
+  }
 }
 
 export const canRecord = () => typeof window !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia) && typeof MediaRecorder !== "undefined";
@@ -133,7 +152,7 @@ export function useRecorder(lang = "en-GB") {
       };
       frame.current = requestAnimationFrame(tick);
 
-      const rec = speechRecognition();
+      const rec = await onDeviceRecognition(lang);
       if (rec) {
         rec.lang = lang;
         rec.continuous = true;

@@ -152,7 +152,7 @@ export function VoiceNote({ note, mine, showTranscript }: { note: Attachment; mi
               ))}
             </ol>
             <p className="mt-1.5 px-1.5 text-[11px] text-muted">
-              {note.transcriptKind === "live" ? "Transcribed by your browser while recording." : "Sample transcript. Real ones arrive with the server."}
+              {note.transcriptKind === "live" ? "Transcribed on this device while recording." : "Sample transcript."}
             </p>
           </motion.div>
         ) : null}
@@ -250,7 +250,7 @@ export function VoiceRecorder({ onSend, onClose }: { onSend: (note: Attachment) 
         </button>
       </div>
       <p className="mt-1 truncate px-2 text-[12px] text-muted" aria-live="polite">
-        {rec.state === "starting" ? "Starting the microphone…" : words ? `“${words}”` : "Recording. Speak, then send."}
+        {rec.state === "starting" ? "Starting the microphone…" : words ? `“${words}”` : "Recording. Transcripts appear when this device can transcribe on its own."}
       </p>
     </div>
   );
