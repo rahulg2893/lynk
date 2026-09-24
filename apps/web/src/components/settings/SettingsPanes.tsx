@@ -530,15 +530,46 @@ function NotificationsPane({ account }: { account: Account }) {
   const set = <K extends keyof Account["notifications"]>(key: K, value: Account["notifications"][K]) =>
     updateAccount((a) => ({ ...a, notifications: { ...a.notifications, [key]: value } }));
   // Panes render on the client only (behind the sign-in gate), so this is safe to read here.
-  const permission = typeof Notification === "undefined" ? "unsupported" : Notification.permission;
+  const [permission, setPermission] = useState(() => (typeof Notification === "undefined" ? "unsupported" : Notification.permission));
+  const allow = async () => {
+    try {
+      setPermission(await Notification.requestPermission());
+    } catch {
+      // Older Safari only takes a callback; the state stays as it was.
+    }
+    set("asked", true);
+  };
 
   return (
     <>
       <Note>
-        Lynk can&apos;t send notifications from this preview yet; they arrive with the server. Your choices below are saved
-        and will apply as soon as they do.
-        {permission === "denied" ? " Your browser currently blocks notifications for this site; you can change that in its site settings." : ""}
+        While Lynk is open in this browser, new messages alert you even when the tab is in the background. Alerts with Lynk
+        closed arrive with the server.
       </Note>
+
+      <Section title="This browser">
+        <Row
+          label="Alerts"
+          description={
+            permission === "granted"
+              ? "On. Lynk follows the choices below."
+              : permission === "denied"
+                ? "Blocked by your browser. Allow notifications for this site in its site settings."
+                : permission === "unsupported"
+                  ? "This browser doesn't support notifications."
+                  : "Off. Turn them on to hear about new messages in other tabs."
+          }
+          control={
+            permission === "default" ? (
+              <Button variant="primary" size="sm" onClick={() => void allow()}>
+                Turn on
+              </Button>
+            ) : permission === "granted" ? (
+              <span className="text-[13px] font-medium text-accent-ink">On</span>
+            ) : null
+          }
+        />
+      </Section>
 
       <Section title="Chats">
         <SwitchRow label="One-to-one chats" description="New messages from one person." checked={n.direct} onChange={(v) => set("direct", v)} />

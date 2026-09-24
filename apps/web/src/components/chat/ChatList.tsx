@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { BellSlash, Command, MagnifyingGlass, NotePencil, PushPin, X } from "@phosphor-icons/react";
 import { ChatAvatar, StatusNode } from "./primitives";
+import { NotificationsButton } from "./Notifications";
+import type { ComponentProps } from "react";
 import { firstName, formatListTime, type Chat } from "@/lib/chat";
 
 type Filter = "all" | "unread" | "groups";
@@ -22,6 +24,8 @@ export function ChatList({
   onSelect,
   onOpenPalette,
   onNewChat,
+  online,
+  notifications,
 }: {
   chats: Chat[];
   activeId: string | null;
@@ -30,6 +34,8 @@ export function ChatList({
   onSelect: (id: string) => void;
   onOpenPalette: () => void;
   onNewChat: (tab: "chat" | "group" | "invite") => void;
+  online: boolean;
+  notifications: Omit<ComponentProps<typeof NotificationsButton>, "now"> | null;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -60,7 +66,7 @@ export function ChatList({
         <div className="min-w-0">
           <h1 className="truncate text-3xl leading-none font-semibold tracking-tight">Chats</h1>
           <p className="mt-1.5 text-[13px] text-muted">
-            {!loaded ? "Syncing" : unreadTotal ? `${unreadTotal} unread` : "All caught up"}
+            {!online ? "Offline" : !loaded ? "Syncing" : unreadTotal ? `${unreadTotal} unread` : "All caught up"}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -73,6 +79,7 @@ export function ChatList({
           >
             <Command size={14} weight="bold" /> K
           </button>
+          {notifications ? <NotificationsButton {...notifications} now={now} /> : null}
           <button
             type="button"
             onClick={() => onNewChat("chat")}
@@ -242,7 +249,7 @@ function Row({
               <>
                 {mine && last?.status ? <StatusNode status={last.status} className="shrink-0" /> : null}
                 <span className="truncate">
-                  {who}
+                  {mine && last?.status === "waiting" ? "Waiting to send · " : who}
                   {!last
                     ? "No messages yet"
                     : last.deleted

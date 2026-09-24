@@ -91,6 +91,7 @@ export function ChatAvatar({ chat, size = 40 }: { chat: Chat; size?: number }) {
 }
 
 const STATUS_LABEL: Record<Status, string> = {
+  waiting: "Waiting to send",
   sending: "Sending",
   sent: "Sent",
   delivered: "Delivered",
@@ -99,11 +100,13 @@ const STATUS_LABEL: Record<Status, string> = {
 
 /**
  * Delivery state as a marker on the rail, borrowed from the landing page's
- * timeline square: dashed while sending, outlined once sent, filled when
- * delivered, and an accent diamond once read.
+ * timeline square: dashed while sending (breathing while it waits for a
+ * connection), outlined once sent, filled when delivered, and an accent
+ * diamond once read.
  */
 export function StatusNode({ status, className = "" }: { status: Status; className?: string }) {
   const look = {
+    waiting: "border border-dashed border-muted bg-bg",
     sending: "border border-dashed border-muted bg-bg",
     sent: "border border-ink/60 bg-bg",
     delivered: "border border-ink bg-ink",
@@ -114,8 +117,10 @@ export function StatusNode({ status, className = "" }: { status: Status; classNa
       role="img"
       aria-label={STATUS_LABEL[status]}
       title={STATUS_LABEL[status]}
-      animate={{ rotate: status === "read" ? 45 : 0 }}
-      transition={{ type: "spring", stiffness: 190, damping: 18 }}
+      animate={status === "waiting" ? { rotate: 0, opacity: [1, 0.35, 1] } : { rotate: status === "read" ? 45 : 0, opacity: 1 }}
+      transition={
+        status === "waiting" ? { opacity: { duration: 1.6, repeat: Infinity, ease: "easeInOut" } } : { type: "spring", stiffness: 190, damping: 18 }
+      }
       className={`inline-block size-2.5 rounded-xs ${look} ${className}`}
     />
   );

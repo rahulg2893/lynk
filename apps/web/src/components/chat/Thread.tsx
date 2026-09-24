@@ -4,6 +4,7 @@ import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 
 import { AnimatePresence, motion, useAnimate, useMotionTemplate, useMotionValue, useSpring } from "motion/react";
 import {
   ArrowLeft,
+  ArrowClockwise,
   ArrowUUpLeft,
   FileText,
   GitBranch,
@@ -50,6 +51,8 @@ export function Thread({
   now,
   me,
   onSend,
+  onRetry,
+  online,
   onEdit,
   onDelete,
   onDraft,
@@ -63,6 +66,9 @@ export function Thread({
   /** Your first name, for @mentions of you. */
   me: string;
   onSend: (text: string, replyTo?: string, attachments?: Attachment[]) => void;
+  /** Try a waiting message again now. */
+  onRetry: (messageId: string) => void;
+  online: boolean;
   onEdit: (messageId: string, text: string) => void;
   onDelete: (messageId: string) => void;
   onDraft: (text: string) => void;
@@ -399,6 +405,20 @@ export function Thread({
                           </button>
                         ))}
                       </div>
+                    ) : null}
+                    {mine && message.status === "waiting" ? (
+                      <p className="mt-1.5 flex items-center gap-2 text-[12px] text-muted">
+                        <span>{online ? "Couldn't send yet" : "Waiting to send"}</span>
+                        <button
+                          type="button"
+                          onClick={() => onRetry(message.id)}
+                          disabled={!online}
+                          className="inline-flex h-6 items-center gap-1 rounded-full border border-line bg-surface px-2 font-medium text-ink hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          title={online ? "Send it now" : "Sends by itself when you're back online"}
+                        >
+                          <ArrowClockwise size={12} weight="bold" aria-hidden /> Retry
+                        </button>
+                      </p>
                     ) : null}
                     {seenBy.length ? (
                       <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-muted">

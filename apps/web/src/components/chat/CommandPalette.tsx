@@ -14,6 +14,8 @@ import {
   QrCode as QrIcon,
   UsersThree,
   Sparkle,
+  CloudCheck,
+  CloudSlash,
   SunHorizon,
   UserCircle,
 } from "@phosphor-icons/react";
@@ -25,7 +27,8 @@ export type PaletteAction =
   | { type: "catchup" }
   | { type: "panel"; tab: "decisions" | "tasks" }
   | { type: "go"; href: string }
-  | { type: "new"; tab: "chat" | "group" | "invite" };
+  | { type: "new"; tab: "chat" | "group" | "invite" }
+| { type: "offline" };
 
 type Item = {
   id: string;
@@ -46,12 +49,14 @@ export function CommandPalette({
   open,
   chats,
   hasActive,
+  online,
   onClose,
   onRun,
 }: {
   open: boolean;
   chats: Chat[];
   hasActive: boolean;
+  online: boolean;
   onClose: () => void;
   onRun: (action: PaletteAction) => void;
 }) {
@@ -98,6 +103,13 @@ export function CommandPalette({
       { id: "profile", group: "Actions", label: "Your profile", icon: <UserCircle size={18} />, action: { type: "go", href: "/app/profile" } },
       { id: "branch", group: "Actions", label: "Start a side chat", icon: <GitBranch size={18} />, disabledReason: "Arrives with the backend" },
       { id: "ask", group: "Actions", label: "Ask Lynk", icon: <Sparkle size={18} />, disabledReason: "Arrives with the AI phase" },
+      {
+        id: "offline",
+        group: "Actions",
+        label: online ? "Test offline mode" : "Reconnect",
+        icon: online ? <CloudSlash size={18} /> : <CloudCheck size={18} />,
+        action: { type: "offline" },
+      },
     ];
     const convos: Item[] = chats.map((c) => ({
       id: `c-${c.id}`,
@@ -125,7 +137,7 @@ export function CommandPalette({
         : [];
     const match = (i: Item) => !q || i.label.toLowerCase().includes(q) || i.hint?.toLowerCase().includes(q);
     return [...actions.filter(match), ...convos.filter(match), ...messages.slice(0, 8)];
-  }, [chats, query, hasActive]);
+  }, [chats, query, hasActive, online]);
 
   const safeIndex = Math.min(index, Math.max(0, items.length - 1));
 

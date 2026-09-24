@@ -55,6 +55,10 @@ export type Account = {
     groups: "all" | "mentions" | "off";
     previews: boolean;
     sounds: boolean;
+    /** We asked once, in context, whether to turn on browser notifications. */
+    asked: boolean;
+    /** When the notifications list was last opened (epoch ms). */
+    seenAt: number;
   };
   smart: {
     enabled: boolean;
@@ -106,7 +110,7 @@ function defaults(now = Date.now()): Account {
       { id: "l-3", at: now - 40 * DAY, text: "Passkey added: iCloud Keychain" },
     ],
     privacy: { newChats: "everyone", presence: "chats", readReceipts: true },
-    notifications: { direct: true, groups: "mentions", previews: true, sounds: true },
+    notifications: { direct: true, groups: "mentions", previews: true, sounds: true, asked: false, seenAt: 0 },
     smart: {
       enabled: true,
       plans: true,

@@ -5,7 +5,8 @@
  * to the messages it came from, so the UI can be wired to the API later.
  */
 
-export type Status = "sending" | "sent" | "delivered" | "read";
+/** "waiting" means sent while offline: it sits in the outbox until the connection is back. */
+export type Status = "waiting" | "sending" | "sent" | "delivered" | "read";
 
 export type Person = { id: string; name: string; handle: string; photo?: string };
 

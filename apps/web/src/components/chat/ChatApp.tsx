@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GearSix } from "@phosphor-icons/react";
 import { Logo } from "@/components/landing/Logo";
-import { useAccount } from "@/lib/account";
+import { updateAccount, useAccount } from "@/lib/account";
+import { isOnline, isSimulatedOffline, setSimulatedOffline, useOnline } from "@/lib/connection";
+import { notificationGroups, notifies, permission, showBrowserNotification } from "@/lib/notify";
+import { ConnectionBanner, NotificationPrompt } from "./Connection";
 import { Avatar } from "./primitives";
 import { NewChatDialog, type NewChatTab } from "./NewChatDialog";
 import { CatchUp } from "./CatchUp";
@@ -45,7 +48,8 @@ type Action =
   | { type: "pin"; id: string }
   | { type: "rename"; id: string; name: string }
   | { type: "members"; id: string; add?: string[]; remove?: string[] }
-  | { type: "leave"; id: string };
+  | { type: "leave"; id: string }
+  | { type: "tick"; now: number };
 
 function update(state: State, id: string, fn: (chat: Chat) => Chat): State {
   return { ...state, chats: state.chats.map((c) => (c.id === id ? fn(c) : c)) };
@@ -54,7 +58,17 @@ function update(state: State, id: string, fn: (chat: Chat) => Chat): State {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "load":
-      return { ...state, chats: action.chats, loaded: true, now: action.now };
+      // A send interrupted by a reload goes back to the outbox and tries again.
+      return {
+        ...state,
+        loaded: true,
+        now: action.now,
+        chats: action.chats.map((c) =>
+          c.messages.some((m) => m.status === "sending")
+            ? { ...c, messages: c.messages.map((m) => (m.status === "sending" ? { ...m, status: "waiting" as const } : m)) }
+            : c,
+        ),
+      };
     case "select":
       return action.id
         ? update({ ...state, activeId: action.id }, action.id, (c) => ({ ...c, unread: 0, mentions: 0 }))
@@ -105,6 +119,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, chats: state.chats.filter((c) => c.id !== action.id), activeId: state.activeId === action.id ? null : state.activeId };
     case "typing":
       return update(state, action.id, (c) => ({ ...c, typing: action.who }));
+    case "tick":
+      return { ...state, now: action.now };
     case "react":
       return update(state, action.id, (c) => ({
         ...c,
@@ -155,6 +171,10 @@ export function ChatApp() {
   const [highlight, setHighlight] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
   const replyIndex = useRef<Record<string, number>>({});
+  // Message ids on their way to the server, so a flush never sends one twice.
+  const inFlight = useRef(new Set<string>());
+  const online = useOnline();
+  const [asking, setAsking] = useState(false);
 
   const username = account?.profile.username;
   const seeded = account?.seeded ?? true;
@@ -210,6 +230,18 @@ export function ChatApp() {
   }, [chatParam, state.loaded, state.activeId]);
 
   const active = state.chats.find((c) => c.id === state.activeId) ?? null;
+
+  // Timers outlive renders, so they read the latest chats and open chat from refs.
+  const chatsRef = useRef(state.chats);
+  const activeRef = useRef(state.activeId);
+  const settingsRef = useRef(account?.notifications);
+  const meRef = useRef((account?.profile.name ?? "You").split(" ")[0]);
+  useEffect(() => {
+    chatsRef.current = state.chats;
+    activeRef.current = state.activeId;
+    settingsRef.current = account?.notifications;
+    meRef.current = (account?.profile.name ?? "You").split(" ")[0];
+  });
 
   const open = useCallback((chatId: string | null, messageId?: string) => {
     // Native pushState keeps this a client-only change (no server round trip).
@@ -277,31 +309,110 @@ export function ChatApp() {
     [open],
   );
 
+  /** A message that arrived while you weren't looking becomes a browser notification. */
+  const alert = useCallback(
+    (chatId: string, message: Message) => {
+      const chat = chatsRef.current.find((c) => c.id === chatId);
+      const settings = settingsRef.current;
+      if (!chat || !settings) return;
+      if (!document.hidden && activeRef.current === chatId) return;
+      if (!notifies(chat, message, settings, meRef.current)) return;
+      showBrowserNotification(chat, message, settings, () => open(chatId, message.id));
+    },
+    [open],
+  );
+
+  /**
+   * The delivery lifecycle the real gateway will drive: sending, sent,
+   * delivered, read. The message id doubles as the idempotency key, and a
+   * connection lost mid-send puts the message back in the outbox.
+   */
+  const deliver = useCallback(
+    (chatId: string, id: string) => {
+      if (inFlight.current.has(id)) return;
+      inFlight.current.add(id);
+      dispatch({ type: "status", id: chatId, messageId: id, status: "sending" });
+      later(350, () => {
+        inFlight.current.delete(id);
+        if (!isOnline()) return dispatch({ type: "status", id: chatId, messageId: id, status: "waiting" });
+        dispatch({ type: "status", id: chatId, messageId: id, status: "sent" });
+        later(550, () => dispatch({ type: "status", id: chatId, messageId: id, status: "delivered" }));
+
+        const chat = chatsRef.current.find((c) => c.id === chatId);
+        if (!chat?.members.length) return;
+        const replier = chat.members[Math.floor(Math.random() * chat.members.length)];
+        const pool = REPLIES[chat.id] ?? ["👍"];
+        const n = replyIndex.current[chat.id] ?? 0;
+        replyIndex.current[chat.id] = n + 1;
+        if (n >= pool.length) return;
+
+        later(1250, () => {
+          dispatch({ type: "status", id: chatId, messageId: id, status: "read" });
+          dispatch({ type: "typing", id: chatId, who: replier });
+        });
+        later(3050, () => {
+          const reply: Message = { id: newId(), from: replier, text: pool[n], at: Date.now() };
+          dispatch({ type: "typing", id: chatId, who: null });
+          dispatch({ type: "append", id: chatId, message: reply });
+          alert(chatId, reply);
+        });
+      });
+    },
+    [later, alert],
+  );
+
   const send = useCallback(
     (chat: Chat, text: string, replyTo?: string, attachments?: Attachment[]) => {
       const id = newId();
-      dispatch({ type: "append", id: chat.id, message: { id, from: "me", text, at: Date.now(), status: "sending", replyTo, attachments } });
-      // The delivery lifecycle the real gateway will drive: sent, delivered, read.
-      later(350, () => dispatch({ type: "status", id: chat.id, messageId: id, status: "sent" }));
-      later(900, () => dispatch({ type: "status", id: chat.id, messageId: id, status: "delivered" }));
-
-      if (!chat.members.length) return;
-      const replier = chat.members[Math.floor(Math.random() * chat.members.length)];
-      const pool = REPLIES[chat.id] ?? ["👍"];
-      const n = replyIndex.current[chat.id] ?? 0;
-      replyIndex.current[chat.id] = n + 1;
-      if (n >= pool.length) return;
-
-      later(1600, () => {
-        dispatch({ type: "status", id: chat.id, messageId: id, status: "read" });
-        dispatch({ type: "typing", id: chat.id, who: replier });
-      });
-      later(3400, () => {
-        dispatch({ type: "typing", id: chat.id, who: null });
-        dispatch({ type: "append", id: chat.id, message: { id: newId(), from: replier, text: pool[n], at: Date.now() } });
-      });
+      // Offline, the message still appears right away and waits in the outbox.
+      const status: Status = isOnline() ? "sending" : "waiting";
+      dispatch({ type: "append", id: chat.id, message: { id, from: "me", text, at: Date.now(), status, replyTo, attachments } });
+      if (status === "sending") window.setTimeout(() => deliver(chat.id, id), 0);
     },
-    [later],
+    [deliver],
+  );
+
+  const retry = useCallback((chatId: string, messageId: string) => isOnline() && deliver(chatId, messageId), [deliver]);
+
+  const waiting = useMemo(
+    () => state.chats.flatMap((c) => c.messages.filter((m) => m.status === "waiting").map((m) => ({ chatId: c.id, id: m.id }))),
+    [state.chats],
+  );
+
+  // Back online (or loaded with a full outbox): send what's waiting, oldest first.
+  useEffect(() => {
+    if (!online || !state.loaded) return;
+    waiting.forEach((m, i) => later(i * 220, () => deliver(m.chatId, m.id)));
+    // Flush on reconnect and on load only; deliver() skips anything already sent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online, state.loaded]);
+
+  // Ask about notifications the first time a chat is opened, not on page load.
+  useEffect(() => {
+    if (!state.activeId || !account || account.notifications.asked || permission() !== "default") return;
+    const t = window.setTimeout(() => setAsking(true), 1400);
+    return () => window.clearTimeout(t);
+  }, [state.activeId, account]);
+
+  const markAsked = () => {
+    setAsking(false);
+    updateAccount((a) => ({ ...a, notifications: { ...a.notifications, asked: true } }));
+  };
+
+  const enableAlerts = async () => {
+    markAsked();
+    if (permission() !== "default") return;
+    try {
+      await Notification.requestPermission();
+    } catch {
+      // Older Safari takes a callback; it simply stays undecided here.
+    }
+    dispatch({ type: "tick", now: Date.now() });
+  };
+
+  const groups = useMemo(
+    () => (account ? notificationGroups(state.chats, account.notifications, (account.profile.name || "You").split(" ")[0], state.now) : []),
+    [state.chats, state.now, account],
   );
 
   const runPalette = (action: PaletteAction) => {
@@ -312,6 +423,7 @@ export function ChatApp() {
     else if (action.type === "panel") setPanel(action.tab);
     else if (action.type === "go") router.push(action.href);
     else if (action.type === "new") setNewChat(action.tab);
+    else if (action.type === "offline") setSimulatedOffline(!isSimulatedOffline());
   };
 
   return (
@@ -349,6 +461,19 @@ export function ChatApp() {
             onSelect={(id) => open(id)}
             onOpenPalette={() => setPaletteOpen(true)}
             onNewChat={(tab) => setNewChat(tab)}
+            online={online}
+            notifications={
+              account
+                ? {
+                    groups,
+                    settings: account.notifications,
+                    permission: permission(),
+                    onOpenChat: (chatId, messageId) => open(chatId, messageId),
+                    onSeen: () => updateAccount((a) => ({ ...a, notifications: { ...a.notifications, seenAt: Date.now() } })),
+                    onEnable: () => void enableAlerts(),
+                  }
+                : null
+            }
           />
         </div>
       </aside>
@@ -368,6 +493,8 @@ export function ChatApp() {
               highlightId={highlight}
               me={(account?.profile.name ?? "You").split(" ")[0]}
               onSend={(text, replyTo, attachments) => send(active, text, replyTo, attachments)}
+              onRetry={(messageId) => retry(active.id, messageId)}
+              online={online}
               onEdit={(messageId, text) => dispatch({ type: "edit", id: active.id, messageId, text })}
               onDelete={(messageId) => dispatch({ type: "remove", id: active.id, messageId })}
               onDraft={(text) => dispatch({ type: "draft", id: active.id, text })}
@@ -423,8 +550,17 @@ export function ChatApp() {
         onCreateGroup={createGroup}
       />
 
+      <ConnectionBanner
+        online={online}
+        waiting={waiting.length}
+        simulated={isSimulatedOffline()}
+        onReconnect={() => setSimulatedOffline(false)}
+      />
+      <NotificationPrompt open={asking} onEnable={() => void enableAlerts()} onDismiss={markAsked} />
+
       <CommandPalette
         open={paletteOpen}
+        online={online}
         chats={state.chats}
         hasActive={Boolean(active)}
         onClose={() => setPaletteOpen(false)}
