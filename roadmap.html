@@ -119,7 +119,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 
 <div class="wrap">
 <header class="hero">
-  <span class="eyebrow">Product &amp; engineering roadmap, v4.9 · Sep 2026</span>
+  <span class="eyebrow">Product &amp; engineering roadmap, v5.0 · Sep 2026</span>
   <h1>Lynk Roadmap</h1>
   <p class="lede">A personal chat app for friends and family that remembers the plan. Messaging comes first, and every chat is end-to-end encrypted. Plans, to-dos, memories and search that finds things again are what make it different, and they all run on your own device, so nobody else ever reads your chats.</p>
   <div class="flow" aria-label="Product thesis">
@@ -128,7 +128,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 </header>
 
 <nav class="toc" aria-label="Sections">
-  <a href="#progress">Progress</a><a href="#changes">What changed</a><a href="#conflicts">Conflicts</a><a href="#stack">Stack</a><a href="#architecture">Architecture</a><a href="#repo">Repo</a><a href="#schema">Schema</a><a href="#protocol">Protocol</a><a href="#authz">Privacy model</a><a href="#jobs">Jobs</a><a href="#ai">Smart features</a><a href="#risks">Risks</a><a href="#phases">Milestones</a><a href="#timeline">Timeline</a><a href="#adrs">ADRs</a>
+  <a href="#progress">Progress</a><a href="#changes">What changed</a><a href="#conflicts">Conflicts</a><a href="#stack">Stack</a><a href="#architecture">Architecture</a><a href="#repo">Repo</a><a href="#schema">Schema</a><a href="#protocol">Protocol</a><a href="#authz">Privacy model</a><a href="#e2ee">Encryption</a><a href="#jobs">Jobs</a><a href="#ai">Smart features</a><a href="#risks">Risks</a><a href="#phases">Milestones</a><a href="#timeline">Timeline</a><a href="#adrs">ADRs</a>
 </nav>
 
 <section id="progress">
@@ -215,7 +215,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li>Web Push (alerts with Lynk closed), and uploads to real storage (photos are shrunk and kept in the browser for now; other files last until you reload).</li>
         <li>Real-time messaging over WebSockets, and the <code>packages/protocol</code> schemas.</li>
         <li>Server side of reliability: the NATS outbox and relay, gap replay by per-chat <code>seq</code>, rate limits, metrics and load tests. The browser outbox runs on <code>localStorage</code> until then.</li>
-        <li>End-to-end encryption (libsignal) for every chat, device linking and encrypted backups. The web app already says every chat is encrypted; the encryption itself arrives with the server in phase 1.</li>
+        <li>End-to-end encryption (MLS via OpenMLS) for every chat, key transparency, device linking and encrypted backups. The web app already says every chat is encrypted; the encryption itself arrives with the server in phase 1.</li>
         <li>Mobile app, push notifications, and on-device models for smart features.</li>
       </ul>
       <h3 style="margin-top:8px">Decisions made along the way</h3>
@@ -315,7 +315,8 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
     <tr><td class="layer">HTTP and WebSockets</td><td><code>net/http</code> + coder/websocket</td><td><span class="ver">stdlib · 1.8+</span></td><td class="why">No framework needed.</td></tr>
     <tr><td class="layer">Database access</td><td>pgx + sqlc, goose migrations</td><td><span class="ver">pgx 5 · sqlc 1.x · goose 3</span></td><td class="why">Type-safe Go from hand-written SQL.</td></tr>
     <tr><td class="layer">Auth</td><td>Server sessions, passkeys (go-webauthn), Apple and Google sign-in</td><td><span class="ver">latest</span></td><td class="why">No passwords. One session per device, listed in settings.</td></tr>
-    <tr><td class="layer">End-to-end encryption</td><td>libsignal: Signal Protocol for one-to-one chats, Sender Keys for groups, sealed sender</td><td><span class="ver">latest</span></td><td class="why">Every chat, by default. Proven and reviewed; never home-made crypto. Web uses the WASM build.</td></tr>
+    <tr><td class="layer">End-to-end encryption</td><td>MLS (RFC 9420) via OpenMLS, one Rust core: WASM on the web, Swift and Kotlin bindings on phones</td><td><span class="ver">OpenMLS 0.6+</span></td><td class="why">Every chat, by default. An IETF standard with forward secrecy, post-compromise security and signed membership changes. One implementation on every client; never home-made crypto.</td></tr>
+    <tr><td class="layer">Key transparency</td><td>Append-only, publicly auditable key directory (Merkle log), checked by every client</td><td><span class="ver">—</span></td><td class="why">The server can't swap someone's keys without it showing up. Security codes and QR verification on top.</td></tr>
     <tr><td class="layer">Keys and backup</td><td>Per-device identity keys, device linking by QR, encrypted backup keyed from the passkey (WebAuthn PRF) or a recovery code</td><td><span class="ver">—</span></td><td class="why">New devices get history without the server ever holding a readable copy.</td></tr>
     <tr class="group-row"><td colspan="4">Data and infrastructure</td></tr>
     <tr><td class="layer">Database</td><td>PostgreSQL</td><td><span class="ver">PG 18</span></td><td class="why">Accounts, memberships, delivery order and encrypted payloads. No message text, so no vectors.</td></tr>
@@ -339,8 +340,8 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
   <p>One Go binary in three roles: <b>api</b> (HTTP + WebSocket), <b>worker</b> (push and media) and <b>relay</b> (outbox to NATS). Web and mobile speak the same protocol. Everything a chat says is encrypted on the sending device and decrypted on the receiving ones; the server routes and stores ciphertext.</p></div>
   <div class="diagram"><pre class="mermaid">
 flowchart LR
-  W[Web client<br/>libsignal · local index · on-device AI] <-- WebSocket, ciphertext --> API
-  M[Phone app<br/>libsignal · local index · on-device AI] <-- WebSocket, ciphertext --> API
+  W[Web client<br/>OpenMLS WASM · local index · on-device AI] <-- WebSocket, ciphertext --> API
+  M[Phone app<br/>OpenMLS · local index · on-device AI] <-- WebSocket, ciphertext --> API
   subgraph GO[Go modular monolith]
     API[api role<br/>HTTP + WS gateway]
     RELAY[relay role<br/>outbox to NATS]
@@ -358,7 +359,7 @@ flowchart LR
   <div class="two">
     <div class="card"><h3>Send path (never waits for AI)</h3>
       <ol class="ms">
-        <li>Client encrypts the message for the chat (Sender Keys in groups), creates an idempotency key and shows it as sending.</li>
+        <li>Client encrypts the message with the chat's current MLS epoch key, pads it to a size bucket, creates an idempotency key and shows it as sending.</li>
         <li>Gateway checks membership, blocks and rate limits. It can't read the payload.</li>
         <li>One transaction: ciphertext with the next per-chat <code>seq</code>, plus an outbox event.</li>
         <li>Ack the sender, then fan out to every member's devices through NATS.</li>
@@ -389,13 +390,13 @@ flowchart LR
 │        ├─ access/         membership, blocks, join-time rules: the only place access is decided
 │        ├─ auth/  users/  contacts/  invites/  devices/
 │        ├─ chats/          one-to-one and group chats, admins, settings
-│        ├─ keys/           prekey bundles, device lists, encrypted backups (no private keys)
+│        ├─ keys/           MLS key packages, key transparency log, encrypted backups (no private keys)
 │        ├─ events/         the ordered, encrypted event log per chat (relay only, never read)
 │        ├─ realtime/       ws gateway, protocol, presence, typing, sync
 │        └─ outbox/  jobs/  push/  media/   (plans, lists, memories and search live on the device)
 ├─ packages/
 │  ├─ protocol/             JSON Schema → generated Go + TypeScript
-│  ├─ crypto/               libsignal wrapper shared by web and mobile
+│  ├─ crypto/               OpenMLS core (Rust) → WASM for web, Swift and Kotlin bindings
 │  ├─ smart/                on-device search, spotting rules, model adapters
 │  └─ tokens/               design tokens for web and mobile
 ├─ db/  migrations/  queries/
@@ -410,9 +411,9 @@ flowchart LR
   <div class="tbl"><table>
     <thead><tr><th>Group</th><th>Tables</th><th>Key design points</th></tr></thead>
     <tbody>
-    <tr><td class="layer">Identity</td><td class="mono">users, sessions, devices, passkeys, oauth_accounts, user_settings</td><td class="why">Sessions stored hashed. Devices hold push tokens. Settings hold language and smart-feature choices.</td></tr>
+    <tr><td class="layer">Identity</td><td class="mono">users (username only), sessions, devices, passkeys, oauth_accounts, encrypted_profiles, encrypted_settings</td><td class="why">Sessions stored hashed. Devices hold push tokens. Name, photo, bio and settings are encrypted with a profile key shared only with your contacts.</td></tr>
     <tr><td class="layer">People</td><td class="mono">contacts, invites, blocks, reports, security_events</td><td class="why">Blocking hides both directions. Security events power the personal security log.</td></tr>
-    <tr><td class="layer">Keys</td><td class="mono">identity_keys, signed_prekeys, one_time_prekeys, device_lists, key_backups</td><td class="why">Public keys only. Backups are encrypted with a key the server never sees (passkey PRF or recovery code).</td></tr>
+    <tr><td class="layer">Keys</td><td class="mono">device_credentials, key_packages, transparency_log, key_backups</td><td class="why">Public keys only, each published in the transparency log. Backups are encrypted with a key the server never sees (passkey PRF or recovery code).</td></tr>
     <tr><td class="layer">Chats</td><td class="mono">chats (kind: dm | group), chat_members (role, joined_at, last_read_seq, muted, pinned)</td><td class="why"><code>joined_at</code> decides which history a new member receives. Group names and photos travel encrypted.</td></tr>
     <tr><td class="layer">Events</td><td class="mono">chat_events (chat_id, seq, sender_device, idempotency_key, ciphertext, sent_at)</td><td class="why">One ordered log of encrypted events per chat: messages, edits, deletes, reactions, side chats, plans, RSVPs, lists and memories. Unique <code>(chat_id, seq)</code>.</td></tr>
     <tr><td class="layer">Media</td><td class="mono">encrypted_blobs (owner, size, expires_at)</td><td class="why">Photos, files and voice notes encrypted on the device; the key travels inside the message.</td></tr>
@@ -463,11 +464,62 @@ flowchart LR
     <div class="card"><h3>Smart features that cannot leak</h3>
       <ul class="check">
         <li>Everything runs on your device over messages your device could already decrypt, so there is nothing extra to leak.</li>
-        <li>Leaving a group rotates its Sender Keys, so you can't read what's said after you leave; joining late means you only get keys from then on.</li>
+        <li>Every membership change is a signed MLS commit that each member's device checks, so the server can't slip in a hidden member. Leaving starts a new epoch you have no keys for; joining late means you only get keys from then on.</li>
         <li>No message, plan, list, memory, transcript or index is ever sent to a model provider.</li>
-        <li>What the server does see: who is in which chat, when messages are sent and their size. Sealed sender hides the sender from the server where possible.</li>
+        <li>What the server does see is listed in <a href="#e2ee">Encryption</a>, along with how each part is kept to a minimum.</li>
       </ul></div>
   </div>
+</section>
+
+<section id="e2ee">
+  <div class="sec-head"><span class="eyebrow">End-to-end encryption</span><h2>Encryption</h2>
+  <p>Every chat is end-to-end encrypted, always, with no setting to turn it off. This is the full design: the threats it defends against, what is encrypted, what the server can still see, and the limits no messaging app can remove.</p></div>
+  <div class="two">
+    <div class="card"><h3>Protected against</h3>
+      <ul class="check">
+        <li>Lynk's servers and anyone who runs, subpoenas or breaks into them: they only ever hold ciphertext.</li>
+        <li>Anyone on the network: TLS outside, MLS inside.</li>
+        <li>A server that tries to add a hidden member: every membership change is a signed MLS commit that each device checks.</li>
+        <li>A server that swaps someone's keys: every key is in a public, append-only transparency log that clients check, and security codes let two people confirm in person.</li>
+        <li>A stolen key later: forward secrecy protects past messages, and regular key updates (at least daily) heal the chat after a compromise.</li>
+        <li>People who left or were removed: they have no keys for anything said afterwards.</li>
+      </ul></div>
+    <div class="card"><h3>Encrypted end to end</h3>
+      <ul class="check">
+        <li>Messages, edits, deletes, reactions, replies, mentions and side chats.</li>
+        <li>Photos, files and voice notes: each encrypted with its own key, which travels inside the message.</li>
+        <li>Plans, RSVPs, lists, to-dos, memories and saved items: they are events in the chat, not server records.</li>
+        <li>Group names, photos and settings; your name, photo, bio and settings (shared with contacts through a profile key).</li>
+        <li>Typing indicators, read receipts and push previews.</li>
+        <li>Backups, with a key from your passkey (WebAuthn PRF) or a 64-character recovery code.</li>
+      </ul></div>
+  </div>
+  <div class="two">
+    <div class="card"><h3>What the server can still see, and how little</h3>
+      <ul class="check">
+        <li>Your username (so people can find you) and which devices you have.</li>
+        <li>Which accounts are in which chats, needed to deliver messages.</li>
+        <li>When messages are sent and their size, padded into fixed size buckets so length says little.</li>
+        <li>IP addresses while connected: never written to logs, and rate-limit counters expire within 24 hours.</li>
+        <li>No content in logs, metrics or crash reports, and no third-party analytics or tracking SDKs in the apps.</li>
+      </ul></div>
+    <div class="card"><h3>Closing the side doors</h3>
+      <ul class="check">
+        <li>Link previews are made by the sender's device and sent encrypted; the server never fetches a link.</li>
+        <li>Invite links carry the group's key material after the <code>#</code>, which browsers never send to the server.</li>
+        <li>Smart features, search, transcripts and translation run only on the device; nothing is sent to a model or speech service.</li>
+        <li>Stored chats are encrypted on the device: iOS Data Protection and Android Keystore with SQLCipher; on the web, a non-extractable WebCrypto key over IndexedDB.</li>
+        <li>New devices get history by device-to-device transfer or an encrypted backup, never from a readable server copy.</li>
+        <li>Abuse reports send only the reported messages, from the reporter's device, with message franking so they can't be forged.</li>
+      </ul></div>
+  </div>
+  <div class="card"><h3>Limits we say out loud</h3>
+    <ul class="check">
+      <li><b>Your device and the people you talk to:</b> encryption protects messages in transit and on the server, not on a hacked phone, and anyone in a chat can screenshot or forward what they see. "Delete for everyone" asks devices to delete; it can't undo a screenshot.</li>
+      <li><b>The web app:</b> a website is downloaded again on each visit, so a compromised server could serve altered code. Reproducible builds, published hashes and Subresource Integrity reduce this; the phone apps give the strongest guarantee.</li>
+      <li><b>Losing every device and your recovery code</b> loses your history, because nobody else holds a readable copy.</li>
+      <li><b>Leaving Lynk on purpose:</b> exporting a plan to your calendar, sharing a file to another app or keeping notification previews on the lock screen moves that content outside Lynk's encryption, by your choice.</li>
+    </ul></div>
 </section>
 
 <section id="jobs">
@@ -516,7 +568,7 @@ flowchart LR
   <div class="sec-head"><span class="eyebrow">What could go wrong</span><h2>Risks</h2></div>
   <div class="card">
     <div class="risk"><span class="sev h">High</span><h3>Memories about people who never agreed</h3><p>Keep them scoped to one chat, visible to its members only, removable by the person described, and deleted with their source.</p></div>
-    <div class="risk"><span class="sev h">High</span><h3>Getting the encryption right</h3><p>Use libsignal, never custom crypto; external cryptography review before launch; tests for group membership changes, device loss and key rotation; safety numbers so people can verify each other.</p></div>
+    <div class="risk"><span class="sev h">High</span><h3>Getting the encryption right</h3><p>Use OpenMLS, never custom crypto; external cryptography review before launch; interop, fuzz and state-machine tests for membership changes, device loss and key rotation; key transparency and security codes so a swapped key can't go unnoticed.</p></div>
     <div class="risk"><span class="sev h">High</span><h3>Encryption on the web</h3><p>A web app is re-downloaded from the server on every visit, so a compromised server could serve bad code. Pin and publish build hashes, use Subresource Integrity, and recommend the phone apps for people who need the strongest guarantee.</p></div>
     <div class="risk"><span class="sev h">High</span><h3>Lost devices, lost history</h3><p>With no server copy, losing every device loses the chats. Device linking, and encrypted backups keyed from the passkey or a recovery code, set up during sign-up.</p></div>
     <div class="risk"><span class="sev m">Med</span><h3>Spam and abuse without reading messages</h3><p>Invite-based contact, rate limits on new accounts, blocking, and reporting that sends the reported messages from the reporter's device (with message franking so reports can't be forged). Required for the app stores anyway.</p></div>
@@ -549,7 +601,7 @@ flowchart LR
         <li><s>Profiles, usernames, invite links and QR codes, blocking and reporting</s> (screens done).</li>
         <li><s>One-to-one and group chats, group admins, pinned chats</s> (screens done).</li>
         <li>WebSocket gateway, per-chat <code>seq</code>, idempotent sends.</li>
-        <li>End-to-end encryption for every chat from day one: libsignal sessions, Sender Keys for groups, key rotation on membership changes, device linking, encrypted backup.</li>
+        <li>End-to-end encryption for every chat from day one: OpenMLS groups for one-to-one and group chats, signed membership changes, key transparency, security codes with QR verification and key-change notices, encrypted profiles and group details, device linking, encrypted backup.</li>
         <li><s>Replies, reactions, edits, deletes, mentions, read receipts, typing, presence</s> (screens done, simulated).</li>
         <li>Photos and files with signed uploads (picker, preview and viewer done; uploads need the server).</li>
       </ol></div></div>
@@ -610,7 +662,7 @@ flowchart LR
     <article class="phase">
       <div class="phase-top"><span class="n">7</span><h3>Security review and launch</h3><span class="pill weeks">Weeks 38–42</span></div>
       <div class="cols"><div><ol class="ms">
-        <li>External cryptography and security review, safety-number verification, published web build hashes.</li>
+        <li>External cryptography and security review of the OpenMLS integration, transparency log and backups; reproducible web builds with published hashes.</li>
         <li>Accessibility audit, failure drills, device-loss and backup-restore drills.</li>
         <li>App Store and Play submission, public web launch.</li>
       </ol></div></div>
@@ -638,7 +690,7 @@ flowchart LR
     <li>Idempotency keys and per-chat seq</li>
     <li>Reconnect and gap replay</li>
     <li>Access from membership and join time</li>
-    <li>End-to-end encryption for every chat, by default</li>
+    <li>End-to-end encryption for every chat, by default, with MLS (OpenMLS) on every client</li>
     <li>Memories scoped to one chat</li>
     <li>Smart features on the device, never on the server</li>
     <li>Suggestions, never automatic actions</li>
@@ -647,7 +699,7 @@ flowchart LR
   </ol>
 </section>
 
-<footer>Roadmap v4.9, September 2026. Every chat end-to-end encrypted by default, with smart features moved onto the device; the server only relays and stores ciphertext. v4.8: Phases 5–6 as sample interactions on the web: Ask Lynk with cited answers, suggestion cards and rule-based plan spotting, editable memories, recorded voice notes with transcripts, and in-place translation. Supersedes v3 (workplace direction).</footer>
+<footer>Roadmap v5.0, September 2026. An encryption audit: MLS via OpenMLS on every client (libsignal has no supported web build), signed membership changes, key transparency, security codes from phase 1, encrypted profiles and group details, invite keys in the link fragment, sender-side link previews, padding, no IP logs, and on-device storage encryption. v4.9: Every chat end-to-end encrypted by default, with smart features moved onto the device; the server only relays and stores ciphertext. v4.8: Phases 5–6 as sample interactions on the web: Ask Lynk with cited answers, suggestion cards and rule-based plan spotting, editable memories, recorded voice notes with transcripts, and in-place translation. Supersedes v3 (workplace direction).</footer>
 </div>
 
 <script>
