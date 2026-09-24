@@ -119,7 +119,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 
 <div class="wrap">
 <header class="hero">
-  <span class="eyebrow">Product &amp; engineering roadmap, v4.2 · Sep 2026</span>
+  <span class="eyebrow">Product &amp; engineering roadmap, v4.3 · Sep 2026</span>
   <h1>Lynk Roadmap</h1>
   <p class="lede">A personal chat app for friends and family that remembers the plan. Messaging comes first. Plans, to-dos, memories and search that finds things again are what make it different, and every one of them respects who can see what.</p>
   <div class="flow" aria-label="Product thesis">
@@ -156,11 +156,12 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li><b>Invite links</b> at <code>/invite/[code]</code> for groups and people, a plain-language <code>/privacy</code> overview, and a 404 page.</li>
         <li><b>Deep links</b> to chats (<code>/app?chat=…</code>), so reload, back and shared links land in the right conversation.</li>
         <li><b>Profile photos</b> for the demo friends in <code>public/people</code>.</li>
+        <li><b>Logo and app icon:</b> two interlocking rings, one blue and one silver, drawn as a vector in <code>Logo.tsx</code>. The silver ring turns graphite on light backgrounds. The site uses <code>icon.svg</code> and a 180px <code>apple-icon.png</code>, and there's a 1024px master in <code>public/app-icon-1024.png</code> for the stores.</li>
+        <li><b>GitHub repo</b> at <code>rahulg2893/lynk</code> (private, branch <code>main</code>): <code>apps/web</code>, <code>design-system</code>, this roadmap and a README. Local tooling (<code>.claude/</code>, <code>graphify-out/</code>, <code>prompt.txt</code>) and <code>.env</code> files are ignored.</li>
         <li><b>Quality fixes:</b> no hydration mismatches, reduced motion respected everywhere, lighter scroll performance.</li>
       </ul></div>
     <div class="card"><h3>Not started</h3>
       <ul class="check">
-        <li>Git repository and monorepo layout (<code>apps/web</code> is its own repo for now).</li>
         <li>Go server, PostgreSQL, Redis, NATS and Docker Compose.</li>
         <li>Real sign-in on the server (go-webauthn passkeys, Apple and Google) and real accounts. The screens exist and run on a browser-only mock.</li>
         <li>QR codes for invite links, starting new chats, and actual notifications.</li>
@@ -175,11 +176,13 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li>Moved from pink and plum to Apple greys with a blue accent.</li>
         <li>Account screens run on a mock store shaped like the future API (<code>src/lib/account.ts</code>), so wiring the server changes data calls, not pages.</li>
         <li>The theme switch moved from the app dock into Settings › Appearance, with Match system as the default.</li>
+        <li>One repo for every app: <code>apps/web</code> now, then <code>apps/ios</code> and <code>apps/android</code>, plus <code>apps/server</code> for the Go backend.</li>
+        <li><b>Open decision:</b> the plan so far is one Expo app for both phones, but the repo now expects separate <code>ios</code> and <code>android</code> folders. Decide before phase 3: one Expo app (shared code, generated protocol, one team) or two native apps (SwiftUI and Kotlin, roughly double the mobile work).</li>
         <li>A red token for destructive actions only: <code>--danger</code> #D70015 (white text 5.38:1) and <code>--danger-ink</code> #FF6961 in dark (6.03:1).</li>
         <li>"Nearby mode" (chatting with no internet over Bluetooth and Wi-Fi) is possible in the mobile app but deferred until after v1.</li>
       </ul></div>
   </div>
-  <p class="note">Next up: the backend half of phase 0. Set up git and the monorepo first (the whole frontend is still uncommitted), then the Go server skeleton and Docker Compose, then connect the existing sign-in screens to real passkeys, Apple and Google.</p>
+  <p class="note">Next up: the backend half of phase 0. Add <code>apps/server</code> with the Go skeleton and Docker Compose, then connect the existing sign-in screens to real passkeys, Apple and Google.</p>
 </section>
 
 <section id="changes">
@@ -229,7 +232,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
   <div class="conflict">
     <h3>3. Web first vs phone first</h3>
     <div class="vs"><div><b>Built so far</b>A web client and landing page.</div><div><b>Reality</b>Personal chat happens on phones, with push notifications.</div></div>
-    <p class="call"><b>Web for the messaging core, then the Expo app immediately after.</b> The protocol is generated for both clients, so the mobile app reuses the same server with no API changes. Anyone testing Lynk with friends needs the phone app before the smart features matter.</p>
+    <p class="call"><b>Web for the messaging core, then the phone apps immediately after.</b> The protocol is generated for every client, so the phone apps reuse the same server with no API changes. Anyone testing Lynk with friends needs the phone app before the smart features matter. Whether that is one Expo app or separate iOS and Android apps is still open (see Progress).</p>
   </div>
 
   <div class="conflict">
@@ -253,7 +256,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
     <tbody>
     <tr class="group-row"><td colspan="4">Clients</td></tr>
     <tr><td class="layer">Web</td><td>Next.js App Router + React, Tailwind, Radix primitives</td><td><span class="ver">Next 16.3 · React 19.2 · TW 4</span></td><td class="why">Already running the landing page and the client prototype.</td></tr>
-    <tr><td class="layer">Mobile</td><td>Expo (React Native, New Architecture)</td><td><span class="ver">SDK 54+ · RN 0.81+</span></td><td class="why">One app for iOS and Android, sharing types and design tokens with the web.</td></tr>
+    <tr><td class="layer">Mobile</td><td>Expo (React Native, New Architecture) · <i>open decision</i></td><td><span class="ver">SDK 54+ · RN 0.81+</span></td><td class="why">One app for iOS and Android, sharing types and design tokens with the web. The alternative is native SwiftUI and Kotlin apps in <code>apps/ios</code> and <code>apps/android</code>.</td></tr>
     <tr><td class="layer">Local cache</td><td>IndexedDB (web) · expo-sqlite (mobile)</td><td><span class="ver">latest</span></td><td class="why">Instant open, offline reading, and an outbox for messages sent offline.</td></tr>
     <tr><td class="layer">Client state</td><td>TanStack Query + Zustand, TanStack Virtual / FlashList</td><td><span class="ver">Query 5 · Zustand 5</span></td><td class="why">Optimistic sends and smooth long timelines.</td></tr>
     <tr class="group-row"><td colspan="4">Backend</td></tr>
@@ -325,8 +328,9 @@ flowchart LR
   <div class="sec-head"><h2>Repository structure</h2></div>
 <pre class="code">lynk/
 ├─ apps/
-│  ├─ web/                  Next.js client + landing (exists today)
-│  ├─ mobile/               Expo app (phase 3)
+│  ├─ web/                  Next.js client + landing (on GitHub today)
+│  ├─ ios/                  iPhone app (phase 3)
+│  ├─ android/              Android app (phase 3)
 │  └─ server/               Go modular monolith
 │     ├─ cmd/lynk/          `lynk api | worker | relay | migrate`
 │     └─ internal/
@@ -482,7 +486,8 @@ flowchart LR
       <div class="cols"><div><ol class="ms">
         <li><s>Landing page, design system, theme toggle, web client prototype with mock data, profile photos</s> (done).</li>
         <li><s>Sign-in and sign-up screens, settings, and the signed-in gate on the web</s> (done, on a browser mock).</li>
-        <li>Git repository and monorepo layout, moving the existing web app to <code>apps/web</code> inside it.</li>
+        <li><s>Git repository and monorepo layout, with the web app in <code>apps/web</code></s> (done: <code>rahulg2893/lynk</code>).</li>
+        <li><s>Logo and app icon</s> (done).</li>
         <li>Monorepo, Docker Compose, Go skeleton with logging, tracing and health checks.</li>
         <li>goose + sqlc, passkeys, Apple and Google sign-in.</li>
         <li><code>packages/protocol</code> with generated Go and TypeScript.</li>
@@ -513,7 +518,7 @@ flowchart LR
     <article class="phase">
       <div class="phase-top"><span class="n">3</span><h3>Mobile app</h3><span class="pill weeks">Weeks 14–19</span></div>
       <div class="cols"><div><ol class="ms">
-        <li>Expo app on the same protocol, with SQLite cache and offline outbox.</li>
+        <li>Phone apps in <code>apps/ios</code> and <code>apps/android</code> on the same protocol, with a SQLite cache and offline outbox. Decide first between one Expo app and two native apps.</li>
         <li>Push through APNs and FCM, reply from the notification.</li>
         <li>Recording and playing voice notes.</li>
         <li>TestFlight and Play internal testing with friends.</li>
@@ -591,7 +596,7 @@ flowchart LR
   </ol>
 </section>
 
-<footer>Roadmap v4.2, September 2026. Adds the sign-in, profile, settings, invite and privacy screens to progress. Supersedes v3 (workplace direction).</footer>
+<footer>Roadmap v4.3, September 2026. Adds the GitHub repo, the new logo and app icon, and the open decision on the phone apps. Supersedes v3 (workplace direction).</footer>
 </div>
 
 <script>
