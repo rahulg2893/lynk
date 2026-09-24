@@ -119,9 +119,9 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 
 <div class="wrap">
 <header class="hero">
-  <span class="eyebrow">Product &amp; engineering roadmap, v4.8 · Sep 2026</span>
+  <span class="eyebrow">Product &amp; engineering roadmap, v4.9 · Sep 2026</span>
   <h1>Lynk Roadmap</h1>
-  <p class="lede">A personal chat app for friends and family that remembers the plan. Messaging comes first. Plans, to-dos, memories and search that finds things again are what make it different, and every one of them respects who can see what.</p>
+  <p class="lede">A personal chat app for friends and family that remembers the plan. Messaging comes first, and every chat is end-to-end encrypted. Plans, to-dos, memories and search that finds things again are what make it different, and they all run on your own device, so nobody else ever reads your chats.</p>
   <div class="flow" aria-label="Product thesis">
     <span>Chat</span><i>→</i><span>Messages</span><i>→</i><span class="hot">Plans</span><span class="hot">To-dos &amp; lists</span><span class="hot">Memories</span><span class="hot">Side chats</span><span class="hot">Voice notes</span><i>→</i><span>Find it again</span>
   </div>
@@ -215,7 +215,8 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li>Web Push (alerts with Lynk closed), and uploads to real storage (photos are shrunk and kept in the browser for now; other files last until you reload).</li>
         <li>Real-time messaging over WebSockets, and the <code>packages/protocol</code> schemas.</li>
         <li>Server side of reliability: the NATS outbox and relay, gap replay by per-chat <code>seq</code>, rate limits, metrics and load tests. The browser outbox runs on <code>localStorage</code> until then.</li>
-        <li>Mobile app, push notifications, smart features and private chats.</li>
+        <li>End-to-end encryption (libsignal) for every chat, device linking and encrypted backups. The web app already says every chat is encrypted; the encryption itself arrives with the server in phase 1.</li>
+        <li>Mobile app, push notifications, and on-device models for smart features.</li>
       </ul>
       <h3 style="margin-top:8px">Decisions made along the way</h3>
       <ul class="check">
@@ -229,6 +230,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li><b>Full motion for everyone:</b> the OS "Reduce motion" setting is deliberately not honoured, by product decision. Revisit before launch (WCAG 2.3.3); recorded in <code>MASTER.md</code>.</li>
         <li>A red token for destructive actions only: <code>--danger</code> #D70015 (white text 5.38:1) and <code>--danger-ink</code> #FF6961 in dark (6.03:1).</li>
         <li>"Nearby mode" (chatting with no internet over Bluetooth and Wi-Fi) is possible in the mobile app but deferred until after v1.</li>
+        <li><b>End-to-end encryption by default (v4.9):</b> every chat, with no opt-out and no server-readable mode. Smart features move onto the device, and the server never reads message content. This replaces the earlier "normal and private chat modes" plan (conflict 1, ADR-09).</li>
       </ul></div>
   </div>
   <p class="note">Next up: the backend half of phase 0. Add <code>apps/server</code> with the Go skeleton and Docker Compose, then connect the existing sign-in screens to real passkeys, Apple and Google.</p>
@@ -256,8 +258,8 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
     <tr><td class="layer">Translation</td><td>Optional</td><td>Optional, useful for families spread across languages</td><td><span class="tag keep">Keep</span></td></tr>
     <tr><td class="layer">Mobile app</td><td>After v1</td><td>Phase 3, straight after the messaging core</td><td><span class="tag change">Change</span></td></tr>
     <tr><td class="layer">Contacts</td><td>Workspace invites</td><td>Usernames, invite links, QR codes, blocking and reporting</td><td><span class="tag new">New</span></td></tr>
-    <tr><td class="layer">Private chats</td><td>No E2EE</td><td>An end-to-end encrypted chat mode with smart features off</td><td><span class="tag new">New</span></td></tr>
-    <tr><td class="layer">Backend and data</td><td>Go, Postgres, pgvector, Redis, NATS, S3</td><td>Unchanged</td><td><span class="tag keep">Keep</span></td></tr>
+    <tr><td class="layer">Encryption</td><td>No E2EE</td><td>Every chat end-to-end encrypted by default, with smart features on the device</td><td><span class="tag new">New</span></td></tr>
+    <tr><td class="layer">Backend and data</td><td>Go, Postgres, pgvector, Redis, NATS, S3</td><td>Go, Postgres, Redis, NATS, S3. pgvector and server-side AI dropped: the server only sees ciphertext.</td><td><span class="tag change">Change</span></td></tr>
     </tbody>
   </table></div>
 </section>
@@ -268,8 +270,8 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 
   <div class="conflict">
     <h3>1. Smart features vs end-to-end encryption</h3>
-    <div class="vs"><div><b>People expect</b>Personal chats to be private, and many expect end-to-end encryption.</div><div><b>Smart features need</b>The server to read messages to find plans, memories and answers.</div></div>
-    <p class="call"><b>Two chat modes, chosen per chat and shown clearly.</b> Normal chats get TLS, encryption at rest, strict membership checks and smart features. Private chats use end-to-end encryption (libsignal), and every smart feature is off because the server cannot read them. The mode is visible in the chat header, and switching needs everyone's agreement.</p>
+    <div class="vs"><div><b>People expect</b>Personal chats to be private, and many expect end-to-end encryption.</div><div><b>Smart features need</b>Something to read messages to find plans, memories and answers.</div></div>
+    <p class="call"><b>Every chat is end-to-end encrypted, and the smart features run on the device.</b> The server relays and stores ciphertext only and can never read a message, a plan or a list. Search, spotting, memories, transcripts and translation run on each member's phone or computer, over messages already decrypted there. Answers and catch-up summaries use an on-device model where the device has one, and fall back to plain results where it doesn't. There is no server-readable mode. The trade-off: answers are weaker on older phones, and nothing can be computed across devices by the server.</p>
   </div>
 
   <div class="conflict">
@@ -291,9 +293,9 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
   </div>
 
   <div class="conflict">
-    <h3>5. AI cost without business customers</h3>
-    <div class="vs"><div><b>Cost</b>Every smart feature spends tokens or GPU time.</div><div><b>Users</b>People expect personal chat to be free.</div></div>
-    <p class="call"><b>Keep the free tier cheap and never show ads.</b> Cheap rules run before any model call, extraction uses Claude Haiku 4.5 through the Batch API, embeddings and transcription are self-hosted, and each user has a monthly budget. A later "Lynk Plus" subscription can raise the limits.</p>
+    <h3>5. Smart features on very different devices</h3>
+    <div class="vs"><div><b>Upside</b>On-device models cost Lynk nothing per message, so the free tier stays free and there are no ads.</div><div><b>Downside</b>A new iPhone can summarise a busy group; an old Android phone or a browser without a built-in model can't.</div></div>
+    <p class="call"><b>Rules first, models where available, plain results everywhere else.</b> Search (full-text plus small on-device embeddings), rule-based spotting, memories, transcripts and translation work on every supported device. Answers and catch-up summaries light up where Apple Foundation Models, Gemini Nano or the browser's built-in model are present, and say plainly when they aren't. Each feature degrades to something useful, never to an error.</p>
   </div>
 </section>
 
@@ -313,62 +315,62 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
     <tr><td class="layer">HTTP and WebSockets</td><td><code>net/http</code> + coder/websocket</td><td><span class="ver">stdlib · 1.8+</span></td><td class="why">No framework needed.</td></tr>
     <tr><td class="layer">Database access</td><td>pgx + sqlc, goose migrations</td><td><span class="ver">pgx 5 · sqlc 1.x · goose 3</span></td><td class="why">Type-safe Go from hand-written SQL.</td></tr>
     <tr><td class="layer">Auth</td><td>Server sessions, passkeys (go-webauthn), Apple and Google sign-in</td><td><span class="ver">latest</span></td><td class="why">No passwords. One session per device, listed in settings.</td></tr>
-    <tr><td class="layer">Private chats</td><td>libsignal</td><td><span class="ver">latest</span></td><td class="why">Proven end-to-end encryption for the private mode. Never home-made crypto.</td></tr>
+    <tr><td class="layer">End-to-end encryption</td><td>libsignal: Signal Protocol for one-to-one chats, Sender Keys for groups, sealed sender</td><td><span class="ver">latest</span></td><td class="why">Every chat, by default. Proven and reviewed; never home-made crypto. Web uses the WASM build.</td></tr>
+    <tr><td class="layer">Keys and backup</td><td>Per-device identity keys, device linking by QR, encrypted backup keyed from the passkey (WebAuthn PRF) or a recovery code</td><td><span class="ver">—</span></td><td class="why">New devices get history without the server ever holding a readable copy.</td></tr>
     <tr class="group-row"><td colspan="4">Data and infrastructure</td></tr>
-    <tr><td class="layer">Database</td><td>PostgreSQL + pgvector</td><td><span class="ver">PG 18 · pgvector 0.8</span></td><td class="why">Messages, memberships and vectors in one transactional store.</td></tr>
+    <tr><td class="layer">Database</td><td>PostgreSQL</td><td><span class="ver">PG 18</span></td><td class="why">Accounts, memberships, delivery order and encrypted payloads. No message text, so no vectors.</td></tr>
     <tr><td class="layer">Ephemeral state</td><td>Redis (or Valkey)</td><td><span class="ver">8.x</span></td><td class="why">Presence, typing, rate limits. Never messages.</td></tr>
     <tr><td class="layer">Events and jobs</td><td>NATS JetStream + Postgres outbox</td><td><span class="ver">2.11+</span></td><td class="why">Fan-out between gateways and durable background jobs.</td></tr>
     <tr><td class="layer">Media</td><td>SeaweedFS or Garage (S3 API)</td><td><span class="ver">latest</span></td><td class="why">Self-hosted photos, videos and voice notes with signed URLs.</td></tr>
-    <tr><td class="layer">Push</td><td>Web Push (VAPID), APNs, FCM</td><td><span class="ver">—</span></td><td class="why">Sent directly from the worker. Previews hidden for private chats.</td></tr>
-    <tr><td class="layer">Metrics</td><td>OpenTelemetry, Prometheus, Grafana</td><td><span class="ver">latest</span></td><td class="why">Delivery latency, queue depth, AI latency and cost.</td></tr>
-    <tr class="group-row"><td colspan="4">Smart features (behind provider interfaces)</td></tr>
-    <tr><td class="layer">Answers and catch-up</td><td>Claude Opus 5</td><td><span class="ver">claude-opus-5</span></td><td class="why">"Find it again" answers with sources, and catch-up summaries.</td></tr>
-    <tr><td class="layer">Plan, to-do and memory spotting</td><td>Claude Haiku 4.5</td><td><span class="ver">claude-haiku-4-5</span></td><td class="why">High volume, structured outputs, Batch API when latency allows.</td></tr>
-    <tr><td class="layer">Embeddings</td><td>bge-m3, self-hosted</td><td><span class="ver">1024-d</span></td><td class="why">Multilingual, no per-message cost. Anthropic does not offer embeddings.</td></tr>
-    <tr><td class="layer">Voice notes</td><td>faster-whisper, self-hosted</td><td><span class="ver">large-v3</span></td><td class="why">Transcripts with timestamps. Anthropic does not offer speech-to-text.</td></tr>
+    <tr><td class="layer">Push</td><td>Web Push (VAPID), APNs, FCM</td><td><span class="ver">—</span></td><td class="why">Sent from the worker with an encrypted payload; the phone or browser decrypts the preview (iOS Notification Service Extension, Android and web service workers).</td></tr>
+    <tr><td class="layer">Metrics</td><td>OpenTelemetry, Prometheus, Grafana</td><td><span class="ver">latest</span></td><td class="why">Delivery latency, queue depth and errors. Never message content.</td></tr>
+    <tr class="group-row"><td colspan="4">Smart features (on the device, behind provider interfaces)</td></tr>
+    <tr><td class="layer">Search index</td><td>SQLite FTS5 (mobile) · IndexedDB + MiniSearch (web), plus small on-device embeddings</td><td><span class="ver">latest</span></td><td class="why">"Find it again" over messages already decrypted on the device.</td></tr>
+    <tr><td class="layer">Answers, catch-up, spotting</td><td>Apple Foundation Models (iOS 26+) · Gemini Nano via AICore (Android) · the browser's built-in Prompt API</td><td><span class="ver">on-device</span></td><td class="why">Cited answers, summaries and plan/to-do extraction without any server reading the chat. Rules alone where no model is present.</td></tr>
+    <tr><td class="layer">Voice notes</td><td>SpeechAnalyzer (iOS) · on-device SpeechRecognizer (Android) · Web Speech with <code>processLocally</code> (web)</td><td><span class="ver">on-device</span></td><td class="why">Transcripts with timestamps. Audio never goes to a speech service.</td></tr>
+    <tr><td class="layer">Translation</td><td>Apple Translation · ML Kit on-device translation · the browser's Translator API</td><td><span class="ver">on-device</span></td><td class="why">In place, with "View original".</td></tr>
     </tbody>
   </table></div>
-  <p class="note">Model IDs are from the current Claude API model list (Sep 2026). Other versions reflect mid-2026; check release notes before pinning.</p>
+  <p class="note">Versions reflect mid-2026; check release notes before pinning. No cloud model ever receives message content.</p>
 </section>
 
 <section id="architecture">
   <div class="sec-head"><span class="eyebrow">How it fits together</span><h2>System architecture</h2>
-  <p>One Go binary in three roles: <b>api</b> (HTTP + WebSocket), <b>worker</b> (background jobs) and <b>relay</b> (outbox to NATS). Web and mobile speak the same protocol.</p></div>
+  <p>One Go binary in three roles: <b>api</b> (HTTP + WebSocket), <b>worker</b> (push and media) and <b>relay</b> (outbox to NATS). Web and mobile speak the same protocol. Everything a chat says is encrypted on the sending device and decrypted on the receiving ones; the server routes and stores ciphertext.</p></div>
   <div class="diagram"><pre class="mermaid">
 flowchart LR
-  W[Web client<br/>IndexedDB + outbox] <-- WebSocket --> API
-  M[Expo app<br/>SQLite + outbox] <-- WebSocket --> API
+  W[Web client<br/>libsignal · local index · on-device AI] <-- WebSocket, ciphertext --> API
+  M[Phone app<br/>libsignal · local index · on-device AI] <-- WebSocket, ciphertext --> API
   subgraph GO[Go modular monolith]
     API[api role<br/>HTTP + WS gateway]
     RELAY[relay role<br/>outbox to NATS]
-    WORK[worker role<br/>smart features, media, push]
+    WORK[worker role<br/>push, media, cleanup]
   end
-  API -- tx: message + outbox --> PG[(PostgreSQL<br/>+ pgvector)]
+  API -- tx: ciphertext + outbox --> PG[(PostgreSQL<br/>ciphertext, keys, members)]
   RELAY --> N[(NATS JetStream)]
   N -- fan-out --> API
   N -- jobs --> WORK
   API <--> R[(Redis)]
   WORK --> PUSH[APNs / FCM / Web Push]
-  WORK --> AI[Claude, bge-m3,<br/>faster-whisper]
-  W -. signed upload .-> S3[(S3-compatible)]
-  M -. signed upload .-> S3
+  W -. encrypted upload .-> S3[(S3-compatible<br/>encrypted media)]
+  M -. encrypted upload .-> S3
   </pre></div>
   <div class="two">
     <div class="card"><h3>Send path (never waits for AI)</h3>
       <ol class="ms">
-        <li>Client creates an idempotency key and shows the message as sending.</li>
-        <li>Gateway checks membership, blocks and rate limits.</li>
-        <li>One transaction: message with the next per-chat <code>seq</code>, plus an outbox event.</li>
+        <li>Client encrypts the message for the chat (Sender Keys in groups), creates an idempotency key and shows it as sending.</li>
+        <li>Gateway checks membership, blocks and rate limits. It can't read the payload.</li>
+        <li>One transaction: ciphertext with the next per-chat <code>seq</code>, plus an outbox event.</li>
         <li>Ack the sender, then fan out to every member's devices through NATS.</li>
-        <li>Offline members get a push notification.</li>
+        <li>Offline members get a push with an encrypted payload their device decrypts.</li>
       </ol></div>
-    <div class="card"><h3>After the ack (normal chats only)</h3>
+    <div class="card"><h3>On each receiving device</h3>
       <ol class="ms">
-        <li>Embed the message for search.</li>
+        <li>Decrypt, store locally, and add to the on-device search index.</li>
         <li>Cheap rules look for times, places, questions to someone, and lists.</li>
-        <li>Only likely candidates go to the model, which suggests a plan, to-do or memory.</li>
-        <li>Suggestions appear for the chat to save or dismiss.</li>
-        <li>Voice notes are transcribed and messages translated for members who want it.</li>
+        <li>Likely candidates go to the on-device model (where present), which suggests a plan, to-do or memory.</li>
+        <li>A saved suggestion is sent to the chat as an encrypted event, so every member's device has it.</li>
+        <li>Voice notes are transcribed and messages translated on the device, for members who want it.</li>
       </ol></div>
   </div>
 </section>
@@ -386,14 +388,15 @@ flowchart LR
 │        ├─ platform/       config, pgx, redis, nats, s3, otel, slog
 │        ├─ access/         membership, blocks, join-time rules: the only place access is decided
 │        ├─ auth/  users/  contacts/  invites/  devices/
-│        ├─ chats/          one-to-one and group chats, admins, settings, private mode
-│        ├─ messages/  sidechats/  reactions/  pins/  saved/
+│        ├─ chats/          one-to-one and group chats, admins, settings
+│        ├─ keys/           prekey bundles, device lists, encrypted backups (no private keys)
+│        ├─ events/         the ordered, encrypted event log per chat (relay only, never read)
 │        ├─ realtime/       ws gateway, protocol, presence, typing, sync
-│        ├─ outbox/  jobs/  push/  media/  voice/  translate/
-│        ├─ plans/  todos/  lists/  memories/  catchup/  search/
-│        └─ ai/             provider interfaces, adapters, versioned prompts
+│        └─ outbox/  jobs/  push/  media/   (plans, lists, memories and search live on the device)
 ├─ packages/
 │  ├─ protocol/             JSON Schema → generated Go + TypeScript
+│  ├─ crypto/               libsignal wrapper shared by web and mobile
+│  ├─ smart/                on-device search, spotting rules, model adapters
 │  └─ tokens/               design tokens for web and mobile
 ├─ db/  migrations/  queries/
 ├─ evals/                   datasets and runners for search and spotting
@@ -403,21 +406,17 @@ flowchart LR
 
 <section id="schema">
   <div class="sec-head"><span class="eyebrow">PostgreSQL</span><h2>Schema</h2>
-  <p>Relational for everything people query. Every row a user can read is reachable through <code>chat_members</code>, which keeps access rules in one place.</p></div>
+  <p>The server keeps accounts, keys, memberships and an ordered log of encrypted events per chat. Plans, lists, memories and search indexes are rebuilt on each device from that log, so none of them exist in readable form on the server.</p></div>
   <div class="tbl"><table>
     <thead><tr><th>Group</th><th>Tables</th><th>Key design points</th></tr></thead>
     <tbody>
     <tr><td class="layer">Identity</td><td class="mono">users, sessions, devices, passkeys, oauth_accounts, user_settings</td><td class="why">Sessions stored hashed. Devices hold push tokens. Settings hold language and smart-feature choices.</td></tr>
     <tr><td class="layer">People</td><td class="mono">contacts, invites, blocks, reports, security_events</td><td class="why">Blocking hides both directions. Security events power the personal security log.</td></tr>
-    <tr><td class="layer">Chats</td><td class="mono">chats (kind: dm | group, mode: normal | private), chat_members (role, joined_at, last_read_seq, muted, pinned)</td><td class="why"><code>joined_at</code> decides which history a new member sees. <code>mode</code> switches smart features off for private chats.</td></tr>
-    <tr><td class="layer">Messages</td><td class="mono">messages, message_edits, reactions, mentions, pins, saved_messages</td><td class="why">Unique <code>(chat_id, seq)</code> and <code>(author_id, idempotency_key)</code>. Private-mode rows hold ciphertext only.</td></tr>
-    <tr><td class="layer">Side chats</td><td class="mono">side_chats (chat_id, parent_side_chat_id, root_message_id, name, created_by)</td><td class="why">Messages carry <code>side_chat_id</code>. Nesting through the parent column.</td></tr>
-    <tr><td class="layer">Plans</td><td class="mono">plans, plan_sources, plan_rsvps</td><td class="why">What, when, where, status (suggested, saved, cancelled), <code>replaces_id</code> for history, and an .ics export.</td></tr>
-    <tr><td class="layer">To-dos and lists</td><td class="mono">todos, todo_sources, lists, list_items</td><td class="why">Assignee, due, status, and the source message.</td></tr>
-    <tr><td class="layer">Memories</td><td class="mono">memories (chat_id, about_user_id, kind, value, status, confidence), memory_sources</td><td class="why">Always scoped to one chat. Deleted with their last source message. The person described can remove them.</td></tr>
-    <tr><td class="layer">Media and voice</td><td class="mono">attachments, voice_transcripts, voice_segments</td><td class="why">Segments carry <code>start_ms/end_ms</code> for jump-to-moment search.</td></tr>
-    <tr><td class="layer">Retrieval</td><td class="mono">embeddings (source_type, source_id, chat_id, created_at, vector), translations</td><td class="why"><code>chat_id</code> next to every vector so access filtering happens inside the search query.</td></tr>
-    <tr><td class="layer">Platform</td><td class="mono">notifications, outbox_events, job_failures, usage_budgets</td><td class="why">Budgets cap smart-feature spend per user per month.</td></tr>
+    <tr><td class="layer">Keys</td><td class="mono">identity_keys, signed_prekeys, one_time_prekeys, device_lists, key_backups</td><td class="why">Public keys only. Backups are encrypted with a key the server never sees (passkey PRF or recovery code).</td></tr>
+    <tr><td class="layer">Chats</td><td class="mono">chats (kind: dm | group), chat_members (role, joined_at, last_read_seq, muted, pinned)</td><td class="why"><code>joined_at</code> decides which history a new member receives. Group names and photos travel encrypted.</td></tr>
+    <tr><td class="layer">Events</td><td class="mono">chat_events (chat_id, seq, sender_device, idempotency_key, ciphertext, sent_at)</td><td class="why">One ordered log of encrypted events per chat: messages, edits, deletes, reactions, side chats, plans, RSVPs, lists and memories. Unique <code>(chat_id, seq)</code>.</td></tr>
+    <tr><td class="layer">Media</td><td class="mono">encrypted_blobs (owner, size, expires_at)</td><td class="why">Photos, files and voice notes encrypted on the device; the key travels inside the message.</td></tr>
+    <tr><td class="layer">Platform</td><td class="mono">notifications, outbox_events, job_failures</td><td class="why">Notification rows carry no content.</td></tr>
     </tbody>
   </table></div>
 </section>
@@ -452,7 +451,7 @@ flowchart LR
 
 <section id="authz">
   <div class="sec-head"><h2>Privacy model</h2>
-  <p>Simpler than roles and capabilities: access comes from being in the chat. Smart features follow exactly the same rule.</p></div>
+  <p>Access comes from being in the chat, and encryption enforces it: only current members' devices hold the keys. Smart features follow the same rule because they only ever run on those devices.</p></div>
   <div class="two">
     <div class="card"><h3>Who can see what</h3>
       <ul class="check">
@@ -463,10 +462,10 @@ flowchart LR
       </ul></div>
     <div class="card"><h3>Smart features that cannot leak</h3>
       <ul class="check">
-        <li>One SQL function, <code>visible_messages(user_id)</code>, defines readable content, including join time, deletions and blocks.</li>
-        <li>Search and answers filter through it inside the query, so the model only sees permitted messages.</li>
-        <li>Private chats are never embedded, indexed or sent to a model.</li>
-        <li>Mandatory leak tests: people who left a group, were blocked, or joined late never retrieve content they should not.</li>
+        <li>Everything runs on your device over messages your device could already decrypt, so there is nothing extra to leak.</li>
+        <li>Leaving a group rotates its Sender Keys, so you can't read what's said after you leave; joining late means you only get keys from then on.</li>
+        <li>No message, plan, list, memory, transcript or index is ever sent to a model provider.</li>
+        <li>What the server does see: who is in which chat, when messages are sent and their size. Sealed sender hides the sender from the server where possible.</li>
       </ul></div>
   </div>
 </section>
@@ -478,13 +477,13 @@ flowchart LR
       <ol class="ms">
         <li>Writes add an outbox row in the same transaction.</li>
         <li>The relay publishes to JetStream subjects such as <code>lynk.msg.created</code>.</li>
-        <li>Durable consumers: push, embed, spot, transcribe, translate, notify.</li>
-        <li>Jobs are idempotent, keyed by source ID and prompt version.</li>
+        <li>Durable consumers: push, media expiry, notify. None of them can read content.</li>
+        <li>Jobs are idempotent, keyed by event ID.</li>
       </ol></div>
     <div class="card"><h3>When things fail</h3>
       <ul class="check">
         <li>Retries with backoff, then a dead-letter stream and a replay view.</li>
-        <li>A circuit breaker per AI provider pauses smart features during outages.</li>
+        <li>Smart features have no server dependency, so they keep working offline and during outages.</li>
         <li>Messaging never depends on AI, Redis or storage being up.</li>
       </ul></div>
   </div>
@@ -492,24 +491,24 @@ flowchart LR
 
 <section id="ai">
   <div class="sec-head"><span class="eyebrow">Smart features</span><h2>How the smart features work</h2>
-  <p>Each one solves a real annoyance in group chats, suggests rather than decides, and links back to the messages behind it.</p></div>
+  <p>Each one solves a real annoyance in group chats, suggests rather than decides, links back to the messages behind it, and runs on the device inside the encryption.</p></div>
   <div class="tbl"><table>
     <thead><tr><th>Feature</th><th>What it does</th><th>How</th></tr></thead>
     <tbody>
-    <tr><td class="layer">Plans</td><td>Spots "Saturday 10am at Boulder Barn" once people agree</td><td class="why">Rules find times and places, Haiku returns a validated plan, the chat saves or dismisses it. Changes keep history.</td></tr>
+    <tr><td class="layer">Plans</td><td>Spots "Saturday 10am at Boulder Barn" once people agree</td><td class="why">Rules find times and places, the on-device model (where present) returns a validated plan, the chat saves or dismisses it. Changes keep history.</td></tr>
     <tr><td class="layer">To-dos and lists</td><td>"Can you bring the chalk bag?" becomes a to-do for you</td><td class="why">Only suggested. The assignee confirms. Shopping lists become shared checklists.</td></tr>
     <tr><td class="layer">Memories</td><td>Birthdays, allergies, favourite places</td><td class="why">Scoped to the chat, sourced, editable, removable by the person described.</td></tr>
-    <tr><td class="layer">Find it again</td><td>"Where did Mei say that ramen place was?"</td><td class="why">Hybrid pgvector + full-text search inside <code>visible_messages</code>, reranked, answered by Opus 5 with source links. Falls back to plain results.</td></tr>
+    <tr><td class="layer">Find it again</td><td>"Where did Mei say that ramen place was?"</td><td class="why">Full-text plus small on-device embeddings over the local message store, answered by the on-device model with source links. Plain results where there's no model.</td></tr>
     <tr><td class="layer">Catch-up</td><td>What you missed in busy groups</td><td class="why">Mentions, plans to confirm and your to-dos first, then the rest in a sentence or two.</td></tr>
-    <tr><td class="layer">Voice notes</td><td>Transcripts and jump-to-moment search</td><td class="why">faster-whisper with word timestamps. The original audio is always kept.</td></tr>
-    <tr><td class="layer">Translation</td><td>Each person reads in their language</td><td class="why">Cached per message and language, with "View original".</td></tr>
+    <tr><td class="layer">Voice notes</td><td>Transcripts and jump-to-moment search</td><td class="why">On-device speech recognition with timestamps. The original audio is always kept.</td></tr>
+    <tr><td class="layer">Translation</td><td>Each person reads in their language</td><td class="why">On-device translation, cached on the device, with "View original".</td></tr>
     </tbody>
   </table></div>
   <div class="card"><h3>Evaluation</h3>
     <ul class="check">
       <li>A seeded set of synthetic friend and family chats with labelled plans, to-dos, memories and search questions.</li>
       <li>Metrics: plan and to-do precision and recall, search recall@10, citation correctness, unsupported-claim rate.</li>
-      <li>Runs in CI when prompts, models or retrieval change. Leak tests run on every build.</li>
+      <li>Runs in CI against each on-device model and the rules-only fallback. Crypto tests (member removal, late joins, device loss) run on every build.</li>
     </ul></div>
 </section>
 
@@ -517,11 +516,12 @@ flowchart LR
   <div class="sec-head"><span class="eyebrow">What could go wrong</span><h2>Risks</h2></div>
   <div class="card">
     <div class="risk"><span class="sev h">High</span><h3>Memories about people who never agreed</h3><p>Keep them scoped to one chat, visible to its members only, removable by the person described, and deleted with their source.</p></div>
-    <div class="risk"><span class="sev h">High</span><h3>Smart features leaking across chats</h3><p>Access filtering inside the search query, no cross-chat memories, and leak tests covering people who left, were blocked or joined late.</p></div>
-    <div class="risk"><span class="sev h">High</span><h3>Privacy expectations</h3><p>Say plainly which chats the server can read. Private mode must be real end-to-end encryption, with an external review before launch.</p></div>
-    <div class="risk"><span class="sev m">Med</span><h3>Spam and abuse</h3><p>Invite-based contact, rate limits on new accounts, blocking, and reporting from day one. Required for the app stores anyway.</p></div>
-    <div class="risk"><span class="sev m">Med</span><h3>AI cost on a free product</h3><p>Rules before models, Haiku and batching, self-hosted embeddings and transcription, and per-user budgets.</p></div>
-    <div class="risk"><span class="sev m">Med</span><h3>Prompt injection in messages</h3><p>Messages are treated as untrusted data. The model only suggests; every field is validated before saving, and it can never take actions.</p></div>
+    <div class="risk"><span class="sev h">High</span><h3>Getting the encryption right</h3><p>Use libsignal, never custom crypto; external cryptography review before launch; tests for group membership changes, device loss and key rotation; safety numbers so people can verify each other.</p></div>
+    <div class="risk"><span class="sev h">High</span><h3>Encryption on the web</h3><p>A web app is re-downloaded from the server on every visit, so a compromised server could serve bad code. Pin and publish build hashes, use Subresource Integrity, and recommend the phone apps for people who need the strongest guarantee.</p></div>
+    <div class="risk"><span class="sev h">High</span><h3>Lost devices, lost history</h3><p>With no server copy, losing every device loses the chats. Device linking, and encrypted backups keyed from the passkey or a recovery code, set up during sign-up.</p></div>
+    <div class="risk"><span class="sev m">Med</span><h3>Spam and abuse without reading messages</h3><p>Invite-based contact, rate limits on new accounts, blocking, and reporting that sends the reported messages from the reporter's device (with message franking so reports can't be forged). Required for the app stores anyway.</p></div>
+    <div class="risk"><span class="sev m">Med</span><h3>Uneven smart features across devices</h3><p>Rules and search work everywhere; model features light up where an on-device model exists and say so plainly where it doesn't.</p></div>
+    <div class="risk"><span class="sev m">Med</span><h3>Prompt injection in messages</h3><p>Messages are treated as untrusted data by the on-device model. It only suggests; every field is validated before saving, and it can never take actions.</p></div>
     <div class="risk"><span class="sev l">Low</span><h3>Wrong suggestions</h3><p>Nothing is saved without a tap, and dismissing is one tap too.</p></div>
   </div>
 </section>
@@ -544,18 +544,19 @@ flowchart LR
       <p class="exit"><b>Exit:</b> sign in on the web against the real Go server.</p>
     </article>
     <article class="phase">
-      <div class="phase-top"><span class="n">1</span><h3>Messaging core</h3><span class="pill weeks">Weeks 4–9</span><span class="pill done">Frontend done</span><span class="pill">Server not started</span></div>
+      <div class="phase-top"><span class="n">1</span><h3>Messaging core</h3><span class="pill weeks">Weeks 4–11</span><span class="pill done">Frontend done</span><span class="pill">Server not started</span></div>
       <div class="cols"><div><ol class="ms">
         <li><s>Profiles, usernames, invite links and QR codes, blocking and reporting</s> (screens done).</li>
         <li><s>One-to-one and group chats, group admins, pinned chats</s> (screens done).</li>
         <li>WebSocket gateway, per-chat <code>seq</code>, idempotent sends.</li>
+        <li>End-to-end encryption for every chat from day one: libsignal sessions, Sender Keys for groups, key rotation on membership changes, device linking, encrypted backup.</li>
         <li><s>Replies, reactions, edits, deletes, mentions, read receipts, typing, presence</s> (screens done, simulated).</li>
         <li>Photos and files with signed uploads (picker, preview and viewer done; uploads need the server).</li>
       </ol></div></div>
       <p class="exit"><b>Exit:</b> five friends chat on the web for a week without problems.</p>
     </article>
     <article class="phase">
-      <div class="phase-top"><span class="n">2</span><h3>Reliability</h3><span class="pill weeks">Weeks 10–13</span><span class="pill done">User-facing done</span><span class="pill">Server not started</span></div>
+      <div class="phase-top"><span class="n">2</span><h3>Reliability</h3><span class="pill weeks">Weeks 12–15</span><span class="pill done">User-facing done</span><span class="pill">Server not started</span></div>
       <div class="cols"><div><ol class="ms">
         <li>Outbox, relay and NATS fan-out across two gateway nodes.</li>
         <li>Reconnect sync, offline outbox, duplicate handling (<s>offline outbox, retry and client-side dedupe</s> done in the browser; gap replay needs the server).</li>
@@ -565,7 +566,7 @@ flowchart LR
       <p class="exit"><b>Exit:</b> no lost or duplicated messages in chaos tests, p95 delivery under 250 ms.</p>
     </article>
     <article class="phase">
-      <div class="phase-top"><span class="n">3</span><h3>Mobile app</h3><span class="pill weeks">Weeks 14–19</span></div>
+      <div class="phase-top"><span class="n">3</span><h3>Mobile app</h3><span class="pill weeks">Weeks 16–21</span></div>
       <div class="cols"><div><ol class="ms">
         <li>Phone apps in <code>apps/ios</code> and <code>apps/android</code> on the same protocol, with a SQLite cache and offline outbox. Decide first between one Expo app and two native apps.</li>
         <li>Push through APNs and FCM, reply from the notification.</li>
@@ -575,7 +576,7 @@ flowchart LR
       <p class="exit"><b>Exit:</b> a friends-and-family beta runs on phones every day.</p>
     </article>
     <article class="phase">
-      <div class="phase-top"><span class="n">4</span><h3>Structure without AI</h3><span class="pill weeks">Weeks 20–23</span><span class="pill done">Frontend done</span><span class="pill">Server not started</span></div>
+      <div class="phase-top"><span class="n">4</span><h3>Structure without AI</h3><span class="pill weeks">Weeks 22–25</span><span class="pill done">Frontend done</span><span class="pill">Server not started</span></div>
       <div class="cols"><div><ol class="ms">
         <li><s>Side chats from any message</s> (done in the browser).</li>
         <li><s>Plans made by hand, with RSVPs and calendar export</s> (done, plus an in-app calendar across all chats).</li>
@@ -586,37 +587,37 @@ flowchart LR
       <p class="exit"><b>Exit:</b> the beta group uses plans and lists without any smart features.</p>
     </article>
     <article class="phase">
-      <div class="phase-top"><span class="n">5</span><h3>Find it again</h3><span class="pill weeks">Weeks 24–28</span><span class="pill done">Sample UI done</span><span class="pill">Server not started</span></div>
+      <div class="phase-top"><span class="n">5</span><h3>Find it again</h3><span class="pill weeks">Weeks 26–30</span><span class="pill done">Sample UI done</span><span class="pill">On-device index not started</span></div>
       <div class="cols"><div><ol class="ms">
-        <li>Provider interfaces, embeddings worker, pgvector, backfill.</li>
-        <li>Hybrid search inside <code>visible_messages</code>, answers with sources (the Ask Lynk screen and cited answers are done as a sample on browser data).</li>
-        <li>Per-user and per-chat smart-feature settings and budgets.</li>
-        <li>Eval set, leak tests in CI.</li>
+        <li>On-device message store and search index (SQLite FTS5 / IndexedDB), small on-device embeddings, backfill from the encrypted log.</li>
+        <li>Answers with sources from the on-device model, plain results without one (the Ask Lynk screen and cited answers are done as a sample on browser data).</li>
+        <li>Per-user and per-chat smart-feature settings.</li>
+        <li>Eval set per device class, in CI.</li>
       </ol></div></div>
-      <p class="exit"><b>Exit:</b> recall@10 of at least 0.85, every citation valid, zero leaks.</p>
+      <p class="exit"><b>Exit:</b> recall@10 of at least 0.85 on current phones, every citation valid, nothing sent off the device.</p>
     </article>
     <article class="phase">
-      <div class="phase-top"><span class="n">6</span><h3>Smart features</h3><span class="pill weeks">Weeks 29–35</span><span class="pill done">Sample UI done</span><span class="pill">Models not started</span></div>
+      <div class="phase-top"><span class="n">6</span><h3>Smart features</h3><span class="pill weeks">Weeks 31–37</span><span class="pill done">Sample UI done</span><span class="pill">Models not started</span></div>
       <div class="cols"><div><ol class="ms">
-        <li>Plan and to-do spotting with save and dismiss (<s>cards in the chat, rule-based plan spotting</s> done; Haiku extraction to come).</li>
+        <li>Plan and to-do spotting with save and dismiss (<s>cards in the chat, rule-based plan spotting</s> done; on-device model extraction to come).</li>
         <li><s>Memories with sources, editing and removal</s> (done in the browser).</li>
-        <li>Catch-up for busy groups (screen done since phase 0; summaries need a model).</li>
-        <li>Voice-note transcripts and jump-to-moment search (<s>recording, playback, tap-to-jump transcripts</s> done; faster-whisper on the server to come).</li>
-        <li>Translation with "View original" (<s>in-place UI, on-device where the browser supports it</s> done; cached server translation to come).</li>
+        <li>Catch-up for busy groups (screen done since phase 0; summaries need an on-device model).</li>
+        <li>Voice-note transcripts and jump-to-moment search (<s>recording, playback, tap-to-jump transcripts</s> done; native on-device recognition on phones to come).</li>
+        <li>Translation with "View original" (<s>in-place UI, on-device where the browser supports it</s> done; native on-device translation on phones to come).</li>
       </ol></div></div>
       <p class="exit"><b>Exit:</b> plan spotting precision of at least 0.8, and the beta group keeps catch-up switched on.</p>
     </article>
     <article class="phase">
-      <div class="phase-top"><span class="n">7</span><h3>Private chats and launch</h3><span class="pill weeks">Weeks 36–42</span></div>
+      <div class="phase-top"><span class="n">7</span><h3>Security review and launch</h3><span class="pill weeks">Weeks 38–42</span></div>
       <div class="cols"><div><ol class="ms">
-        <li>Private chat mode on libsignal, with smart features off and clear labelling.</li>
-        <li>External security review, accessibility audit, failure drills.</li>
+        <li>External cryptography and security review, safety-number verification, published web build hashes.</li>
+        <li>Accessibility audit, failure drills, device-loss and backup-restore drills.</li>
         <li>App Store and Play submission, public web launch.</li>
       </ol></div></div>
       <p class="exit"><b>Exit:</b> approved in both stores, review findings closed.</p>
     </article>
   </div>
-  <p class="note">After v1: voice and video calls, "Ask Lynk" (a private assistant over your own chats), shared photo albums, Lynk Plus, and "Nearby mode" for chatting without internet over Bluetooth and Wi-Fi in the mobile app.</p>
+  <p class="note">After v1: end-to-end encrypted voice and video calls, shared photo albums, Lynk Plus, and "Nearby mode" for chatting without internet over Bluetooth and Wi-Fi in the mobile app.</p>
 </section>
 
 <section id="timeline">
@@ -637,16 +638,16 @@ flowchart LR
     <li>Idempotency keys and per-chat seq</li>
     <li>Reconnect and gap replay</li>
     <li>Access from membership and join time</li>
-    <li>Normal and private chat modes</li>
+    <li>End-to-end encryption for every chat, by default</li>
     <li>Memories scoped to one chat</li>
-    <li>Search that filters inside the query</li>
+    <li>Smart features on the device, never on the server</li>
     <li>Suggestions, never automatic actions</li>
-    <li>AI providers behind interfaces, and model choice</li>
+    <li>On-device model providers behind interfaces, rules as the fallback</li>
     <li>Web first, mobile in phase 3</li>
   </ol>
 </section>
 
-<footer>Roadmap v4.8, September 2026. Phases 5–6 as sample interactions on the web: Ask Lynk with cited answers, suggestion cards and rule-based plan spotting, editable memories, recorded voice notes with transcripts, and in-place translation. Supersedes v3 (workplace direction).</footer>
+<footer>Roadmap v4.9, September 2026. Every chat end-to-end encrypted by default, with smart features moved onto the device; the server only relays and stores ciphertext. v4.8: Phases 5–6 as sample interactions on the web: Ask Lynk with cited answers, suggestion cards and rule-based plan spotting, editable memories, recorded voice notes with transcripts, and in-place translation. Supersedes v3 (workplace direction).</footer>
 </div>
 
 <script>
@@ -654,13 +655,13 @@ flowchart LR
   var g=document.getElementById('gantt'); if(!g) return;
   var rows=[
     ['0 · Foundation',1,3,''],
-    ['1 · Messaging core',4,9,''],
-    ['2 · Reliability',10,13,''],
-    ['3 · Mobile app',14,19,'soft'],
-    ['4 · Structure without AI',20,23,'soft'],
-    ['5 · Find it again',24,28,'alt'],
-    ['6 · Smart features',29,35,'alt'],
-    ['7 · Private chats, launch',36,42,'']
+    ['1 · Messaging core + E2EE',4,11,''],
+    ['2 · Reliability',12,15,''],
+    ['3 · Mobile app',16,21,'soft'],
+    ['4 · Structure without AI',22,25,'soft'],
+    ['5 · Find it again',26,30,'alt'],
+    ['6 · Smart features',31,37,'alt'],
+    ['7 · Review, launch',38,42,'']
   ];
   var h='';
   for(var w=1;w<=42;w+=4) h+='<div class="wk" style="grid-row:1;grid-column:'+(w+1)+' / span '+Math.min(4,43-w)+'">W'+w+'</div>';
