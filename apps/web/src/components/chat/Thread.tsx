@@ -138,8 +138,12 @@ export function Thread({
   }, [value]);
 
   useEffect(() => {
-    if (!highlightId) return;
-    document.getElementById(`msg-${highlightId}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    const el = document.getElementById(`msg-${highlightId}`);
+    const box = scrollRef.current;
+    if (!highlightId || !el || !box) return;
+    // Scroll only the conversation: scrollIntoView would also shift the app frame, which clips its overflow.
+    const offset = el.getBoundingClientRect().top - box.getBoundingClientRect().top;
+    box.scrollTo({ top: box.scrollTop + offset - box.clientHeight / 2 + el.clientHeight / 2, behavior: "smooth" });
   }, [highlightId]);
 
   const addFiles = async (files: File[]) => {
