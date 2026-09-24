@@ -4,10 +4,10 @@ import { useId, useState } from "react";
 import Link from "next/link";
 import {
   BellSlash,
+  CalendarPlus,
   CaretRight,
   Check,
   CheckCircle,
-  Lightbulb,
   ListChecks,
   PencilSimple,
   PushPin,
@@ -22,6 +22,9 @@ import { Button, Switch } from "@/components/ui/controls";
 import { Dialog } from "@/components/ui/Dialog";
 import { TextField } from "@/components/ui/Field";
 import { PeoplePicker } from "./PeoplePicker";
+import { PlanCard } from "./PlanCard";
+import { Lists } from "./Lists";
+import type { ListOp } from "@/lib/chat-ops";
 import { Avatar } from "./primitives";
 import { useAccount } from "@/lib/account";
 import {
@@ -29,15 +32,18 @@ import {
   firstName,
   personName,
   type Chat,
+  type Decision,
   type KnowledgeStatus,
+  type Rsvp,
   type Task,
 } from "@/lib/chat";
 
-export type PanelTab = "decisions" | "tasks" | "memory" | "about";
+export type PanelTab = "decisions" | "tasks" | "lists" | "memory" | "about";
 
 const TABS: { value: PanelTab; label: string }[] = [
   { value: "decisions", label: "Plans" },
   { value: "tasks", label: "To-dos" },
+  { value: "lists", label: "Lists" },
   { value: "memory", label: "Memories" },
   { value: "about", label: "Info" },
 ];
@@ -55,6 +61,10 @@ export function ContextPanel({
   onJump,
   onDecision,
   onTask,
+  onRsvp,
+  onNewPlan,
+  onEditPlan,
+  onList,
   onMute,
   onPin,
   onRename,
@@ -68,6 +78,10 @@ export function ContextPanel({
   onJump: (messageId: string) => void;
   onDecision: (id: string, status: KnowledgeStatus) => void;
   onTask: (id: string, status: Task["status"]) => void;
+  onRsvp: (planId: string, answer: Rsvp | null) => void;
+  onNewPlan: () => void;
+  onEditPlan: (plan: Decision) => void;
+  onList: (op: ListOp) => void;
   onMute: () => void;
   onPin: () => void;
   onRename: (name: string) => void;
@@ -91,10 +105,18 @@ export function ContextPanel({
         </button>
       </div>
 
-      <div role="tablist" aria-label="Remembered in this chat" className="mx-4 flex gap-1 rounded-full bg-surface-2 p-1">
+      <div role="tablist" aria-label="Remembered in this chat" className="mx-4 flex gap-0.5 overflow-x-auto rounded-full bg-surface-2 p-1 [scrollbar-width:none]">
         {TABS.map((t) => {
           const count =
-            t.value === "decisions" ? chat.decisions.length : t.value === "tasks" ? chat.tasks.length : t.value === "memory" ? chat.memory.length : 0;
+            t.value === "decisions"
+              ? chat.decisions.length
+              : t.value === "tasks"
+                ? chat.tasks.length
+                : t.value === "lists"
+                  ? (chat.lists?.length ?? 0)
+                  : t.value === "memory"
+                    ? chat.memory.length
+                    : 0;
           return (
             <button
               key={t.value}
@@ -103,7 +125,7 @@ export function ContextPanel({
               aria-selected={tab === t.value}
               onClick={() => onTab(t.value)}
               className={[
-                "flex h-9 flex-auto items-center justify-center gap-1.5 rounded-full px-3 text-[13px] font-medium whitespace-nowrap transition-colors",
+                "flex h-9 flex-auto shrink-0 items-center justify-center gap-1 rounded-full px-2.5 text-[13px] font-medium whitespace-nowrap transition-colors",
                 tab === t.value ? "bg-surface text-ink shadow-soft" : "text-muted hover:text-ink",
               ].join(" ")}
             >
@@ -120,22 +142,37 @@ export function ContextPanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-6">
         {tab === "decisions" ? (
-          <List empty="No plans yet. When everyone agrees on a time or place, Lynk suggests it here.">
-            {chat.decisions.map((d) => (
-              <Item
-                key={d.id}
-                status={d.status}
-                icon={<Lightbulb size={16} weight="fill" />}
-                title={d.title}
-                detail={d.detail + (d.supersedes ? ` Instead of ${d.supersedes}.` : "")}
-                sources={d.sources}
-                onJump={onJump}
-                onConfirm={() => onDecision(d.id, "confirmed")}
-                onReject={() => onDecision(d.id, "rejected")}
-              />
-            ))}
-          </List>
+          <div className="grid gap-2.5">
+            <button
+              type="button"
+              onClick={onNewPlan}
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-accent text-[14px] font-medium text-on-accent active:scale-[0.98]"
+            >
+              <CalendarPlus size={17} weight="bold" /> New plan
+            </button>
+            {chat.decisions.length === 0 ? (
+              <p className="px-2 py-8 text-center text-sm text-muted">No plans yet. Make one, or Lynk suggests one when everyone agrees on a time or place.</p>
+            ) : (
+              <ul className="grid gap-2.5">
+                {chat.decisions.map((d) => (
+                  <li key={d.id}>
+                  <PlanCard
+                    chat={chat}
+                    plan={d}
+                    onRsvp={(answer) => onRsvp(d.id, answer)}
+                    onEdit={() => onEditPlan(d)}
+                    onConfirm={() => onDecision(d.id, "confirmed")}
+                    onReject={() => onDecision(d.id, "rejected")}
+                    onJump={onJump}
+                  />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         ) : null}
+
+        {tab === "lists" ? <Lists lists={chat.lists ?? []} onChange={onList} /> : null}
 
         {tab === "tasks" ? (
           <List empty="Nothing to do. Asks like “can you bring the snacks?” show up here to confirm.">

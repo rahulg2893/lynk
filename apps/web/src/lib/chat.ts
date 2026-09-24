@@ -36,8 +36,10 @@ export type Message = {
   status?: Status;
   replyTo?: string;
   reactions?: Reaction[];
-  /** A branch that starts at this message. */
+  /** Legacy label for a side chat; real side chats live in `Chat.sideChats`. */
   branch?: { name: string; count: number };
+  /** Bookmarked by you, listed in Saved. */
+  saved?: boolean;
   attachments?: Attachment[];
   editedAt?: number;
   /** Deleted for everyone: the text is gone, a placeholder stays. */
@@ -48,6 +50,9 @@ export type Message = {
 
 export type KnowledgeStatus = "proposed" | "confirmed" | "rejected";
 
+export type Rsvp = "going" | "maybe" | "no";
+
+/** A plan: what, when, where and who's coming. Suggested ones come from Lynk; made-by-hand ones start confirmed. */
 export type Decision = {
   id: string;
   title: string;
@@ -55,6 +60,31 @@ export type Decision = {
   status: KnowledgeStatus;
   sources: string[];
   supersedes?: string;
+  /** Start time (epoch ms). */
+  when?: number;
+  /** No time of day, just the date. */
+  allDay?: boolean;
+  where?: string;
+  /** Answers keyed by "me" or a person id. */
+  rsvp?: Record<string, Rsvp>;
+  /** Who made it by hand; absent when Lynk suggested it. */
+  by?: string;
+};
+
+export type ListItem = { id: string; text: string; done: boolean; by: string };
+
+/** A checklist anyone in the chat can add to and tick off. */
+export type SharedList = { id: string; title: string; items: ListItem[] };
+
+/** A thread that branches off one message, so a tangent doesn't take over the chat. */
+export type SideChat = {
+  id: string;
+  /** The message it started from, in the parent chat. */
+  rootId: string;
+  name: string;
+  messages: Message[];
+  draft: string;
+  typing: string | null;
 };
 
 export type Task = {
@@ -90,6 +120,10 @@ export type Chat = {
   decisions: Decision[];
   tasks: Task[];
   memory: Memory[];
+  lists?: SharedList[];
+  sideChats?: SideChat[];
+  /** Set only on the stand-in chat a side chat is shown as (see `resolveChat`). */
+  side?: { parentId: string; parentName: string; rootId: string };
 };
 
 export const ME: Person = { id: "me", name: "Rahul", handle: "rahul" };
@@ -171,9 +205,7 @@ export function createMockChats(now: number): Chat[] {
       mentions: 1,
       messages: [
         m("w1", "tomas", "New bouldering route went up on the north wall", 1500),
-        m("w2", "jonas", "The purple one? I fell off it four times yesterday", 1490, {
-          branch: { name: "Best climbing shoes under $100", count: 9 },
-        }),
+        m("w2", "jonas", "The purple one? I fell off it four times yesterday", 1490),
         m("w3", "me", "We send it this weekend. All of us.", 1480, {
           status: "read",
           readBy: ["amara", "tomas", "jonas"],
@@ -193,6 +225,35 @@ export function createMockChats(now: number): Chat[] {
           status: "proposed",
           sources: ["w4", "w5", "w6", "w7"],
           supersedes: "Sunday",
+          when: nextWeekday(now, 6, 10),
+          where: "Boulder Barn",
+          rsvp: { amara: "going", jonas: "going", tomas: "maybe" },
+        },
+      ],
+      sideChats: [
+        {
+          id: "s-shoes",
+          rootId: "w2",
+          name: "Best climbing shoes under $100",
+          draft: "",
+          typing: null,
+          messages: [
+            m("ws1", "jonas", "My toes are done with these. Recommendations under $100?", 1488),
+            m("ws2", "amara", "Scarpa Origin. Comfy from day one", 1486),
+            m("ws3", "tomas", "La Sportiva Tarantulace if you want them to last", 1484),
+            m("ws4", "me", "Second the Origins, I've had mine two years", 1482, { status: "read" }),
+          ],
+        },
+      ],
+      lists: [
+        {
+          id: "l-pack",
+          title: "Packing for Saturday",
+          items: [
+            { id: "li1", text: "Spare chalk bag", done: false, by: "amara" },
+            { id: "li2", text: "Finger tape", done: true, by: "jonas" },
+            { id: "li3", text: "Snacks", done: false, by: "tomas" },
+          ],
         },
       ],
       tasks: [
@@ -218,7 +279,16 @@ export function createMockChats(now: number): Chat[] {
         m("f5", "sofia", "Remember she's off sugar now", 60),
       ],
       decisions: [
-        { id: "p2", title: "You're picking Mum up on Friday", detail: "Terminal 2, flight lands 6:40pm.", status: "confirmed", sources: ["f1", "f3"] },
+        {
+          id: "p2",
+          title: "You're picking Mum up on Friday",
+          detail: "Terminal 2, flight lands 6:40pm.",
+          status: "confirmed",
+          sources: ["f1", "f3"],
+          when: nextWeekday(now, 5, 18, 40),
+          where: "Airport, terminal 2",
+          rsvp: { me: "going", priya: "maybe" },
+        },
       ],
       tasks: [{ id: "td3", title: "Pick up Mum from the airport", assignee: "me", due: "Friday 6:40pm", status: "confirmed", sources: ["f1", "f3"] }],
       memory: [{ id: "r2", kind: "Mum", value: "Off sugar, prefers cooking at home", sources: ["f4", "f5"] }],
@@ -237,7 +307,17 @@ export function createMockChats(now: number): Chat[] {
         m("a4", "amara", "That ramen place Mei mentioned, want to try it?", 5),
       ],
       memory: [{ id: "r3", kind: "Birthday", value: "Amara's birthday is October 3", sources: ["a3"] }],
-      decisions: [{ id: "p3", title: "Dinner with Amara on Thursday", detail: "Place still open.", status: "proposed", sources: ["a1", "a2", "a3"] }],
+      decisions: [
+        {
+          id: "p3",
+          title: "Dinner with Amara on Thursday",
+          detail: "Place still open.",
+          status: "proposed",
+          sources: ["a1", "a2", "a3"],
+          when: nextWeekday(now, 4, 19, 30),
+          rsvp: { amara: "going" },
+        },
+      ],
     }),
     base({
       id: "c-flat",
@@ -252,6 +332,18 @@ export function createMockChats(now: number): Chat[] {
         m("h3", "kwame", "Shopping list for the week: oat milk, eggs, rice, dish soap", 50),
       ],
       tasks: [{ id: "td4", title: "Buy oat milk, eggs, rice, dish soap", assignee: "me", due: "This week", status: "proposed", sources: ["h3"] }],
+      lists: [
+        {
+          id: "l-shop",
+          title: "Shopping this week",
+          items: [
+            { id: "ls1", text: "Oat milk", done: false, by: "kwame" },
+            { id: "ls2", text: "Eggs", done: true, by: "kwame" },
+            { id: "ls3", text: "Rice", done: false, by: "kwame" },
+            { id: "ls4", text: "Dish soap", done: false, by: "mei" },
+          ],
+        },
+      ],
     }),
     base({
       id: "c-mei",
@@ -335,4 +427,94 @@ export function presence(chat: Chat) {
   if (mins < 60) return `last seen ${mins} min ago`;
   if (mins < 1440) return `last seen ${Math.round(mins / 60)} h ago`;
   return "last seen yesterday";
+}
+
+/* ---------- Side chats ---------- */
+
+/** A side chat is addressed as "<chat id>~<side chat id>", so URLs and actions stay one string. */
+export const sideChatId = (chatId: string, sideId: string) => `${chatId}~${sideId}`;
+
+export function splitChatId(id: string) {
+  const [chatId, sideId] = id.split("~");
+  return { chatId, sideId: sideId as string | undefined };
+}
+
+/** A side chat dressed as a chat, so the thread, sending and the outbox work on it unchanged. */
+export function sideAsChat(parent: Chat, side: SideChat): Chat {
+  return {
+    ...parent,
+    id: sideChatId(parent.id, side.id),
+    name: side.name,
+    pinned: false,
+    unread: 0,
+    mentions: 0,
+    typing: side.typing,
+    draft: side.draft,
+    messages: side.messages,
+    decisions: [],
+    tasks: [],
+    memory: [],
+    lists: [],
+    sideChats: [],
+    side: { parentId: parent.id, parentName: parent.name, rootId: side.rootId },
+  };
+}
+
+export function resolveChat(chats: Chat[], id: string | null): Chat | null {
+  if (!id) return null;
+  const { chatId, sideId } = splitChatId(id);
+  const parent = chats.find((c) => c.id === chatId);
+  if (!parent || !sideId) return parent ?? null;
+  const side = parent.sideChats?.find((s) => s.id === sideId);
+  return side ? sideAsChat(parent, side) : null;
+}
+
+/** Every message thread in a chat: the chat itself, then its side chats. */
+export function threadsOf(chat: Chat): { id: string; messages: Message[] }[] {
+  return [{ id: chat.id, messages: chat.messages }, ...(chat.sideChats ?? []).map((s) => ({ id: sideChatId(chat.id, s.id), messages: s.messages }))];
+}
+
+export const SIDE_REPLIES = ["Good call", "Agreed", "👍", "Let's keep it here then"];
+
+/* ---------- Plans ---------- */
+
+const DAY_MS = 86_400_000;
+
+/** The next given weekday (0 = Sunday) at a time, from `now`. */
+export function nextWeekday(now: number, weekday: number, hours: number, minutes = 0) {
+  const d = new Date(now);
+  d.setHours(hours, minutes, 0, 0);
+  const ahead = (weekday - d.getDay() + 7) % 7 || (d.getTime() <= now ? 7 : 0);
+  return d.getTime() + ahead * DAY_MS;
+}
+
+export function formatWhen(plan: Pick<Decision, "when" | "allDay">) {
+  if (!plan.when) return "No date yet";
+  const day = new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric", month: "short" }).format(plan.when);
+  return plan.allDay ? day : `${day} · ${formatTime(plan.when)}`;
+}
+
+export const RSVP_LABEL: Record<Rsvp, string> = { going: "Going", maybe: "Maybe", no: "Can't go" };
+
+/** "Amara, Jonas and you are going · Tomás maybe" */
+export function rsvpSummary(plan: Decision) {
+  const by = (answer: Rsvp) =>
+    Object.entries(plan.rsvp ?? {})
+      .filter(([, a]) => a === answer)
+      .map(([id]) => (id === "me" ? "you" : firstName(id)));
+  const join = (names: string[]) => (names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]);
+  const going = by("going");
+  const maybe = by("maybe");
+  const parts = [];
+  if (going.length) parts.push(`${join(going)} ${going.length === 1 && going[0] !== "you" ? "is" : "are"} going`);
+  if (maybe.length) parts.push(`${join(maybe)} maybe`);
+  const text = parts.join(" · ");
+  return text ? text[0].toUpperCase() + text.slice(1) : "No answers yet";
+}
+
+/** Every dated plan across chats, soonest first, with the chat it belongs to. */
+export function allPlans(chats: Chat[]) {
+  return chats
+    .flatMap((chat) => chat.decisions.filter((d) => d.when && d.status !== "rejected").map((plan) => ({ chat, plan })))
+    .sort((a, b) => (a.plan.when ?? 0) - (b.plan.when ?? 0));
 }

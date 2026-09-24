@@ -6,6 +6,8 @@ import {
   ArrowLeft,
   ArrowClockwise,
   ArrowUUpLeft,
+  BookmarkSimple,
+  CalendarPlus,
   FileText,
   GitBranch,
   Info,
@@ -34,6 +36,7 @@ import {
   type Attachment,
   type Chat,
   type Message,
+  type SideChat,
 } from "@/lib/chat";
 import { toAttachments } from "@/lib/attachments";
 import { MOTION } from "@/lib/motion";
@@ -60,6 +63,11 @@ export function Thread({
   onBack,
   onToggleInfo,
   highlightId,
+  root,
+  sideChats,
+  onSideChat,
+  onSave,
+  onMakePlan,
 }: {
   chat: Chat;
   now: number;
@@ -77,6 +85,13 @@ export function Thread({
   onToggleInfo: () => void;
   /** A message to scroll to and flash, e.g. from a decision's sources. */
   highlightId?: string | null;
+  /** In a side chat: the message it branched from. */
+  root?: Message;
+  /** Side chats that branch off this chat's messages. */
+  sideChats: SideChat[];
+  onSideChat: (messageId: string) => void;
+  onSave: (messageId: string) => void;
+  onMakePlan: (message: Message) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -249,16 +264,24 @@ export function Thread({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex size-10 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink md:hidden"
-          aria-label="Back to inbox"
+          className={`inline-flex size-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink ${chat.side ? "" : "md:hidden"}`}
+          aria-label={chat.side ? `Back to ${chat.side.parentName}` : "Back to inbox"}
         >
           <ArrowLeft size={20} />
         </button>
         <button type="button" onClick={onToggleInfo} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-          <ChatAvatar chat={chat} size={42} />
+          {chat.side ? (
+            <span className="inline-flex size-[42px] shrink-0 items-center justify-center rounded-[14px] bg-accent-soft text-accent-ink">
+              <GitBranch size={22} weight="bold" aria-hidden />
+            </span>
+          ) : (
+            <ChatAvatar chat={chat} size={42} />
+          )}
           <span className="min-w-0">
             <span className="block truncate text-lg leading-tight font-semibold tracking-tight">{displayName(chat)}</span>
-            <span className={`block truncate text-[13px] ${chat.typing ? "text-accent-ink" : "text-muted"}`}>{presence(chat)}</span>
+            <span className={`block truncate text-[13px] ${chat.typing ? "text-accent-ink" : "text-muted"}`}>
+              {chat.side && !chat.typing ? `Side chat in ${chat.side.parentName}` : presence(chat)}
+            </span>
           </span>
         </button>
         <div className="flex items-center gap-0.5 text-muted">
@@ -290,7 +313,34 @@ export function Thread({
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 pt-6 pb-48 md:px-6" aria-live="polite">
         <div className="relative mx-auto max-w-3xl">
-          {chat.messages.length === 0 ? (
+          {chat.side ? (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={MOTION.item}
+              className="relative mb-4 ml-[52px] rounded-2xl border border-line bg-surface p-3.5"
+            >
+              <p className="flex items-center gap-1.5 text-[12px] font-semibold text-muted">
+                <GitBranch size={13} weight="bold" className="text-accent-ink" aria-hidden /> Started from
+              </p>
+              {root ? (
+                <div className="mt-2 flex items-start gap-2.5">
+                  <Avatar id={root.from} name={personName(root.from)} size={24} />
+                  <p className="min-w-0 text-[14px]">
+                    <span className="font-semibold">{root.from === "me" ? "You" : personName(root.from)}</span>{" "}
+                    <span className="text-muted">{root.deleted ? "Deleted message" : root.text || "Photo"}</span>
+                  </p>
+                </div>
+              ) : null}
+              <button type="button" onClick={onBack} className="mt-2.5 text-[13px] font-medium text-accent-ink hover:underline">
+                See it in {chat.side.parentName}
+              </button>
+            </motion.div>
+          ) : null}
+
+          {chat.messages.length === 0 && chat.side ? (
+            <p className="px-6 pt-6 text-center text-[15px] text-muted">Talk it through here so {chat.side.parentName} stays on topic.</p>
+          ) : chat.messages.length === 0 ? (
             <div className="flex flex-col items-center px-6 pt-16 text-center">
               <ChatAvatar chat={chat} size={72} />
               <h2 className="mt-5 text-2xl font-semibold tracking-tight">
@@ -315,6 +365,7 @@ export function Thread({
             const mine = message.from === "me";
             const quoted = message.replyTo ? byId.get(message.replyTo) : undefined;
             const seenBy = chat.kind === "group" && message.id === lastMine?.id ? message.readBy ?? [] : [];
+            const side = sideChats.find((sc) => sc.rootId === message.id);
 
             return (
               <Fragment key={message.id}>
@@ -362,6 +413,7 @@ export function Thread({
                       <p className="mb-1 flex items-baseline gap-2 text-[13px]">
                         <span className="font-semibold">{mine ? "You" : personName(message.from)}</span>
                         <span className="text-[12px] text-muted tabular-nums">{formatTime(message.at)}</span>
+                        {message.saved ? <BookmarkSimple size={12} weight="fill" className="self-center text-accent-ink" aria-label="Saved" /> : null}
                       </p>
                     ) : null}
                     <MessageBody
@@ -380,12 +432,18 @@ export function Thread({
                     {message.attachments?.length && !message.deleted ? (
                       <AttachmentList items={message.attachments} onOpenPhoto={(photos, index) => setLightbox({ photos, index })} />
                     ) : null}
-                    {message.branch ? (
-                      <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-1 text-xs text-muted">
-                        <GitBranch size={13} className="text-accent-ink" aria-hidden />
-                        <span className="font-medium text-ink">{message.branch.name}</span>
-                        <span className="tabular-nums">side chat · {message.branch.count}</span>
-                      </p>
+                    {side || message.branch ? (
+                      <button
+                        type="button"
+                        onClick={() => onSideChat(message.id)}
+                        className="mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-1 text-xs text-muted transition-colors hover:border-accent hover:text-ink"
+                      >
+                        <GitBranch size={13} className="shrink-0 text-accent-ink" aria-hidden />
+                        <span className="truncate font-medium text-ink">{side?.name ?? message.branch?.name}</span>
+                        <span className="shrink-0 tabular-nums">
+                          side chat · {side ? side.messages.length : (message.branch?.count ?? 0)}
+                        </span>
+                      </button>
                     ) : null}
                     {message.reactions?.length && !message.deleted ? (
                       <div className="mt-1.5 flex gap-1">
@@ -477,6 +535,42 @@ export function Thread({
                         aria-label="Reply"
                       >
                         <ArrowUUpLeft size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSave(message.id);
+                          setActiveId(null);
+                        }}
+                        className={`inline-flex size-8 items-center justify-center rounded-full hover:bg-surface-2 ${message.saved ? "text-accent-ink" : "text-muted hover:text-ink"}`}
+                        aria-label={message.saved ? "Remove from Saved" : "Save message"}
+                        aria-pressed={Boolean(message.saved)}
+                      >
+                        <BookmarkSimple size={16} weight={message.saved ? "fill" : "regular"} />
+                      </button>
+                      {chat.side ? null : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveId(null);
+                            onSideChat(message.id);
+                          }}
+                          className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
+                          aria-label={side ? "Open side chat" : "Start a side chat"}
+                        >
+                          <GitBranch size={16} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveId(null);
+                          onMakePlan(message);
+                        }}
+                        className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
+                        aria-label="Make a plan from this"
+                      >
+                        <CalendarPlus size={16} />
                       </button>
                       {mine ? (
                         <>

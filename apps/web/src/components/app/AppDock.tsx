@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform, type MotionValue } from "motion/react";
 import { useState } from "react";
-import { BookmarkSimple, ChatsCircle, GearSix, SunHorizon, type Icon } from "@phosphor-icons/react";
+import { BookmarkSimple, CalendarDots, ChatsCircle, GearSix, SunHorizon, type Icon } from "@phosphor-icons/react";
 import { LogoMark } from "@/components/landing/Logo";
 import { Avatar } from "@/components/chat/primitives";
 import { useAccount } from "@/lib/account";
@@ -25,6 +25,8 @@ export function AppDock() {
   const items: { href: string; label: string; icon: Icon; active: boolean }[] = [
     { href: "/app", label: "Catch up", icon: SunHorizon, active: pathname === "/app" && !chatOpen },
     { href: "/app", label: "Chats", icon: ChatsCircle, active: onChats && (chatOpen || pathname !== "/app") },
+    { href: "/app/calendar", label: "Calendar", icon: CalendarDots, active: pathname === "/app/calendar" },
+    { href: "/app/saved", label: "Saved", icon: BookmarkSimple, active: pathname === "/app/saved" },
   ];
   const settingsActive = pathname.startsWith("/app/settings");
   const profileActive = pathname === "/app/profile";
@@ -49,11 +51,6 @@ export function AppDock() {
                 </DockItem>
               </li>
             ))}
-            <li>
-              <DockItem label="Saved (coming soon)" active={false} mouseY={mouseY} disabled>
-                <BookmarkSimple size={22} />
-              </DockItem>
-            </li>
           </ul>
         </div>
         <ul className="flex flex-col items-center gap-2">

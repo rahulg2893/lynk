@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
+import { useAccount } from "./account";
 import { createMockChats, type Chat } from "./chat";
 
 /**
@@ -60,4 +62,35 @@ export function clearChats(username: string) {
   } catch {
     // Nothing stored is fine.
   }
+}
+
+/**
+ * The saved chats for pages outside the chat screen (Calendar, Saved).
+ * `change` applies an update and writes it straight back to this browser.
+ */
+export function useStoredChats() {
+  const account = useAccount();
+  const username = account?.profile.username;
+  const seeded = account?.seeded ?? true;
+  const [state, setState] = useState<{ chats: Chat[]; loaded: boolean; now: number }>({ chats: [], loaded: false, now: 0 });
+
+  useEffect(() => {
+    if (!username) return;
+    const now = Date.now();
+    // Read after mount: storage isn't available during server rendering.
+    const t = window.setTimeout(() => setState({ chats: loadChats(username, seeded, now), loaded: true, now }), 0);
+    return () => window.clearTimeout(t);
+  }, [username, seeded]);
+
+  const change = useCallback(
+    (fn: (chats: Chat[]) => Chat[]) =>
+      setState((s) => {
+        const chats = fn(s.chats);
+        if (username) saveChats(username, chats);
+        return { ...s, chats };
+      }),
+    [username],
+  );
+
+  return { ...state, change };
 }

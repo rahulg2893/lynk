@@ -16,6 +16,9 @@ import {
   Sparkle,
   CloudCheck,
   CloudSlash,
+  BookmarkSimple,
+  CalendarDots,
+  CalendarPlus,
   SunHorizon,
   UserCircle,
 } from "@phosphor-icons/react";
@@ -25,10 +28,12 @@ export type PaletteAction =
   | { type: "open"; chatId: string }
   | { type: "message"; chatId: string; messageId: string }
   | { type: "catchup" }
-  | { type: "panel"; tab: "decisions" | "tasks" }
+  | { type: "panel"; tab: "decisions" | "tasks" | "lists" }
   | { type: "go"; href: string }
   | { type: "new"; tab: "chat" | "group" | "invite" }
-| { type: "offline" };
+  | { type: "offline" }
+  | { type: "plan" }
+  | { type: "side" };
 
 type Item = {
   id: string;
@@ -101,7 +106,33 @@ export function CommandPalette({
       },
       { id: "settings", group: "Actions", label: "Settings", hint: "⌘,", icon: <GearSix size={18} />, action: { type: "go", href: "/app/settings" } },
       { id: "profile", group: "Actions", label: "Your profile", icon: <UserCircle size={18} />, action: { type: "go", href: "/app/profile" } },
-      { id: "branch", group: "Actions", label: "Start a side chat", icon: <GitBranch size={18} />, disabledReason: "Arrives with the backend" },
+      {
+        id: "plan",
+        group: "Actions",
+        label: "Make a plan",
+        icon: <CalendarPlus size={18} />,
+        action: { type: "plan" },
+        disabledReason: hasActive ? undefined : "Open a conversation first",
+      },
+      {
+        id: "lists",
+        group: "Actions",
+        label: "View lists",
+        icon: <ListChecks size={18} />,
+        action: { type: "panel", tab: "lists" },
+        disabledReason: hasActive ? undefined : "Open a conversation first",
+      },
+      {
+        id: "branch",
+        group: "Actions",
+        label: "Start a side chat",
+        hint: "from the latest message",
+        icon: <GitBranch size={18} />,
+        action: { type: "side" },
+        disabledReason: hasActive ? undefined : "Open a conversation first",
+      },
+      { id: "calendar", group: "Actions", label: "Calendar", icon: <CalendarDots size={18} />, action: { type: "go", href: "/app/calendar" } },
+      { id: "saved", group: "Actions", label: "Saved messages", icon: <BookmarkSimple size={18} />, action: { type: "go", href: "/app/saved" } },
       { id: "ask", group: "Actions", label: "Ask Lynk", icon: <Sparkle size={18} />, disabledReason: "Arrives with the AI phase" },
       {
         id: "offline",

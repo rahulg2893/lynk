@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { GearSix } from "@phosphor-icons/react";
+import { BookmarkSimple, CalendarDots, GearSix } from "@phosphor-icons/react";
 import { Logo } from "@/components/landing/Logo";
 import { updateAccount, useAccount } from "@/lib/account";
 import { isOnline, isSimulatedOffline, setSimulatedOffline, useOnline } from "@/lib/connection";
@@ -17,17 +17,25 @@ import { ChatList } from "./ChatList";
 import { Thread } from "./Thread";
 import { ContextPanel, type PanelTab } from "./ContextPanel";
 import { CommandPalette, type PaletteAction } from "./CommandPalette";
+import { PlanDialog, type PlanDraft } from "./PlanDialog";
 import {
   PEOPLE,
   REPLIES,
+  SIDE_REPLIES,
   newId,
+  resolveChat,
+  sideChatId,
+  splitChatId,
+  threadsOf,
   type Attachment,
   type Chat,
   type KnowledgeStatus,
   type Message,
+  type Rsvp,
   type Status,
   type Task,
 } from "@/lib/chat";
+import { addSideChat, applyListOp, removePlan, setRsvp, toggleSaved, updateThread, upsertPlan, type ListOp, type PlanInput } from "@/lib/chat-ops";
 
 type State = { chats: Chat[]; activeId: string | null; loaded: boolean; now: number };
 
@@ -49,11 +57,17 @@ type Action =
   | { type: "rename"; id: string; name: string }
   | { type: "members"; id: string; add?: string[]; remove?: string[] }
   | { type: "leave"; id: string }
-  | { type: "tick"; now: number };
+  | { type: "tick"; now: number }
+  /** Plans, lists, side chats and saved messages, via the shared pure helpers in chat-ops. */
+  | { type: "change"; id: string; fn: (chat: Chat) => Chat };
 
+/** Update a chat, or a side chat when `id` is "<chat>~<side>". */
 function update(state: State, id: string, fn: (chat: Chat) => Chat): State {
-  return { ...state, chats: state.chats.map((c) => (c.id === id ? fn(c) : c)) };
+  return { ...state, chats: updateThread(state.chats, id, fn) };
 }
+
+const requeue = (messages: Chat["messages"]) =>
+  messages.some((m) => m.status === "sending") ? messages.map((m) => (m.status === "sending" ? { ...m, status: "waiting" as const } : m)) : messages;
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -63,16 +77,18 @@ function reducer(state: State, action: Action): State {
         ...state,
         loaded: true,
         now: action.now,
-        chats: action.chats.map((c) =>
-          c.messages.some((m) => m.status === "sending")
-            ? { ...c, messages: c.messages.map((m) => (m.status === "sending" ? { ...m, status: "waiting" as const } : m)) }
-            : c,
-        ),
+        chats: action.chats.map((c) => ({
+          ...c,
+          messages: requeue(c.messages),
+          sideChats: c.sideChats?.map((sc) => ({ ...sc, typing: null, messages: requeue(sc.messages) })),
+        })),
       };
     case "select":
       return action.id
-        ? update({ ...state, activeId: action.id }, action.id, (c) => ({ ...c, unread: 0, mentions: 0 }))
+        ? update({ ...state, activeId: action.id }, splitChatId(action.id).chatId, (c) => ({ ...c, unread: 0, mentions: 0 }))
         : { ...state, activeId: null };
+    case "change":
+      return update(state, action.id, action.fn);
     case "draft":
       return update(state, action.id, (c) => ({ ...c, draft: action.text }));
     case "append":
@@ -175,6 +191,8 @@ export function ChatApp() {
   const inFlight = useRef(new Set<string>());
   const online = useOnline();
   const [asking, setAsking] = useState(false);
+  const [planDraft, setPlanDraft] = useState<PlanDraft | null>(null);
+  const messageParam = useSearchParams().get("m");
 
   const username = account?.profile.username;
   const seeded = account?.seeded ?? true;
@@ -199,6 +217,19 @@ export function ChatApp() {
     const t = window.setTimeout(() => saveChats(username, state.chats), 400);
     return () => window.clearTimeout(t);
   }, [state.chats, state.loaded, username]);
+
+  // Leaving for Calendar or Saved inside the save delay must not lose the last change.
+  const latest = useRef<{ username?: string; chats: Chat[]; loaded: boolean }>({ chats: [], loaded: false });
+  useEffect(() => {
+    latest.current = { username, chats: state.chats, loaded: state.loaded };
+  });
+  useEffect(
+    () => () => {
+      const { username: user, chats, loaded } = latest.current;
+      if (user && loaded) saveChats(user, chats);
+    },
+    [],
+  );
 
   // ⌘K / Ctrl+K opens the command palette from anywhere.
   useEffect(() => {
@@ -229,7 +260,9 @@ export function ChatApp() {
     if (state.loaded && chatParam !== state.activeId) dispatch({ type: "select", id: chatParam });
   }, [chatParam, state.loaded, state.activeId]);
 
-  const active = state.chats.find((c) => c.id === state.activeId) ?? null;
+  const active = resolveChat(state.chats, state.activeId);
+  // The chat that owns the open thread: itself, or a side chat's parent.
+  const parent = active?.side ? (state.chats.find((c) => c.id === active.side!.parentId) ?? null) : active;
 
   // Timers outlive renders, so they read the latest chats and open chat from refs.
   const chatsRef = useRef(state.chats);
@@ -312,7 +345,7 @@ export function ChatApp() {
   /** A message that arrived while you weren't looking becomes a browser notification. */
   const alert = useCallback(
     (chatId: string, message: Message) => {
-      const chat = chatsRef.current.find((c) => c.id === chatId);
+      const chat = resolveChat(chatsRef.current, chatId);
       const settings = settingsRef.current;
       if (!chat || !settings) return;
       if (!document.hidden && activeRef.current === chatId) return;
@@ -338,10 +371,10 @@ export function ChatApp() {
         dispatch({ type: "status", id: chatId, messageId: id, status: "sent" });
         later(550, () => dispatch({ type: "status", id: chatId, messageId: id, status: "delivered" }));
 
-        const chat = chatsRef.current.find((c) => c.id === chatId);
+        const chat = resolveChat(chatsRef.current, chatId);
         if (!chat?.members.length) return;
         const replier = chat.members[Math.floor(Math.random() * chat.members.length)];
-        const pool = REPLIES[chat.id] ?? ["👍"];
+        const pool = chat.side ? SIDE_REPLIES : (REPLIES[chat.id] ?? ["👍"]);
         const n = replyIndex.current[chat.id] ?? 0;
         replyIndex.current[chat.id] = n + 1;
         if (n >= pool.length) return;
@@ -375,7 +408,10 @@ export function ChatApp() {
   const retry = useCallback((chatId: string, messageId: string) => isOnline() && deliver(chatId, messageId), [deliver]);
 
   const waiting = useMemo(
-    () => state.chats.flatMap((c) => c.messages.filter((m) => m.status === "waiting").map((m) => ({ chatId: c.id, id: m.id }))),
+    () =>
+      state.chats.flatMap((c) =>
+        threadsOf(c).flatMap((t) => t.messages.filter((m) => m.status === "waiting").map((m) => ({ chatId: t.id, id: m.id }))),
+      ),
     [state.chats],
   );
 
@@ -415,6 +451,52 @@ export function ChatApp() {
     [state.chats, state.now, account],
   );
 
+  // Arriving from Saved or the calendar with ?m=<message>: flash that message once.
+  useEffect(() => {
+    if (!state.loaded || !messageParam) return;
+    const t = window.setTimeout(() => {
+      setHighlight(messageParam);
+      // Drop ?m= only now: changing the URL re-runs this effect, which would cancel the timer.
+      window.history.replaceState(null, "", chatUrl(chatParam));
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [state.loaded, messageParam, chatParam]);
+
+  const change = useCallback((id: string, fn: (chat: Chat) => Chat) => dispatch({ type: "change", id, fn }), []);
+
+  /** Open the side chat that starts at a message, creating it the first time. */
+  const openSide = useCallback(
+    (chatId: string, messageId: string) => {
+      const chat = chatsRef.current.find((c) => c.id === chatId);
+      const root = chat?.messages.find((m) => m.id === messageId);
+      if (!chat || !root) return;
+      const existing = chat.sideChats?.find((sc) => sc.rootId === messageId);
+      if (existing) return open(sideChatId(chatId, existing.id));
+      const text = root.text.replace(/\s+/g, " ").trim();
+      const name = root.branch?.name ?? (text ? (text.length > 42 ? `${text.slice(0, 40).trimEnd()}…` : text) : "Photo");
+      const id = newId("s");
+      change(chatId, (c) => addSideChat(c, { id, rootId: messageId, name, messages: [], draft: "", typing: null }));
+      open(sideChatId(chatId, id));
+    },
+    [change, open],
+  );
+
+  const savePlan = (chatId: string, input: PlanInput) => {
+    setPlanDraft(null);
+    change(chatId, (c) => upsertPlan(c, input));
+    // Someone in the chat answers shortly after a new plan appears.
+    const chat = chatsRef.current.find((c) => c.id === chatId);
+    if (!input.id && chat?.members.length) {
+      const who = chat.members[Math.floor(Math.random() * chat.members.length)];
+      later(2400, () =>
+        change(chatId, (c) => {
+          const plan = c.decisions.at(-1);
+          return plan ? setRsvp(c, plan.id, who, "going") : c;
+        }),
+      );
+    }
+  };
+
   const runPalette = (action: PaletteAction) => {
     setPaletteOpen(false);
     if (action.type === "open") open(action.chatId);
@@ -424,6 +506,11 @@ export function ChatApp() {
     else if (action.type === "go") router.push(action.href);
     else if (action.type === "new") setNewChat(action.tab);
     else if (action.type === "offline") setSimulatedOffline(!isSimulatedOffline());
+    else if (action.type === "plan" && parent) setPlanDraft({ chatId: parent.id, title: "" });
+    else if (action.type === "side" && active && !active.side) {
+      const last = [...active.messages].reverse().find((m) => !m.deleted);
+      if (last) openSide(active.id, last.id);
+    }
   };
 
   return (
@@ -440,6 +527,20 @@ export function ChatApp() {
           </Link>
           <div className="flex items-center gap-1">
             <Link
+              href="/app/calendar"
+              className="inline-flex size-11 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
+            >
+              <CalendarDots size={22} aria-hidden />
+              <span className="sr-only">Calendar</span>
+            </Link>
+            <Link
+              href="/app/saved"
+              className="inline-flex size-11 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
+            >
+              <BookmarkSimple size={22} aria-hidden />
+              <span className="sr-only">Saved</span>
+            </Link>
+            <Link
               href="/app/settings"
               className="inline-flex size-11 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
             >
@@ -455,7 +556,7 @@ export function ChatApp() {
         <div className="min-h-0 flex-1">
           <ChatList
             chats={state.chats}
-            activeId={state.activeId}
+            activeId={state.activeId ? splitChatId(state.activeId).chatId : null}
             loaded={state.loaded}
             now={state.now}
             onSelect={(id) => open(id)}
@@ -499,8 +600,15 @@ export function ChatApp() {
               onDelete={(messageId) => dispatch({ type: "remove", id: active.id, messageId })}
               onDraft={(text) => dispatch({ type: "draft", id: active.id, text })}
               onReact={(messageId, emoji) => dispatch({ type: "react", id: active.id, messageId, emoji })}
-              onBack={() => open(null)}
-              onToggleInfo={() => setPanel((p) => (p ? null : active.decisions.length ? "decisions" : "about"))}
+              onBack={() => (active.side ? open(active.side.parentId, active.side.rootId) : open(null))}
+              onToggleInfo={() => setPanel((p) => (p ? null : parent?.decisions.length ? "decisions" : "about"))}
+              root={active.side ? parent?.messages.find((m) => m.id === active.side!.rootId) : undefined}
+              sideChats={active.sideChats ?? []}
+              onSideChat={(messageId) => openSide(active.id, messageId)}
+              onSave={(messageId) => change(active.id, (c) => toggleSaved(c, messageId))}
+              onMakePlan={(message) =>
+                parent && setPlanDraft({ chatId: parent.id, title: message.text.slice(0, 80), sources: active.side ? [] : [message.id] })
+              }
             />
           </div>
         ) : (
@@ -515,30 +623,46 @@ export function ChatApp() {
           />
         )}
 
-        {active && panel ? (
+        {parent && panel ? (
           <ContextPanel
-            chat={active}
+            chat={parent}
             tab={panel}
             onTab={setPanel}
             onClose={() => setPanel(null)}
             onJump={(messageId) => {
+              if (active?.side) return open(parent.id, messageId);
               setHighlight(null);
               window.requestAnimationFrame(() => setHighlight(messageId));
             }}
-            onDecision={(itemId, status) => dispatch({ type: "decision", id: active.id, itemId, status })}
-            onTask={(itemId, status) => dispatch({ type: "task", id: active.id, itemId, status })}
-            onMute={() => dispatch({ type: "mute", id: active.id })}
-            onPin={() => dispatch({ type: "pin", id: active.id })}
-            onRename={(name) => dispatch({ type: "rename", id: active.id, name })}
-            onMembers={(change) => dispatch({ type: "members", id: active.id, ...change })}
+            onDecision={(itemId, status) => dispatch({ type: "decision", id: parent.id, itemId, status })}
+            onTask={(itemId, status) => dispatch({ type: "task", id: parent.id, itemId, status })}
+            onRsvp={(planId, answer: Rsvp | null) => change(parent.id, (c) => setRsvp(c, planId, "me", answer))}
+            onNewPlan={() => setPlanDraft({ chatId: parent.id, title: "" })}
+            onEditPlan={(plan) => setPlanDraft({ ...plan, chatId: parent.id })}
+            onList={(op: ListOp) => change(parent.id, (c) => applyListOp(c, op))}
+            onMute={() => dispatch({ type: "mute", id: parent.id })}
+            onPin={() => dispatch({ type: "pin", id: parent.id })}
+            onRename={(name) => dispatch({ type: "rename", id: parent.id, name })}
+            onMembers={(members) => dispatch({ type: "members", id: parent.id, ...members })}
             onLeave={() => {
               setPanel(null);
-              dispatch({ type: "leave", id: active.id });
+              dispatch({ type: "leave", id: parent.id });
               open(null);
             }}
           />
         ) : null}
       </main>
+
+      <PlanDialog
+        draft={planDraft}
+        chats={state.chats}
+        onSave={savePlan}
+        onDelete={(chatId, planId) => {
+          setPlanDraft(null);
+          change(chatId, (c) => removePlan(c, planId));
+        }}
+        onClose={() => setPlanDraft(null)}
+      />
 
       <NewChatDialog
         open={newChat !== null}
