@@ -7,6 +7,8 @@ import {
   ArrowClockwise,
   ArrowUUpLeft,
   BookmarkSimple,
+  Microphone,
+  Translate,
   CalendarPlus,
   FileText,
   GitBranch,
@@ -22,6 +24,11 @@ import {
 } from "@phosphor-icons/react";
 import { Avatar, ChatAvatar, MessageBody, StatusNode, TypingDots } from "./primitives";
 import { AttachmentList, Lightbox } from "./Attachments";
+import { SuggestionCard } from "./Suggestion";
+import { VoiceNote, VoiceRecorder } from "./VoiceNote";
+import type { Account } from "@/lib/account";
+import { languageName, translateMessage, type Translation } from "@/lib/translate";
+import { canRecord } from "@/lib/voice";
 import { Button } from "@/components/ui/controls";
 import { Dialog } from "@/components/ui/Dialog";
 import {
@@ -31,12 +38,16 @@ import {
   formatDayLabel,
   formatTime,
   mentionables,
+  messagePreview,
   personName,
   presence,
   type Attachment,
   type Chat,
+  type Decision,
+  type KnowledgeStatus,
   type Message,
   type SideChat,
+  type Task,
 } from "@/lib/chat";
 import { toAttachments } from "@/lib/attachments";
 import { MOTION } from "@/lib/motion";
@@ -68,6 +79,10 @@ export function Thread({
   onSideChat,
   onSave,
   onMakePlan,
+  smart,
+  onDecision,
+  onTask,
+  onEditPlan,
 }: {
   chat: Chat;
   now: number;
@@ -92,6 +107,11 @@ export function Thread({
   onSideChat: (messageId: string) => void;
   onSave: (messageId: string) => void;
   onMakePlan: (message: Message) => void;
+  /** Smart-feature settings; null before the account loads. */
+  smart: Account["smart"] | null;
+  onDecision: (id: string, status: KnowledgeStatus) => void;
+  onTask: (id: string, status: Task["status"]) => void;
+  onEditPlan: (plan: Decision) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -109,6 +129,34 @@ export function Thread({
   const [mention, setMention] = useState<{ query: string; start: number } | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
   const [bursts, setBursts] = useState<{ key: number; messageId: string; emoji: string }[]>([]);
+  const [recording, setRecording] = useState(false);
+  // Translations shown in place, per message; "original" flips back without translating again.
+  const [translated, setTranslated] = useState<Record<string, (Translation & { original: boolean }) | "loading" | "none">>({});
+  const target = smart?.translateTo ?? "en";
+
+  const translate = async (message: Message) => {
+    const current = translated[message.id];
+    if (current && typeof current === "object") {
+      setTranslated((t) => ({ ...t, [message.id]: { ...current, original: !current.original } }));
+      return;
+    }
+    setTranslated((t) => ({ ...t, [message.id]: "loading" }));
+    const result = await translateMessage(message.id, message.text, target);
+    setTranslated((t) => ({ ...t, [message.id]: result ? { ...result, original: false } : "none" }));
+  };
+
+  const shownTranslation = (id: string) => {
+    const t = translated[id];
+    return t && typeof t === "object" && !t.original ? t.text : null;
+  };
+
+  // Suggestions sit under the last message they came from.
+  const smartOn = Boolean(smart?.enabled);
+  const suggestions = new Map<string, { plan?: Decision; task?: Task }[]>();
+  if (smartOn) {
+    for (const d of chat.decisions) if (d.status === "proposed" && d.sources.length && smart?.plans) suggestions.set(d.sources.at(-1)!, [...(suggestions.get(d.sources.at(-1)!) ?? []), { plan: d }]);
+    for (const t of chat.tasks) if (t.status === "proposed" && t.sources.length && smart?.todos) suggestions.set(t.sources.at(-1)!, [...(suggestions.get(t.sources.at(-1)!) ?? []), { task: t }]);
+  }
   // Messages present when the chat opened settle in quietly; new ones get their own entrance.
   const [initialIds] = useState(() => new Set(chat.messages.map((m) => m.id)));
   const [plane, animatePlane] = useAnimate();
@@ -328,7 +376,7 @@ export function Thread({
                   <Avatar id={root.from} name={personName(root.from)} size={24} />
                   <p className="min-w-0 text-[14px]">
                     <span className="font-semibold">{root.from === "me" ? "You" : personName(root.from)}</span>{" "}
-                    <span className="text-muted">{root.deleted ? "Deleted message" : root.text || "Photo"}</span>
+                    <span className="text-muted">{root.deleted ? "Deleted message" : messagePreview(root)}</span>
                   </p>
                 </div>
               ) : null}
@@ -418,19 +466,44 @@ export function Thread({
                     ) : null}
                     <MessageBody
                       mine={mine}
-                      text={message.text}
+                      text={shownTranslation(message.id) ?? message.text}
                       names={names}
                       me={me}
                       edited={Boolean(message.editedAt)}
                       deleted={message.deleted}
                       quote={
                         quoted
-                          ? { author: personName(quoted.from), text: quoted.deleted ? "Deleted message" : quoted.text || "Photo" }
+                          ? { author: personName(quoted.from), text: quoted.deleted ? "Deleted message" : messagePreview(quoted) }
                           : null
                       }
                     />
+                    {translated[message.id] === "loading" ? (
+                      <p className="mt-1 text-[12px] text-muted">Translating…</p>
+                    ) : translated[message.id] === "none" ? (
+                      <p className="mt-1 text-[12px] text-muted">This browser can&apos;t translate that yet. Translation for every message arrives with the server.</p>
+                    ) : typeof translated[message.id] === "object" ? (
+                      <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[12px] text-muted">
+                        <Translate size={12} aria-hidden />
+                        {(translated[message.id] as Translation & { original: boolean }).original
+                          ? `Original, in ${languageName((translated[message.id] as Translation).from)}`
+                          : `Translated from ${languageName((translated[message.id] as Translation).from)}${(translated[message.id] as Translation).source === "sample" ? " (sample)" : ""}`}
+                        <span aria-hidden>·</span>
+                        <button type="button" onClick={() => void translate(message)} className="font-medium text-accent-ink hover:underline">
+                          {(translated[message.id] as Translation & { original: boolean }).original ? "Show translation" : "View original"}
+                        </button>
+                      </p>
+                    ) : null}
                     {message.attachments?.length && !message.deleted ? (
-                      <AttachmentList items={message.attachments} onOpenPhoto={(photos, index) => setLightbox({ photos, index })} />
+                      <>
+                        {message.attachments
+                          .filter((a) => a.kind === "voice")
+                          .map((a) => (
+                            <VoiceNote key={a.id} note={a} mine={mine} showTranscript={smartOn ? Boolean(smart?.transcripts) : false} />
+                          ))}
+                        {message.attachments.some((a) => a.kind !== "voice") ? (
+                          <AttachmentList items={message.attachments} onOpenPhoto={(photos, index) => setLightbox({ photos, index })} />
+                        ) : null}
+                      </>
                     ) : null}
                     {side || message.branch ? (
                       <button
@@ -561,6 +634,19 @@ export function Thread({
                           <GitBranch size={16} />
                         </button>
                       )}
+                      {!mine && message.text ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveId(null);
+                            void translate(message);
+                          }}
+                          className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
+                          aria-label={typeof translated[message.id] === "object" ? "View original" : "Translate"}
+                        >
+                          <Translate size={16} />
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => {
@@ -598,6 +684,21 @@ export function Thread({
                     </div>
                   )}
                 </motion.div>
+                <AnimatePresence>
+                  {(suggestions.get(message.id) ?? []).map(({ plan, task }) =>
+                    plan ? (
+                      <SuggestionCard
+                        key={plan.id}
+                        plan={plan}
+                        onSave={() => onDecision(plan.id, "confirmed")}
+                        onDismiss={() => onDecision(plan.id, "rejected")}
+                        onEdit={() => onEditPlan(plan)}
+                      />
+                    ) : task ? (
+                      <SuggestionCard key={task.id} task={task} onSave={() => onTask(task.id, "confirmed")} onDismiss={() => onTask(task.id, "rejected")} />
+                    ) : null,
+                  )}
+                </AnimatePresence>
               </Fragment>
             );
           })}
@@ -694,7 +795,7 @@ export function Thread({
                 <PencilSimple size={16} className="mt-0.5 shrink-0 text-accent-ink" aria-hidden />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">Editing message</p>
-                  <p className="truncate text-muted">{editing.text || "Photo"}</p>
+                  <p className="truncate text-muted">{messagePreview(editing)}</p>
                 </div>
                 <button type="button" onClick={cancelEdit} className="text-muted hover:text-ink" aria-label="Cancel editing">
                   <X size={16} weight="bold" />
@@ -705,7 +806,7 @@ export function Thread({
                 <ArrowUUpLeft size={16} className="mt-0.5 shrink-0 text-accent-ink" aria-hidden />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">Replying to {personName(replyTo.from)}</p>
-                  <p className="truncate text-muted">{replyTo.text || "Photo"}</p>
+                  <p className="truncate text-muted">{messagePreview(replyTo)}</p>
                 </div>
                 <button type="button" onClick={() => setReplyTo(null)} className="text-muted hover:text-ink" aria-label="Cancel reply">
                   <X size={16} weight="bold" />
@@ -747,6 +848,15 @@ export function Thread({
               </p>
             ) : null}
 
+            {recording ? (
+              <VoiceRecorder
+                onClose={() => setRecording(false)}
+                onSend={(note) => {
+                  onSend("", replyTo?.id, [note]);
+                  setReplyTo(null);
+                }}
+              />
+            ) : (
             <div className="flex items-end gap-1.5">
               <button
                 type="button"
@@ -833,6 +943,18 @@ export function Thread({
                 placeholder={editing ? "Edit your message" : `Message ${chat.kind === "dm" ? chat.name.split(" ")[0] : chat.name}`}
                 className="field-sizing-content max-h-40 min-h-10 w-full resize-none bg-transparent px-1 py-2 text-[15px] leading-6 outline-none placeholder:text-muted focus-visible:outline-none"
               />
+              {!canSend && !editing && canRecord() ? (
+                <motion.button
+                  type="button"
+                  initial={{ scale: 0.6, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  onClick={() => setRecording(true)}
+                  className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-surface-2 text-ink hover:bg-accent hover:text-on-accent active:scale-90"
+                  aria-label="Record a voice note"
+                >
+                  <Microphone size={19} weight="fill" />
+                </motion.button>
+              ) : (
               <button
                 type="submit"
                 disabled={!canSend}
@@ -843,7 +965,9 @@ export function Thread({
                   <PaperPlaneTilt size={18} weight="fill" />
                 </span>
               </button>
+              )}
             </div>
+            )}
           </div>
           <p className="mt-2 hidden text-center text-xs text-muted md:block">
             {editing

@@ -65,6 +65,7 @@ export function ContextPanel({
   onNewPlan,
   onEditPlan,
   onList,
+  onMemory,
   onMute,
   onPin,
   onRename,
@@ -82,6 +83,8 @@ export function ContextPanel({
   onNewPlan: () => void;
   onEditPlan: (plan: Decision) => void;
   onList: (op: ListOp) => void;
+  /** Save a new value for a memory, or remove it (null). */
+  onMemory: (id: string, value: string | null) => void;
   onMute: () => void;
   onPin: () => void;
   onRename: (name: string) => void;
@@ -206,11 +209,7 @@ export function ContextPanel({
         {tab === "memory" ? (
           <List empty="Nothing remembered yet. Birthdays, favourite places and other little things collect here.">
             {chat.memory.map((m) => (
-              <li key={m.id} className="rounded-2xl border border-line p-3.5">
-                <p className="text-[12px] font-semibold text-muted">{m.kind}</p>
-                <p className="mt-1 font-medium">{m.value}</p>
-                <Sources ids={m.sources} onJump={onJump} />
-              </li>
+              <MemoryItem key={m.id} kind={m.kind} value={m.value} sources={m.sources} onJump={onJump} onSave={(v) => onMemory(m.id, v)} onRemove={() => onMemory(m.id, null)} />
             ))}
           </List>
         ) : null}
@@ -534,5 +533,89 @@ function SwitchLine({ icon, label, checked, onChange }: { icon: React.ReactNode;
       </span>
       <Switch checked={checked} onChange={onChange} labelledBy={id} />
     </div>
+  );
+}
+
+/** A memory you can correct or remove; only the value is editable, the sources stay. */
+function MemoryItem({
+  kind,
+  value,
+  sources,
+  onJump,
+  onSave,
+  onRemove,
+}: {
+  kind: string;
+  value: string;
+  sources: string[];
+  onJump: (id: string) => void;
+  onSave: (value: string) => void;
+  onRemove: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  return (
+    <li className="group rounded-2xl border border-line p-3.5">
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 flex-1 text-[12px] font-semibold text-muted">{kind}</p>
+        {editing ? null : (
+          <span className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100">
+            <button
+              type="button"
+              onClick={() => {
+                setDraft(value);
+                setEditing(true);
+              }}
+              className="inline-flex size-7 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
+              aria-label={`Edit ${kind}`}
+            >
+              <PencilSimple size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={onRemove}
+              className="inline-flex size-7 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-danger-ink"
+              aria-label={`Forget ${kind}`}
+            >
+              <X size={14} weight="bold" />
+            </button>
+          </span>
+        )}
+      </div>
+      {editing ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (draft.trim()) onSave(draft.trim());
+            setEditing(false);
+          }}
+          className="mt-1.5"
+        >
+          <label htmlFor={`mem-${kind}`} className="sr-only">
+            {kind}
+          </label>
+          <input
+            id={`mem-${kind}`}
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => e.key === "Escape" && setEditing(false)}
+            maxLength={120}
+            className="h-10 w-full rounded-xl border border-accent bg-surface px-3 font-medium outline-none focus:ring-4 focus:ring-accent/15"
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <button type="button" onClick={() => setEditing(false)} className="h-8 rounded-full px-3 text-[13px] text-muted hover:text-ink">
+              Cancel
+            </button>
+            <button type="submit" className="h-8 rounded-full bg-accent px-3 text-[13px] font-medium text-on-accent">
+              Save
+            </button>
+          </div>
+        </form>
+      ) : (
+        <p className="mt-1 font-medium">{value}</p>
+      )}
+      <Sources ids={sources} onJump={onJump} />
+    </li>
   );
 }

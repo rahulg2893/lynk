@@ -99,3 +99,16 @@ export function addSideChat(chat: Chat, side: SideChat): Chat {
 export function toggleSaved(chat: Chat, messageId: string): Chat {
   return { ...chat, messages: chat.messages.map((m) => (m.id === messageId ? { ...m, saved: !m.saved } : m)) };
 }
+
+export const editMemory = (chat: Chat, memoryId: string, value: string): Chat => ({
+  ...chat,
+  memory: chat.memory.map((m) => (m.id === memoryId ? { ...m, value } : m)),
+});
+
+export const removeMemory = (chat: Chat, memoryId: string): Chat => ({ ...chat, memory: chat.memory.filter((m) => m.id !== memoryId) });
+
+/** Add a suggestion Lynk spotted, unless one already comes from the same message. */
+export function suggestPlan(chat: Chat, plan: Decision): Chat {
+  if (chat.decisions.some((d) => d.sources.some((s) => plan.sources.includes(s)))) return chat;
+  return { ...chat, decisions: [...chat.decisions, plan] };
+}

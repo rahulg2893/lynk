@@ -13,9 +13,12 @@ export type Person = { id: string; name: string; handle: string; photo?: string 
 export type Reaction = { emoji: string; count: number; mine: boolean };
 
 /** A photo or file sent in a chat. Photos are small data URLs until uploads exist. */
+/** A stretch of a voice note's transcript, starting `at` ms into the recording. */
+export type TranscriptSegment = { at: number; text: string };
+
 export type Attachment = {
   id: string;
-  kind: "image" | "file";
+  kind: "image" | "file" | "voice";
   name: string;
   /** Bytes. */
   size: number;
@@ -24,6 +27,12 @@ export type Attachment = {
   url: string | null;
   width?: number;
   height?: number;
+  /** Voice notes: length in ms, 0–1 bar heights for the waveform, and the transcript. */
+  duration?: number;
+  peaks?: number[];
+  transcript?: TranscriptSegment[];
+  /** "live" came from this browser's speech recognition; "sample" is demo text. */
+  transcriptKind?: "live" | "sample";
 };
 
 export type Message = {
@@ -277,6 +286,28 @@ export function createMockChats(now: number): Chat[] {
         m("f3", "me", "I'll get her", 385, { status: "read", readBy: ["priya", "sofia"] }),
         m("f4", "priya", "Thank you! She said no restaurants, she wants to cook", 380),
         m("f5", "sofia", "Remember she's off sugar now", 60),
+        m("f6", "priya", "", 45, {
+          attachments: [
+            {
+              id: "vn-f6",
+              kind: "voice",
+              name: "Voice note",
+              size: 0,
+              mime: "audio/webm",
+              url: null,
+              duration: 17_000,
+              peaks: [0.2, 0.35, 0.6, 0.8, 0.5, 0.3, 0.55, 0.9, 0.7, 0.4, 0.25, 0.5, 0.75, 0.6, 0.35, 0.2, 0.45, 0.8, 0.95, 0.6, 0.4, 0.3, 0.5, 0.7, 0.85, 0.55, 0.3, 0.2, 0.4, 0.65, 0.5, 0.35, 0.6, 0.75, 0.45, 0.3, 0.2, 0.35, 0.25, 0.15],
+              transcriptKind: "sample",
+              transcript: [
+                { at: 0, text: "Hi everyone, quick update on Mum." },
+                { at: 3_500, text: "Her flight is still landing at twenty to seven on Friday," },
+                { at: 7_800, text: "terminal two, and she's bringing the big green suitcase." },
+                { at: 12_000, text: "Rahul, text me when you're at arrivals so I can tell her where to go." },
+              ],
+            },
+          ],
+        }),
+        m("f7", "sofia", "Glöm inte att köpa blommor till mamma på fredag 🌷", 30),
       ],
       decisions: [
         {
@@ -517,4 +548,46 @@ export function allPlans(chats: Chat[]) {
   return chats
     .flatMap((chat) => chat.decisions.filter((d) => d.when && d.status !== "rejected").map((plan) => ({ chat, plan })))
     .sort((a, b) => (a.plan.when ?? 0) - (b.plan.when ?? 0));
+}
+
+/* ---------- Translation samples ---------- */
+
+export const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  hi: "Hindi",
+  ta: "Tamil",
+  zh: "Chinese",
+  sv: "Swedish",
+};
+
+/** Built-in translations for the demo messages, used when the browser has no translator of its own. */
+export const SAMPLE_TRANSLATIONS: Record<string, { from: string; text: Record<string, string> }> = {
+  f7: {
+    from: "sv",
+    text: {
+      en: "Don't forget to buy flowers for Mum on Friday 🌷",
+      es: "No olvides comprar flores para mamá el viernes 🌷",
+      fr: "N'oublie pas d'acheter des fleurs pour maman vendredi 🌷",
+      de: "Vergiss nicht, am Freitag Blumen für Mama zu kaufen 🌷",
+    },
+  },
+};
+
+export const formatDuration = (ms: number) => {
+  const s = Math.round(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
+
+/** A one-line stand-in for a message: its text, or what it carries. */
+export function messagePreview(m: Pick<Message, "text" | "attachments">) {
+  if (m.text) return m.text;
+  const items = m.attachments ?? [];
+  const voice = items.find((a) => a.kind === "voice");
+  if (voice) return `Voice note ${formatDuration(voice.duration ?? 0)}`;
+  const photos = items.filter((a) => a.kind === "image").length;
+  if (photos) return photos === 1 ? "Photo" : `${photos} photos`;
+  return items[0]?.name ?? "Message";
 }

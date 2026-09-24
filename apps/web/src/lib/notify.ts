@@ -1,6 +1,6 @@
 "use client";
 
-import { personName, type Chat, type Message } from "./chat";
+import { messagePreview, personName, type Chat, type Message } from "./chat";
 import type { Account } from "./account";
 
 type Settings = Account["notifications"];
@@ -23,7 +23,7 @@ export function notifies(chat: Chat, message: Message, settings: Settings, me: s
   return false;
 }
 
-const summary = (m: Message) => m.text || (m.attachments?.some((a) => a.kind === "image") ? "Sent a photo" : "Sent a file");
+const summary = (m: Message) => messagePreview(m);
 
 export type NotificationGroup = {
   chat: Chat;

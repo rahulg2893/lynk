@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { BellSlash, Command, MagnifyingGlass, NotePencil, PushPin, X } from "@phosphor-icons/react";
+import { BellSlash, Command, MagnifyingGlass, NotePencil, PushPin, Sparkle, X } from "@phosphor-icons/react";
 import { ChatAvatar, StatusNode } from "./primitives";
 import { NotificationsButton } from "./Notifications";
 import type { ComponentProps } from "react";
-import { firstName, formatListTime, type Chat } from "@/lib/chat";
+import { firstName, formatListTime, messagePreview, type Chat } from "@/lib/chat";
 
 type Filter = "all" | "unread" | "groups";
 
@@ -23,6 +23,7 @@ export function ChatList({
   now,
   onSelect,
   onOpenPalette,
+  onAsk,
   onNewChat,
   online,
   notifications,
@@ -33,6 +34,7 @@ export function ChatList({
   now: number;
   onSelect: (id: string) => void;
   onOpenPalette: () => void;
+  onAsk: () => void;
   onNewChat: (tab: "chat" | "group" | "invite") => void;
   online: boolean;
   notifications: Omit<ComponentProps<typeof NotificationsButton>, "now"> | null;
@@ -78,6 +80,15 @@ export function ChatList({
             aria-keyshortcuts="Meta+K Control+K"
           >
             <Command size={14} weight="bold" /> K
+          </button>
+          <button
+            type="button"
+            onClick={onAsk}
+            className="inline-flex size-9 items-center justify-center rounded-full border border-line bg-surface text-accent-ink hover:border-accent"
+            aria-label="Ask Lynk"
+            title="Ask Lynk: find anything in your chats"
+          >
+            <Sparkle size={17} weight="fill" />
           </button>
           {notifications ? <NotificationsButton {...notifications} now={now} /> : null}
           <button
@@ -254,7 +265,7 @@ function Row({
                     ? "No messages yet"
                     : last.deleted
                       ? "Message deleted"
-                      : last.text || attachmentSummary(last.attachments ?? [])}
+                      : messagePreview(last)}
                 </span>
               </>
             )}
@@ -308,12 +319,6 @@ function ListSkeleton() {
   );
 }
 
-/** "Photo", "3 photos" or a file's name, for a message with no text. */
-function attachmentSummary(items: { kind: string; name: string }[]) {
-  const photos = items.filter((a) => a.kind === "image").length;
-  if (photos) return photos === 1 ? "Photo" : `${photos} photos`;
-  return items[0]?.name ?? "File";
-}
 
 /**
  * Pinned chats as a row of large avatars, like favourites on a phone. Unread

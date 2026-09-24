@@ -18,6 +18,8 @@ import { Thread } from "./Thread";
 import { ContextPanel, type PanelTab } from "./ContextPanel";
 import { CommandPalette, type PaletteAction } from "./CommandPalette";
 import { PlanDialog, type PlanDraft } from "./PlanDialog";
+import { AskLynk } from "./AskLynk";
+import { spotPlan } from "@/lib/spot";
 import {
   PEOPLE,
   REPLIES,
@@ -35,7 +37,7 @@ import {
   type Status,
   type Task,
 } from "@/lib/chat";
-import { addSideChat, applyListOp, removePlan, setRsvp, toggleSaved, updateThread, upsertPlan, type ListOp, type PlanInput } from "@/lib/chat-ops";
+import { addSideChat, applyListOp, editMemory, removeMemory, suggestPlan, removePlan, setRsvp, toggleSaved, updateThread, upsertPlan, type ListOp, type PlanInput } from "@/lib/chat-ops";
 
 type State = { chats: Chat[]; activeId: string | null; loaded: boolean; now: number };
 
@@ -192,6 +194,7 @@ export function ChatApp() {
   const online = useOnline();
   const [asking, setAsking] = useState(false);
   const [planDraft, setPlanDraft] = useState<PlanDraft | null>(null);
+  const [askOpen, setAskOpen] = useState(false);
   const messageParam = useSearchParams().get("m");
 
   const username = account?.profile.username;
@@ -268,11 +271,13 @@ export function ChatApp() {
   const chatsRef = useRef(state.chats);
   const activeRef = useRef(state.activeId);
   const settingsRef = useRef(account?.notifications);
+  const smartRef = useRef(account?.smart);
   const meRef = useRef((account?.profile.name ?? "You").split(" ")[0]);
   useEffect(() => {
     chatsRef.current = state.chats;
     activeRef.current = state.activeId;
     settingsRef.current = account?.notifications;
+    smartRef.current = account?.smart;
     meRef.current = (account?.profile.name ?? "You").split(" ")[0];
   });
 
@@ -401,8 +406,13 @@ export function ChatApp() {
       const status: Status = isOnline() ? "sending" : "waiting";
       dispatch({ type: "append", id: chat.id, message: { id, from: "me", text, at: Date.now(), status, replyTo, attachments } });
       if (status === "sending") window.setTimeout(() => deliver(chat.id, id), 0);
+
+      // Spot a plan in what you just wrote ("dinner Friday 8pm?"), as a suggestion to save.
+      const smart = smartRef.current;
+      const plan = !chat.side && smart?.enabled && smart.plans ? spotPlan(text, id, Date.now()) : null;
+      if (plan) later(900, () => dispatch({ type: "change", id: chat.id, fn: (c) => suggestPlan(c, plan) }));
     },
-    [deliver],
+    [deliver, later],
   );
 
   const retry = useCallback((chatId: string, messageId: string) => isOnline() && deliver(chatId, messageId), [deliver]);
@@ -484,6 +494,8 @@ export function ChatApp() {
   const savePlan = (chatId: string, input: PlanInput) => {
     setPlanDraft(null);
     change(chatId, (c) => upsertPlan(c, input));
+    // Editing a suggestion and saving it counts as saving the plan.
+    if (input.id) dispatch({ type: "decision", id: chatId, itemId: input.id, status: "confirmed" });
     // Someone in the chat answers shortly after a new plan appears.
     const chat = chatsRef.current.find((c) => c.id === chatId);
     if (!input.id && chat?.members.length) {
@@ -506,6 +518,7 @@ export function ChatApp() {
     else if (action.type === "go") router.push(action.href);
     else if (action.type === "new") setNewChat(action.tab);
     else if (action.type === "offline") setSimulatedOffline(!isSimulatedOffline());
+    else if (action.type === "ask") setAskOpen(true);
     else if (action.type === "plan" && parent) setPlanDraft({ chatId: parent.id, title: "" });
     else if (action.type === "side" && active && !active.side) {
       const last = [...active.messages].reverse().find((m) => !m.deleted);
@@ -561,6 +574,7 @@ export function ChatApp() {
             now={state.now}
             onSelect={(id) => open(id)}
             onOpenPalette={() => setPaletteOpen(true)}
+            onAsk={() => setAskOpen(true)}
             onNewChat={(tab) => setNewChat(tab)}
             online={online}
             notifications={
@@ -606,6 +620,10 @@ export function ChatApp() {
               sideChats={active.sideChats ?? []}
               onSideChat={(messageId) => openSide(active.id, messageId)}
               onSave={(messageId) => change(active.id, (c) => toggleSaved(c, messageId))}
+              smart={account?.smart ?? null}
+              onDecision={(itemId, status) => parent && dispatch({ type: "decision", id: parent.id, itemId, status })}
+              onTask={(itemId, status) => parent && dispatch({ type: "task", id: parent.id, itemId, status })}
+              onEditPlan={(plan) => parent && setPlanDraft({ ...plan, chatId: parent.id })}
               onMakePlan={(message) =>
                 parent && setPlanDraft({ chatId: parent.id, title: message.text.slice(0, 80), sources: active.side ? [] : [message.id] })
               }
@@ -640,6 +658,7 @@ export function ChatApp() {
             onNewPlan={() => setPlanDraft({ chatId: parent.id, title: "" })}
             onEditPlan={(plan) => setPlanDraft({ ...plan, chatId: parent.id })}
             onList={(op: ListOp) => change(parent.id, (c) => applyListOp(c, op))}
+            onMemory={(memoryId, value) => change(parent.id, (c) => (value === null ? removeMemory(c, memoryId) : editMemory(c, memoryId, value)))}
             onMute={() => dispatch({ type: "mute", id: parent.id })}
             onPin={() => dispatch({ type: "pin", id: parent.id })}
             onRename={(name) => dispatch({ type: "rename", id: parent.id, name })}
@@ -652,6 +671,18 @@ export function ChatApp() {
           />
         ) : null}
       </main>
+
+      <AskLynk
+        open={askOpen}
+        chats={state.chats}
+        now={state.now || 0}
+        smart={Boolean(account?.smart.enabled)}
+        onClose={() => setAskOpen(false)}
+        onOpen={(threadId, messageId) => {
+          setAskOpen(false);
+          open(threadId, messageId);
+        }}
+      />
 
       <PlanDialog
         draft={planDraft}

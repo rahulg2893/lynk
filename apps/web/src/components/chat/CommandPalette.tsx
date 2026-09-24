@@ -33,7 +33,8 @@ export type PaletteAction =
   | { type: "new"; tab: "chat" | "group" | "invite" }
   | { type: "offline" }
   | { type: "plan" }
-  | { type: "side" };
+  | { type: "side" }
+  | { type: "ask" };
 
 type Item = {
   id: string;
@@ -133,7 +134,7 @@ export function CommandPalette({
       },
       { id: "calendar", group: "Actions", label: "Calendar", icon: <CalendarDots size={18} />, action: { type: "go", href: "/app/calendar" } },
       { id: "saved", group: "Actions", label: "Saved messages", icon: <BookmarkSimple size={18} />, action: { type: "go", href: "/app/saved" } },
-      { id: "ask", group: "Actions", label: "Ask Lynk", icon: <Sparkle size={18} />, disabledReason: "Arrives with the AI phase" },
+      { id: "ask", group: "Actions", label: "Ask Lynk", hint: "find it again", icon: <Sparkle size={18} />, action: { type: "ask" } },
       {
         id: "offline",
         group: "Actions",

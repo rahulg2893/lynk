@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, BookmarkSimple, GitBranch, MagnifyingGlass, Paperclip } from "@phosphor-icons/react";
 import { PageShell } from "@/components/app/PageShell";
 import { Avatar } from "@/components/chat/primitives";
-import { formatListTime, personName, sideChatId, type Chat, type Message } from "@/lib/chat";
+import { formatListTime, messagePreview, personName, sideChatId, type Chat, type Message } from "@/lib/chat";
 import { updateThread, toggleSaved } from "@/lib/chat-ops";
 import { useStoredChats } from "@/lib/chat-store";
 import { MOTION } from "@/lib/motion";
@@ -108,7 +108,7 @@ export function SavedView() {
                   <Avatar id={e.message.from} name={personName(e.message.from)} size={32} />
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-semibold">{e.message.from === "me" ? "You" : personName(e.message.from)}</p>
-                    <p className="mt-0.5 text-[15px] leading-relaxed break-words">{e.message.text || "Photo"}</p>
+                    <p className="mt-0.5 text-[15px] leading-relaxed break-words">{messagePreview(e.message)}</p>
                     {e.message.attachments?.length ? (
                       <p className="mt-1 flex items-center gap-1 text-[13px] text-muted">
                         <Paperclip size={13} aria-hidden /> {e.message.attachments.length} attachment{e.message.attachments.length > 1 ? "s" : ""}
