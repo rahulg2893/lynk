@@ -2,3 +2,7 @@
 .claude/
 graphify-out/
 apps/web/public/people/
+# Generated icons, nothing to extract
+apps/web/public/app-icon-1024.png
+apps/web/src/app/apple-icon.png
+apps/web/src/app/icon.svg

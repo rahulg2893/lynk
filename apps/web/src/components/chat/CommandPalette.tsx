@@ -9,6 +9,9 @@ import {
   Lightbulb,
   ListChecks,
   MagnifyingGlass,
+  NotePencil,
+  QrCode as QrIcon,
+  UsersThree,
   Sparkle,
   SunHorizon,
   UserCircle,
@@ -20,7 +23,8 @@ export type PaletteAction =
   | { type: "message"; chatId: string; messageId: string }
   | { type: "catchup" }
   | { type: "panel"; tab: "decisions" | "tasks" }
-  | { type: "go"; href: string };
+  | { type: "go"; href: string }
+  | { type: "new"; tab: "chat" | "group" | "invite" };
 
 type Item = {
   id: string;
@@ -69,6 +73,9 @@ export function CommandPalette({
   const items = useMemo<Item[]>(() => {
     const q = query.trim().toLowerCase();
     const actions: Item[] = [
+      { id: "new-chat", group: "Actions", label: "New chat", icon: <NotePencil size={18} />, action: { type: "new", tab: "chat" } },
+      { id: "new-group", group: "Actions", label: "New group", icon: <UsersThree size={18} />, action: { type: "new", tab: "group" } },
+      { id: "qr", group: "Actions", label: "Show my QR code", icon: <QrIcon size={18} />, action: { type: "new", tab: "invite" } },
       { id: "catchup", group: "Actions", label: "Catch me up", icon: <SunHorizon size={18} />, action: { type: "catchup" } },
       {
         id: "decisions",

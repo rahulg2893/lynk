@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { PEOPLE } from "./chat";
+import { clearChats } from "./chat-store";
 
 /**
  * The signed-in person, their sign-in methods and their settings. Frontend
@@ -70,6 +71,8 @@ export type Account = {
   removedMemories: string[];
   /** Scheduled deletion (epoch ms), or null. */
   deletionAt: number | null;
+  /** The demo account starts with sample chats; new accounts start empty. */
+  seeded: boolean;
 };
 
 /** Things people said about you, kept inside the chat they came from. */
@@ -117,6 +120,7 @@ function defaults(now = Date.now()): Account {
     blocked: [],
     removedMemories: [],
     deletionAt: null,
+    seeded: true,
   };
 }
 
@@ -233,6 +237,7 @@ export function signOut() {
 /** A new account replaces the demo one. */
 export function createAccount(input: { name: string; username: string; method: SignInMethod }) {
   const now = Date.now();
+  clearChats(input.username);
   const base = defaults(now);
   const next: Account = {
     ...base,
@@ -242,6 +247,8 @@ export function createAccount(input: { name: string; username: string; method: S
     linked: { apple: input.method === "apple", google: input.method === "google" },
     sessions: base.sessions.filter((s) => s.current),
     log: [{ id: eventId(), at: now, text: `Account created with ${METHOD_LABEL[input.method]}` }],
+    removedMemories: MEMORIES_ABOUT_ME.map((m) => m.id),
+    seeded: false,
   };
   updateAccount(() => next);
 }
@@ -370,6 +377,7 @@ export function cancelDeletion() {
 
 /** Delete now: in this preview, the browser forgets the account entirely. */
 export function deleteAccountNow() {
+  clearChats(read().profile.username);
   try {
     localStorage.removeItem(KEY);
   } catch {

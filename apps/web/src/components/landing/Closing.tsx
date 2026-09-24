@@ -1,6 +1,3 @@
-import Link from "next/link";
-import { ArrowRight } from "@phosphor-icons/react/ssr";
-import { FadeIn } from "@/components/motion/FadeIn";
 import { Logo } from "./Logo";
 
 const FOOTER_LINKS = [
@@ -8,7 +5,7 @@ const FOOTER_LINKS = [
     heading: "Product",
     links: [
       { label: "Features", href: "#features" },
-      { label: "How it works", href: "#how" },
+      { label: "Privacy", href: "#privacy" },
       { label: "Web app", href: "/app" },
       { label: "Create an account", href: "/sign-up" },
       { label: "Sign in", href: "/sign-in" },
@@ -22,33 +19,10 @@ const FOOTER_LINKS = [
   },
 ];
 
+/** The site footer. */
 export function Closing() {
   return (
     <>
-      <section className="bg-bg px-4 pb-28 md:px-6">
-        <div className="mx-auto flex max-w-7xl flex-col items-center rounded-[2rem] bg-stage px-6 py-20 text-center text-on-stage md:py-28">
-          <FadeIn inView>
-            <h2 className="max-w-[18ch] text-4xl leading-[1.02] font-semibold tracking-tight text-balance md:text-6xl">
-              Bring your people over.
-            </h2>
-          </FadeIn>
-          <FadeIn inView delay={0.3}>
-            <p className="mx-auto mt-5 max-w-[40ch] text-lg text-on-stage-muted">
-              Start a chat, invite your friends, and never lose the plan again.
-            </p>
-          </FadeIn>
-          <FadeIn inView delay={0.45} className="mt-9">
-            <Link
-              href="/app"
-              className="group inline-flex items-center gap-2 rounded-full bg-accent px-7 py-4 font-medium whitespace-nowrap text-on-accent transition-transform active:scale-[0.98]"
-            >
-              Open Lynk
-              <ArrowRight size={18} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          </FadeIn>
-        </div>
-      </section>
-
       <footer className="border-t border-line bg-bg px-4 py-14 md:px-6">
         <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-[2fr_1fr_1fr]">
           <div>

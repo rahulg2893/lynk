@@ -1,8 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
-import { BellSlash, Check, CheckCircle, Lightbulb, ListChecks, Sparkle, UsersThree, X } from "@phosphor-icons/react";
+import {
+  BellSlash,
+  CaretRight,
+  Check,
+  CheckCircle,
+  Lightbulb,
+  ListChecks,
+  PencilSimple,
+  PushPin,
+  SignOut,
+  Sparkle,
+  UserMinus,
+  UserPlus,
+  UsersThree,
+  X,
+} from "@phosphor-icons/react";
+import { Button, Switch } from "@/components/ui/controls";
+import { Dialog } from "@/components/ui/Dialog";
+import { TextField } from "@/components/ui/Field";
+import { PeoplePicker } from "./PeoplePicker";
 import { Avatar } from "./primitives";
 import { useAccount } from "@/lib/account";
 import {
@@ -37,6 +56,10 @@ export function ContextPanel({
   onDecision,
   onTask,
   onMute,
+  onPin,
+  onRename,
+  onMembers,
+  onLeave,
 }: {
   chat: Chat;
   tab: PanelTab;
@@ -46,6 +69,10 @@ export function ContextPanel({
   onDecision: (id: string, status: KnowledgeStatus) => void;
   onTask: (id: string, status: Task["status"]) => void;
   onMute: () => void;
+  onPin: () => void;
+  onRename: (name: string) => void;
+  onMembers: (change: { add?: string[]; remove?: string[] }) => void;
+  onLeave: () => void;
 }) {
   return (
     <aside
@@ -151,7 +178,9 @@ export function ContextPanel({
           </List>
         ) : null}
 
-        {tab === "about" ? <About chat={chat} onMute={onMute} /> : null}
+        {tab === "about" ? (
+          <About chat={chat} onMute={onMute} onPin={onPin} onRename={onRename} onMembers={onMembers} onLeave={onLeave} />
+        ) : null}
       </div>
     </aside>
   );
@@ -258,44 +287,215 @@ function Sources({ ids, onJump }: { ids: string[]; onJump: (id: string) => void 
   );
 }
 
-function About({ chat, onMute }: { chat: Chat; onMute: () => void }) {
+function About({
+  chat,
+  onMute,
+  onPin,
+  onRename,
+  onMembers,
+  onLeave,
+}: {
+  chat: Chat;
+  onMute: () => void;
+  onPin: () => void;
+  onRename: (name: string) => void;
+  onMembers: (change: { add?: string[]; remove?: string[] }) => void;
+  onLeave: () => void;
+}) {
   const account = useAccount();
+  const group = chat.kind === "group";
+  const admin = group && (chat.admins ?? []).includes("me");
+  const [renaming, setRenaming] = useState(false);
+  const [name, setName] = useState(chat.name);
+  const [adding, setAdding] = useState(false);
+  const [toAdd, setToAdd] = useState<string[]>([]);
+  const [toRemove, setToRemove] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
+
   return (
     <div className="grid gap-5">
       {chat.topic ? <p className="text-sm text-muted">{chat.topic}</p> : null}
-      <label htmlFor="mute-toggle" className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-line px-3.5 py-3">
-        <span className="flex items-center gap-2.5 text-sm">
-          <BellSlash size={18} className="text-muted" aria-hidden />
-          Mute notifications
-        </span>
-        <input id="mute-toggle" type="checkbox" checked={chat.muted} onChange={onMute} className="peer sr-only" />
-        <span
-          aria-hidden
-          className="relative h-6 w-10 rounded-full bg-surface-2 transition-colors peer-checked:bg-accent peer-focus-visible:outline-2 peer-focus-visible:outline-accent after:absolute after:top-1 after:left-1 after:size-4 after:rounded-full after:bg-surface after:shadow after:transition-transform peer-checked:after:translate-x-4"
-        />
-      </label>
+
+      {group ? (
+        renaming ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (name.trim()) onRename(name.trim());
+              setRenaming(false);
+            }}
+            className="grid gap-3"
+          >
+            <TextField id="group-rename" label="Group name" value={name} maxLength={50} onChange={(e) => setName(e.target.value)} autoFocus />
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" variant="primary" disabled={!name.trim()}>
+                Save
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setRenaming(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        ) : admin ? (
+          <button
+            type="button"
+            onClick={() => {
+              setName(chat.name);
+              setRenaming(true);
+            }}
+            className="flex items-center justify-between gap-3 rounded-2xl border border-line px-3.5 py-3 text-left hover:bg-surface-2/60"
+          >
+            <span>
+              <span className="block text-[12px] font-semibold text-muted">Group name</span>
+              <span className="block font-medium">{chat.name}</span>
+            </span>
+            <PencilSimple size={16} className="text-muted" aria-hidden />
+            <span className="sr-only">Rename group</span>
+          </button>
+        ) : null
+      ) : (
+        <Link href={`/app/people/${chat.members[0]}`} className="flex items-center justify-between rounded-2xl border border-line px-3.5 py-3 hover:bg-surface-2/60">
+          <span className="text-sm font-medium">View profile</span>
+          <CaretRight size={16} className="text-muted" aria-hidden />
+        </Link>
+      )}
+
+      <div className="divide-y divide-line rounded-2xl border border-line">
+        <SwitchLine icon={<PushPin size={18} />} label="Pin chat" checked={Boolean(chat.pinned)} onChange={onPin} />
+        <SwitchLine icon={<BellSlash size={18} />} label="Mute notifications" checked={chat.muted} onChange={onMute} />
+      </div>
+
       <div>
-        <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <UsersThree size={16} aria-hidden /> Members
-        </h3>
-        <ul className="mt-3 grid gap-2.5">
+        <div className="flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <UsersThree size={16} aria-hidden /> {group ? `${chat.members.length + 1} members` : "In this chat"}
+          </h3>
+          {admin ? (
+            <Button size="sm" onClick={() => setAdding(true)}>
+              <UserPlus size={15} aria-hidden /> Add people
+            </Button>
+          ) : null}
+        </div>
+        <ul className="mt-3 grid gap-1">
           {["me", ...chat.members].map((id) => (
-            <li key={id}>
+            <li key={id} className="flex items-center gap-1">
               <Link
                 href={id === "me" ? "/app/profile" : `/app/people/${id}`}
-                className="-mx-2 flex items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-surface-2"
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-surface-2"
               >
                 {id === "me" ? (
                   <Avatar id="me" name={account?.profile.name ?? "You"} photo={account?.profile.photo} size={30} />
                 ) : (
                   <Avatar id={id} name={personName(id)} size={30} />
                 )}
-                <span className="text-sm">{personName(id)}</span>
+                <span className="min-w-0 flex-1 truncate text-sm">{personName(id)}</span>
+                {group && (chat.admins ?? []).includes(id) ? (
+                  <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-muted">Admin</span>
+                ) : null}
               </Link>
+              {admin && id !== "me" ? (
+                <button
+                  type="button"
+                  onClick={() => setToRemove(id)}
+                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-danger-ink"
+                  aria-label={`Remove ${personName(id)} from the group`}
+                >
+                  <UserMinus size={16} />
+                </button>
+              ) : null}
             </li>
           ))}
         </ul>
       </div>
+
+      {group ? (
+        <Button variant="danger-quiet" onClick={() => setLeaving(true)}>
+          <SignOut size={16} aria-hidden /> Leave group
+        </Button>
+      ) : null}
+
+      <Dialog open={adding} onClose={() => setAdding(false)} title={`Add people to ${chat.name}`}>
+        {adding ? (
+          <>
+            <PeoplePicker
+              mode="multi"
+              exclude={[...chat.members, ...(account?.blocked ?? [])]}
+              selected={toAdd}
+              onPick={(id) => setToAdd((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]))}
+            />
+            <p className="mt-3 text-[13px] text-muted">New members see messages from when they join.</p>
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button onClick={() => setAdding(false)}>Cancel</Button>
+              <Button
+                variant="primary"
+                disabled={!toAdd.length}
+                onClick={() => {
+                  onMembers({ add: toAdd });
+                  setToAdd([]);
+                  setAdding(false);
+                }}
+              >
+                Add {toAdd.length || ""}
+              </Button>
+            </div>
+          </>
+        ) : null}
+      </Dialog>
+
+      <Dialog
+        open={Boolean(toRemove)}
+        onClose={() => setToRemove(null)}
+        title={`Remove ${toRemove ? firstName(toRemove) : ""}?`}
+        description="They'll stop getting new messages from this group. The group is told they were removed."
+      >
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button onClick={() => setToRemove(null)}>Cancel</Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              if (toRemove) onMembers({ remove: [toRemove] });
+              setToRemove(null);
+            }}
+          >
+            Remove
+          </Button>
+        </div>
+      </Dialog>
+
+      <Dialog
+        open={leaving}
+        onClose={() => setLeaving(false)}
+        title={`Leave ${chat.name}?`}
+        description="You'll stop getting messages, and plans and lists from this group disappear from your Lynk. Someone can add you back later."
+      >
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button onClick={() => setLeaving(false)}>Cancel</Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              setLeaving(false);
+              onLeave();
+            }}
+          >
+            Leave group
+          </Button>
+        </div>
+      </Dialog>
+    </div>
+  );
+}
+
+function SwitchLine({ icon, label, checked, onChange }: { icon: React.ReactNode; label: string; checked: boolean; onChange: () => void }) {
+  const id = useId();
+  return (
+    <div className="flex items-center justify-between gap-3 px-3.5 py-3">
+      <span id={id} className="flex items-center gap-2.5 text-sm">
+        <span className="text-muted" aria-hidden>
+          {icon}
+        </span>
+        {label}
+      </span>
+      <Switch checked={checked} onChange={onChange} labelledBy={id} />
     </div>
   );
 }

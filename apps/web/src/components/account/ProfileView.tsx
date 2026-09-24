@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CaretRight, Check, Copy, ShareNetwork, Sparkle } from "@phosphor-icons/react";
+import { CaretRight, Check, Copy, QrCode as QrIcon, ShareNetwork, Sparkle } from "@phosphor-icons/react";
+import { QrCode } from "@/components/ui/QrCode";
 import { PageShell } from "@/components/app/PageShell";
 import { Section } from "@/components/app/Section";
 import { Button } from "@/components/ui/controls";
@@ -139,6 +140,7 @@ function Profile({ account }: { account: Account }) {
 
 function InviteLink({ username }: { username: string }) {
   const [copied, setCopied] = useState(false);
+  const [qr, setQr] = useState(false);
   const url = `${window.location.origin}/invite/${username}`;
   const canShare = typeof navigator.share === "function";
 
@@ -162,6 +164,9 @@ function InviteLink({ username }: { username: string }) {
             {copied ? <Check size={14} weight="bold" aria-hidden /> : <Copy size={14} aria-hidden />}
             {copied ? "Copied" : "Copy link"}
           </Button>
+          <Button size="sm" onClick={() => setQr((v) => !v)} aria-expanded={qr}>
+            <QrIcon size={14} aria-hidden /> {qr ? "Hide QR code" : "QR code"}
+          </Button>
           {canShare ? (
             <Button size="sm" onClick={() => navigator.share({ title: "Chat with me on Lynk", url }).catch(() => {})}>
               <ShareNetwork size={14} aria-hidden /> Share
@@ -169,6 +174,12 @@ function InviteLink({ username }: { username: string }) {
           ) : null}
         </div>
       </div>
+      {qr ? (
+        <div className="flex flex-col items-center gap-3 px-5 py-6">
+          <QrCode value={url} label={`QR code for your invite link, ${url}`} />
+          <p className="text-[13px] text-muted">Friends scan it with their phone camera to start a chat with you.</p>
+        </div>
+      ) : null}
     </Section>
   );
 }

@@ -11,6 +11,20 @@ export type Person = { id: string; name: string; handle: string; photo?: string 
 
 export type Reaction = { emoji: string; count: number; mine: boolean };
 
+/** A photo or file sent in a chat. Photos are small data URLs until uploads exist. */
+export type Attachment = {
+  id: string;
+  kind: "image" | "file";
+  name: string;
+  /** Bytes. */
+  size: number;
+  mime: string;
+  /** A data URL for photos; files keep only their details in this preview. */
+  url: string | null;
+  width?: number;
+  height?: number;
+};
+
 export type Message = {
   id: string;
   /** "me" or a person id. */
@@ -23,6 +37,12 @@ export type Message = {
   reactions?: Reaction[];
   /** A branch that starts at this message. */
   branch?: { name: string; count: number };
+  attachments?: Attachment[];
+  editedAt?: number;
+  /** Deleted for everyone: the text is gone, a placeholder stays. */
+  deleted?: boolean;
+  /** Group members who have read this message. */
+  readBy?: string[];
 };
 
 export type KnowledgeStatus = "proposed" | "confirmed" | "rejected";
@@ -56,6 +76,8 @@ export type Chat = {
   topic?: string;
   pinned?: boolean;
   members: string[];
+  /** Group admins ("me" or person ids). */
+  admins?: string[];
   online?: boolean;
   lastSeenMin?: number;
   unread: number;
@@ -91,6 +113,17 @@ export const initials = (name: string) =>
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+/** First names that an @mention can match, keyed by person id. */
+export function mentionables(chat: Chat) {
+  return chat.members.map((id) => ({ id, name: firstName(id), handle: PEOPLE[id]?.handle ?? id }));
+}
+
+export function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 /** Stable 0-5 tone per id so avatars differ without extra accent colours. */
 export const toneFor = (id: string) =>
@@ -131,6 +164,7 @@ export function createMockChats(now: number): Chat[] {
       kind: "group",
       name: "Weekend climbers",
       members: ["amara", "tomas", "jonas"],
+      admins: ["amara", "me"],
       pinned: true,
       unread: 4,
       mentions: 1,
@@ -139,12 +173,16 @@ export function createMockChats(now: number): Chat[] {
         m("w2", "jonas", "The purple one? I fell off it four times yesterday", 1490, {
           branch: { name: "Best climbing shoes under $100", count: 9 },
         }),
-        m("w3", "me", "We send it this weekend. All of us.", 1480, { status: "read", reactions: [{ emoji: "🔥", count: 3, mine: false }] }),
+        m("w3", "me", "We send it this weekend. All of us.", 1480, {
+          status: "read",
+          readBy: ["amara", "tomas", "jonas"],
+          reactions: [{ emoji: "🔥", count: 3, mine: false }],
+        }),
         m("w4", "amara", "Saturday morning works for me", 95),
         m("w5", "tomas", "Sunday is better for me, but I can do Saturday", 90),
         m("w6", "jonas", "Saturday 10am at Boulder Barn then?", 84),
         m("w7", "amara", "Perfect. Saturday 10am it is", 80),
-        m("w8", "amara", "Rahul, can you bring the spare chalk bag?", 12),
+        m("w8", "amara", "@Rahul can you bring the spare chalk bag?", 12),
       ],
       decisions: [
         {
@@ -167,13 +205,14 @@ export function createMockChats(now: number): Chat[] {
       kind: "group",
       name: "Family",
       members: ["priya", "sofia"],
+      admins: ["priya"],
       pinned: true,
       unread: 9,
       muted: false,
       messages: [
         m("f1", "priya", "Mum's flight lands Friday at 6:40pm, terminal 2", 400),
         m("f2", "sofia", "I'm at work until 7, can someone else pick her up?", 390),
-        m("f3", "me", "I'll get her", 385, { status: "read" }),
+        m("f3", "me", "I'll get her", 385, { status: "read", readBy: ["priya", "sofia"] }),
         m("f4", "priya", "Thank you! She said no restaurants, she wants to cook", 380),
         m("f5", "sofia", "Remember she's off sugar now", 60),
       ],
@@ -204,6 +243,7 @@ export function createMockChats(now: number): Chat[] {
       kind: "group",
       name: "Flat 4B",
       members: ["mei", "kwame"],
+      admins: ["kwame"],
       unread: 2,
       messages: [
         m("h1", "kwame", "Landlord is coming Tuesday to fix the boiler", 700),

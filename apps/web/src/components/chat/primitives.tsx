@@ -1,6 +1,6 @@
 "use client";
 
-import { UsersThree } from "@phosphor-icons/react";
+import { Prohibit, UsersThree } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import Image from "next/image";
@@ -140,6 +140,33 @@ export function TypingDots({ className = "" }: { className?: string }) {
 }
 
 /**
+ * Message text with @mentions picked out. A mention of you gets a soft
+ * accent block so it stands out when you skim a busy group.
+ */
+function RichText({ text, names, me }: { text: string; names: string[]; me?: string }) {
+  if (!names.length) return <>{text}</>;
+  const lower = names.map((n) => n.toLowerCase());
+  const parts = text.split(/(@[\p{L}]+)/u);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const name = part.startsWith("@") ? part.slice(1).toLowerCase() : null;
+        if (!name || !lower.includes(name)) return <span key={i}>{part}</span>;
+        const isMe = me && name === me.toLowerCase();
+        return (
+          <span
+            key={i}
+            className={isMe ? "rounded-md bg-accent-soft px-1 font-semibold text-accent-ink" : "font-medium text-accent-ink"}
+          >
+            {part}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/**
  * One message on the rail. Everyone reads down a single column; my own
  * messages sit on a soft accent block, everyone else's is plain text.
  */
@@ -147,11 +174,30 @@ export function MessageBody({
   mine,
   text,
   quote,
+  names = [],
+  me,
+  edited = false,
+  deleted = false,
 }: {
   mine: boolean;
   text: string;
   quote?: { author: string; text: string } | null;
+  /** First names in this chat that count as @mentions. */
+  names?: string[];
+  /** Your first name, for highlighting mentions of you. */
+  me?: string;
+  edited?: boolean;
+  deleted?: boolean;
 }) {
+  if (deleted) {
+    return (
+      <p className="inline-flex items-center gap-1.5 py-0.5 text-[14px] text-muted italic">
+        <Prohibit size={14} aria-hidden />
+        {mine ? "You deleted this message" : "This message was deleted"}
+      </p>
+    );
+  }
+  if (!text && !quote) return null;
   return (
     <div
       className={[
@@ -165,7 +211,12 @@ export function MessageBody({
           <p className="line-clamp-2 text-muted">{quote.text}</p>
         </div>
       ) : null}
-      <p className="wrap-break-word whitespace-pre-wrap">{text}</p>
+      {text ? (
+        <p className="wrap-break-word whitespace-pre-wrap">
+          <RichText text={text} names={names} me={me} />
+          {edited ? <span className="ml-1.5 text-[12px] text-muted">(edited)</span> : null}
+        </p>
+      ) : null}
     </div>
   );
 }

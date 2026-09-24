@@ -1,29 +1,41 @@
 "use client";
 
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
   ArrowUUpLeft,
+  FileText,
   GitBranch,
   Info,
   PaperPlaneTilt,
   Paperclip,
+  PencilSimple,
   Phone,
+  Trash,
+  UploadSimple,
   VideoCamera,
   X,
 } from "@phosphor-icons/react";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { Avatar, ChatAvatar, MessageBody, StatusNode, TypingDots } from "./primitives";
+import { AttachmentList, Lightbox } from "./Attachments";
+import { Button } from "@/components/ui/controls";
+import { Dialog } from "@/components/ui/Dialog";
 import {
   displayName,
+  firstName,
+  formatBytes,
   formatDayLabel,
   formatTime,
+  mentionables,
   personName,
   presence,
+  type Attachment,
   type Chat,
   type Message,
 } from "@/lib/chat";
+import { toAttachments } from "@/lib/attachments";
 import { MOTION } from "@/lib/motion";
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "🙌"];
@@ -37,7 +49,10 @@ const GROUP_GAP = 5 * 60_000;
 export function Thread({
   chat,
   now,
+  me,
   onSend,
+  onEdit,
+  onDelete,
   onDraft,
   onReact,
   onBack,
@@ -46,7 +61,11 @@ export function Thread({
 }: {
   chat: Chat;
   now: number;
-  onSend: (text: string, replyTo?: string) => void;
+  /** Your first name, for @mentions of you. */
+  me: string;
+  onSend: (text: string, replyTo?: string, attachments?: Attachment[]) => void;
+  onEdit: (messageId: string, text: string) => void;
+  onDelete: (messageId: string) => void;
   onDraft: (text: string) => void;
   onReact: (messageId: string, emoji: string) => void;
   onBack: () => void;
@@ -57,9 +76,29 @@ export function Thread({
   const reduce = useReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   // Touch screens have no hover, so tapping a message reveals its actions.
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Message | null>(null);
+  const [editText, setEditText] = useState("");
+  const [pending, setPending] = useState<Attachment[]>([]);
+  const [problems, setProblems] = useState<string[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const [lightbox, setLightbox] = useState<{ photos: Attachment[]; index: number } | null>(null);
+  const [toDelete, setToDelete] = useState<Message | null>(null);
+  const [mention, setMention] = useState<{ query: string; start: number } | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+
+  const names = useMemo(() => [...mentionables(chat).map((m) => m.name), me], [chat, me]);
+  const mentionOptions = useMemo(() => {
+    if (!mention || chat.kind !== "group") return [];
+    const q = mention.query.toLowerCase();
+    return mentionables(chat).filter((m) => m.name.toLowerCase().startsWith(q) || m.handle.startsWith(q));
+  }, [mention, chat]);
+
+  const value = editing ? editText : chat.draft;
+  const setValue = (text: string) => (editing ? setEditText(text) : onDraft(text));
 
   // Stay pinned to the newest message.
   useLayoutEffect(() => {
@@ -80,25 +119,98 @@ export function Thread({
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
-  }, [chat.draft]);
+  }, [value]);
 
   useEffect(() => {
     if (!highlightId) return;
     document.getElementById(`msg-${highlightId}`)?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
   }, [highlightId, reduce]);
 
-  const send = () => {
-    const text = chat.draft.trim();
-    if (!text) return;
-    onSend(text, replyTo?.id);
-    setReplyTo(null);
+  const addFiles = async (files: File[]) => {
+    if (!files.length) return;
+    const { items, problems: found } = await toAttachments(files);
+    setPending((p) => [...p, ...items].slice(0, 10));
+    setProblems(found);
     inputRef.current?.focus();
   };
 
+  const startEdit = (m: Message) => {
+    setEditing(m);
+    setEditText(m.text);
+    setReplyTo(null);
+    setActiveId(null);
+    window.requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const cancelEdit = () => {
+    setEditing(null);
+    setEditText("");
+  };
+
+  const send = () => {
+    if (editing) {
+      const text = editText.trim();
+      if (!text && !editing.attachments?.length) return;
+      if (text !== editing.text) onEdit(editing.id, text);
+      cancelEdit();
+      return;
+    }
+    const text = chat.draft.trim();
+    if (!text && !pending.length) return;
+    onSend(text, replyTo?.id, pending.length ? pending : undefined);
+    setReplyTo(null);
+    setPending([]);
+    setProblems([]);
+    inputRef.current?.focus();
+  };
+
+  // Watch the text before the caret for "@name" in group chats.
+  const trackMention = (text: string, caret: number) => {
+    if (chat.kind !== "group") return;
+    const match = /(^|\s)@([\p{L}.]*)$/u.exec(text.slice(0, caret));
+    if (match) {
+      setMention({ query: match[2], start: caret - match[2].length - 1 });
+      setMentionIndex(0);
+    } else setMention(null);
+  };
+
+  const pickMention = (name: string) => {
+    if (!mention) return;
+    const el = inputRef.current;
+    const caret = el?.selectionStart ?? value.length;
+    const next = `${value.slice(0, mention.start)}@${name} ${value.slice(caret)}`;
+    setValue(next);
+    setMention(null);
+    const pos = mention.start + name.length + 2;
+    window.requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(pos, pos);
+    });
+  };
+
   const byId = new Map(chat.messages.map((m) => [m.id, m]));
+  const lastMine = [...chat.messages].reverse().find((m) => m.from === "me" && !m.deleted);
+  const canSend = editing ? Boolean(editText.trim() || editing.attachments?.length) : Boolean(chat.draft.trim() || pending.length);
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col">
+    <div
+      className="relative flex h-full min-h-0 flex-col"
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("Files") || editing) return;
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+        setDragging(false);
+      }}
+      onDrop={(e) => {
+        if (!e.dataTransfer.files.length || editing) return;
+        e.preventDefault();
+        setDragging(false);
+        void addFiles(Array.from(e.dataTransfer.files));
+      }}
+    >
       <header className="flex items-center gap-3 border-b border-line px-3 py-3 md:px-6">
         <button
           type="button"
@@ -108,19 +220,11 @@ export function Thread({
         >
           <ArrowLeft size={20} />
         </button>
-        <button
-          type="button"
-          onClick={onToggleInfo}
-          className="flex min-w-0 flex-1 items-center gap-3 text-left"
-        >
+        <button type="button" onClick={onToggleInfo} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           <ChatAvatar chat={chat} size={42} />
           <span className="min-w-0">
-            <span className="block truncate text-lg leading-tight font-semibold tracking-tight">
-              {displayName(chat)}
-            </span>
-            <span className={`block truncate text-[13px] ${chat.typing ? "text-accent-ink" : "text-muted"}`}>
-              {presence(chat)}
-            </span>
+            <span className="block truncate text-lg leading-tight font-semibold tracking-tight">{displayName(chat)}</span>
+            <span className={`block truncate text-[13px] ${chat.typing ? "text-accent-ink" : "text-muted"}`}>{presence(chat)}</span>
           </span>
         </button>
         <div className="flex items-center gap-0.5 text-muted">
@@ -143,32 +247,40 @@ export function Thread({
             type="button"
             onClick={onToggleInfo}
             className="inline-flex size-10 items-center justify-center rounded-full hover:bg-surface-2 hover:text-ink"
-            aria-label="What this chat remembers"
+            aria-label="Chat info"
           >
             <Info size={20} />
           </button>
         </div>
       </header>
 
-      <div
-        ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto px-3 pt-6 pb-40 md:px-6"
-        aria-live="polite"
-      >
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 pt-6 pb-48 md:px-6" aria-live="polite">
         <div className="relative mx-auto max-w-3xl">
-          {/* The rail */}
-          <div aria-hidden className="absolute inset-y-0 left-[19px] border-l border-line" />
+          {chat.messages.length === 0 ? (
+            <div className="flex flex-col items-center px-6 pt-16 text-center">
+              <ChatAvatar chat={chat} size={72} />
+              <h2 className="mt-5 text-2xl font-semibold tracking-tight">
+                {chat.kind === "group" ? `You created ${chat.name}` : `This is the start of your chat with ${firstName(chat.members[0])}`}
+              </h2>
+              <p className="mt-2 max-w-[40ch] text-[15px] text-muted">
+                {chat.kind === "group"
+                  ? `${chat.members.length + 1} people are here. Say hi, or share a photo to get things going.`
+                  : "Say hi. Plans and lists you make here stay in this chat."}
+              </p>
+            </div>
+          ) : (
+            <div aria-hidden className="absolute inset-y-0 left-[19px] border-l border-line" />
+          )}
 
           {chat.messages.map((message, i) => {
             const prev = chat.messages[i - 1];
             const next = chat.messages[i + 1];
-            const newDay =
-              !prev || new Date(prev.at).toDateString() !== new Date(message.at).toDateString();
-            const startsRun =
-              newDay || !prev || prev.from !== message.from || message.at - prev.at > GROUP_GAP;
+            const newDay = !prev || new Date(prev.at).toDateString() !== new Date(message.at).toDateString();
+            const startsRun = newDay || !prev || prev.from !== message.from || message.at - prev.at > GROUP_GAP;
             const endsRun = !next || next.from !== message.from || next.at - message.at > GROUP_GAP;
             const mine = message.from === "me";
             const quoted = message.replyTo ? byId.get(message.replyTo) : undefined;
+            const seenBy = chat.kind === "group" && message.id === lastMine?.id ? message.readBy ?? [] : [];
 
             return (
               <Fragment key={message.id}>
@@ -177,30 +289,26 @@ export function Thread({
                     <span className="flex justify-center">
                       <span className="size-1.5 rounded-xs bg-muted" aria-hidden />
                     </span>
-                    <p className="text-[12px] font-semibold text-muted">
-                      {formatDayLabel(message.at, now)}
-                    </p>
+                    <p className="text-[12px] font-semibold text-muted">{formatDayLabel(message.at, now)}</p>
                   </div>
                 ) : null}
 
                 <motion.div
                   id={`msg-${message.id}`}
+                  layout={reduce ? false : "position"}
                   initial={reduce ? false : { opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={MOTION.item}
                   onClick={(e) => {
                     if (!window.matchMedia("(hover: none)").matches) return;
-                    if ((e.target as HTMLElement).closest("button")) return;
+                    if ((e.target as HTMLElement).closest("button,a")) return;
                     setActiveId((id) => (id === message.id ? null : message.id));
                   }}
-                  className={`group relative grid scroll-mt-24 grid-cols-[40px_1fr] gap-3 rounded-2xl transition-colors duration-700 ${startsRun ? "pt-3" : "pt-1"} ${endsRun ? "pb-1" : ""} ${highlightId === message.id ? "bg-accent-soft/60" : ""}`}
+                  className={`group relative grid scroll-mt-24 grid-cols-[40px_1fr] gap-3 rounded-2xl transition-colors duration-700 ${startsRun ? "pt-3" : "pt-1"} ${endsRun ? "pb-1" : ""} ${highlightId === message.id || editing?.id === message.id ? "bg-accent-soft/60" : ""}`}
                 >
                   <div className="flex justify-center">
                     {mine ? (
-                      <StatusNode
-                        status={message.status ?? "read"}
-                        className={startsRun ? "mt-8" : "mt-3"}
-                      />
+                      <StatusNode status={message.status ?? "read"} className={startsRun ? "mt-8" : "mt-3"} />
                     ) : startsRun ? (
                       <span className="rounded-[11px] bg-bg p-0.5">
                         <Avatar id={message.from} name={personName(message.from)} size={32} />
@@ -208,20 +316,29 @@ export function Thread({
                     ) : null}
                   </div>
 
-                  <div className="min-w-0 pr-2 md:pr-24">
+                  <div className="min-w-0 pr-2 md:pr-44">
                     {startsRun ? (
                       <p className="mb-1 flex items-baseline gap-2 text-[13px]">
                         <span className="font-semibold">{mine ? "You" : personName(message.from)}</span>
-                        <span className="text-[12px] text-muted tabular-nums">
-                          {formatTime(message.at)}
-                        </span>
+                        <span className="text-[12px] text-muted tabular-nums">{formatTime(message.at)}</span>
                       </p>
                     ) : null}
                     <MessageBody
                       mine={mine}
                       text={message.text}
-                      quote={quoted ? { author: personName(quoted.from), text: quoted.text } : null}
+                      names={names}
+                      me={me}
+                      edited={Boolean(message.editedAt)}
+                      deleted={message.deleted}
+                      quote={
+                        quoted
+                          ? { author: personName(quoted.from), text: quoted.deleted ? "Deleted message" : quoted.text || "Photo" }
+                          : null
+                      }
                     />
+                    {message.attachments?.length && !message.deleted ? (
+                      <AttachmentList items={message.attachments} onOpenPhoto={(photos, index) => setLightbox({ photos, index })} />
+                    ) : null}
                     {message.branch ? (
                       <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-1 text-xs text-muted">
                         <GitBranch size={13} className="text-accent-ink" aria-hidden />
@@ -229,7 +346,7 @@ export function Thread({
                         <span className="tabular-nums">side chat · {message.branch.count}</span>
                       </p>
                     ) : null}
-                    {message.reactions?.length ? (
+                    {message.reactions?.length && !message.deleted ? (
                       <div className="mt-1.5 flex gap-1">
                         {message.reactions.map((r) => (
                           <button
@@ -248,37 +365,79 @@ export function Thread({
                         ))}
                       </div>
                     ) : null}
+                    {seenBy.length ? (
+                      <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-muted">
+                        <span className="flex -space-x-1.5" aria-hidden>
+                          {seenBy.slice(0, 3).map((id) => (
+                            <span key={id} className="rounded-[7px] ring-2 ring-bg">
+                              <Avatar id={id} name={personName(id)} size={16} />
+                            </span>
+                          ))}
+                        </span>
+                        {seenBy.length === chat.members.length
+                          ? "Seen by everyone"
+                          : `Seen by ${seenBy.map((id) => firstName(id)).join(", ")}`}
+                      </p>
+                    ) : null}
                   </div>
 
                   {/* Hover and keyboard actions */}
-                  <div className={`absolute top-1 right-0 flex items-center gap-0.5 rounded-full border border-line bg-surface p-0.5 shadow-soft transition-opacity group-hover:opacity-100 focus-within:opacity-100 ${activeId === message.id ? "opacity-100" : "pointer-events-none opacity-0 [@media(hover:hover)]:pointer-events-auto"}`}>
-                    {QUICK_REACTIONS.map((emoji) => (
+                  {message.deleted ? null : (
+                    <div
+                      className={`absolute top-1 right-0 flex items-center gap-0.5 rounded-full border border-line bg-surface p-0.5 shadow-soft transition-opacity group-hover:opacity-100 focus-within:opacity-100 ${activeId === message.id ? "opacity-100" : "pointer-events-none opacity-0 [@media(hover:hover)]:pointer-events-auto"}`}
+                    >
+                      {QUICK_REACTIONS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => {
+                            onReact(message.id, emoji);
+                            setActiveId(null);
+                          }}
+                          className="inline-flex size-8 items-center justify-center rounded-full text-sm hover:bg-surface-2"
+                          aria-label={`React with ${emoji}`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
                       <button
-                        key={emoji}
                         type="button"
                         onClick={() => {
-                          onReact(message.id, emoji);
+                          setReplyTo(message);
+                          cancelEdit();
                           setActiveId(null);
+                          inputRef.current?.focus();
                         }}
-                        className="inline-flex size-8 items-center justify-center rounded-full text-sm hover:bg-surface-2"
-                        aria-label={`React with ${emoji}`}
+                        className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
+                        aria-label="Reply"
                       >
-                        {emoji}
+                        <ArrowUUpLeft size={16} />
                       </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setReplyTo(message);
-                        setActiveId(null);
-                        inputRef.current?.focus();
-                      }}
-                      className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
-                      aria-label="Reply"
-                    >
-                      <ArrowUUpLeft size={16} />
-                    </button>
-                  </div>
+                      {mine ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => startEdit(message)}
+                            className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
+                            aria-label="Edit message"
+                          >
+                            <PencilSimple size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setToDelete(message);
+                              setActiveId(null);
+                            }}
+                            className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-danger-ink"
+                            aria-label="Delete message"
+                          >
+                            <Trash size={16} />
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+                  )}
                 </motion.div>
               </Fragment>
             );
@@ -301,13 +460,28 @@ export function Thread({
                 </span>
                 <span className="flex items-center gap-2 text-[13px] text-muted">
                   <TypingDots className="text-accent-ink" />
-                  {personName(chat.typing).split(" ")[0]} is typing
+                  {firstName(chat.typing)} is typing
                 </span>
               </motion.div>
             ) : null}
           </AnimatePresence>
         </div>
       </div>
+
+      <AnimatePresence>
+        {dragging ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="pointer-events-none absolute inset-3 z-20 flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-accent bg-accent-soft/80 text-accent-ink"
+          >
+            <UploadSimple size={32} aria-hidden />
+            <p className="mt-2 font-semibold">Drop to add to your message</p>
+            <p className="text-[13px]">Photos and files up to 10 MB</p>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       {/* Floating composer */}
       <form
@@ -317,45 +491,178 @@ export function Thread({
         }}
         className="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-bg via-bg/90 to-transparent px-3 pt-10 pb-4 md:px-6"
       >
-        <div className="pointer-events-auto mx-auto max-w-3xl">
+        <div className="pointer-events-auto relative mx-auto max-w-3xl">
+          {/* @mention suggestions */}
+          <AnimatePresence>
+            {mention && mentionOptions.length ? (
+              <motion.ul
+                id="mention-list"
+                role="listbox"
+                aria-label="Mention someone"
+                initial={reduce ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                transition={MOTION.item}
+                className="absolute bottom-full left-2 mb-2 w-64 overflow-hidden rounded-2xl border border-line bg-surface p-1 shadow-soft"
+              >
+                {mentionOptions.map((m, i) => (
+                  <li
+                    key={m.id}
+                    id={`mention-${m.id}`}
+                    role="option"
+                    aria-selected={i === mentionIndex}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      pickMention(m.name);
+                    }}
+                    onMouseMove={() => setMentionIndex(i)}
+                    className={`flex cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-2 ${i === mentionIndex ? "bg-surface-2" : ""}`}
+                  >
+                    <Avatar id={m.id} name={personName(m.id)} size={28} />
+                    <span className="min-w-0">
+                      <span className="block truncate text-[14px] font-medium">{personName(m.id)}</span>
+                      <span className="block truncate text-[12px] text-muted">@{m.handle}</span>
+                    </span>
+                  </li>
+                ))}
+              </motion.ul>
+            ) : null}
+          </AnimatePresence>
+
           <div className="rounded-3xl border border-line bg-surface p-1.5 shadow-soft transition-[border-color,box-shadow] duration-200 focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/15">
-            {replyTo ? (
+            {editing ? (
+              <div className="mx-1.5 mt-1 mb-1.5 flex items-start gap-3 rounded-2xl bg-surface-2 px-3 py-2 text-sm">
+                <PencilSimple size={16} className="mt-0.5 shrink-0 text-accent-ink" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold">Editing message</p>
+                  <p className="truncate text-muted">{editing.text || "Photo"}</p>
+                </div>
+                <button type="button" onClick={cancelEdit} className="text-muted hover:text-ink" aria-label="Cancel editing">
+                  <X size={16} weight="bold" />
+                </button>
+              </div>
+            ) : replyTo ? (
               <div className="mx-1.5 mt-1 mb-1.5 flex items-start gap-3 rounded-2xl bg-surface-2 px-3 py-2 text-sm">
                 <ArrowUUpLeft size={16} className="mt-0.5 shrink-0 text-accent-ink" aria-hidden />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">Replying to {personName(replyTo.from)}</p>
-                  <p className="truncate text-muted">{replyTo.text}</p>
+                  <p className="truncate text-muted">{replyTo.text || "Photo"}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setReplyTo(null)}
-                  className="text-muted hover:text-ink"
-                  aria-label="Cancel reply"
-                >
+                <button type="button" onClick={() => setReplyTo(null)} className="text-muted hover:text-ink" aria-label="Cancel reply">
                   <X size={16} weight="bold" />
                 </button>
               </div>
             ) : null}
+
+            {pending.length ? (
+              <ul className="mx-1.5 mt-1 mb-1.5 flex gap-2 overflow-x-auto pb-1" aria-label="Attachments to send">
+                {pending.map((a) => (
+                  <li key={a.id} className="relative shrink-0">
+                    {a.kind === "image" && a.url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={a.url} alt={a.name} className="size-16 rounded-xl object-cover" />
+                    ) : (
+                      <span className="flex h-16 w-40 items-center gap-2 rounded-xl bg-surface-2 px-2.5">
+                        <FileText size={20} className="shrink-0 text-accent-ink" aria-hidden />
+                        <span className="min-w-0">
+                          <span className="block truncate text-[12px] font-medium">{a.name}</span>
+                          <span className="block text-[11px] text-muted">{formatBytes(a.size)}</span>
+                        </span>
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setPending((p) => p.filter((x) => x.id !== a.id))}
+                      className="absolute -top-1.5 -right-1.5 inline-flex size-6 items-center justify-center rounded-full bg-ink text-bg"
+                      aria-label={`Remove ${a.name}`}
+                    >
+                      <X size={11} weight="bold" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {problems.length ? (
+              <p role="alert" className="mx-3 mb-1.5 text-[13px] text-danger-ink">
+                {problems.join(" ")}
+              </p>
+            ) : null}
+
             <div className="flex items-end gap-1.5">
               <button
                 type="button"
-                aria-disabled
-                title="Attachments arrive with the backend"
-                className="inline-flex size-10 shrink-0 cursor-not-allowed items-center justify-center rounded-2xl text-muted opacity-50"
+                onClick={() => fileRef.current?.click()}
+                disabled={Boolean(editing)}
+                className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"
+                aria-label="Add photos or files"
               >
                 <Paperclip size={20} />
-                <span className="sr-only">Attach a file (coming soon)</span>
               </button>
+              <input
+                ref={fileRef}
+                type="file"
+                multiple
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden
+                onChange={(e) => {
+                  void addFiles(Array.from(e.target.files ?? []));
+                  e.target.value = "";
+                }}
+              />
               <label htmlFor="composer" className="sr-only">
-                Message {chat.name}
+                {editing ? "Edit message" : `Message ${chat.name}`}
               </label>
               <textarea
                 id="composer"
                 ref={inputRef}
                 rows={1}
-                value={chat.draft}
-                onChange={(e) => onDraft(e.target.value)}
+                value={value}
+                role={chat.kind === "group" ? "combobox" : undefined}
+                aria-expanded={chat.kind === "group" ? Boolean(mention && mentionOptions.length) : undefined}
+                aria-controls={mention && mentionOptions.length ? "mention-list" : undefined}
+                aria-activedescendant={mention && mentionOptions[mentionIndex] ? `mention-${mentionOptions[mentionIndex].id}` : undefined}
+                aria-autocomplete={chat.kind === "group" ? "list" : undefined}
+                onChange={(e) => {
+                  setValue(e.target.value);
+                  trackMention(e.target.value, e.target.selectionStart ?? e.target.value.length);
+                }}
+                onPaste={(e) => {
+                  const files = Array.from(e.clipboardData.files);
+                  if (files.length && !editing) {
+                    e.preventDefault();
+                    void addFiles(files);
+                  }
+                }}
+                onBlur={() => window.setTimeout(() => setMention(null), 100)}
                 onKeyDown={(e) => {
+                  if (mention && mentionOptions.length) {
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setMentionIndex((i) => (i + 1) % mentionOptions.length);
+                      return;
+                    }
+                    if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setMentionIndex((i) => (i - 1 + mentionOptions.length) % mentionOptions.length);
+                      return;
+                    }
+                    if (e.key === "Enter" || e.key === "Tab") {
+                      e.preventDefault();
+                      pickMention(mentionOptions[mentionIndex].name);
+                      return;
+                    }
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      setMention(null);
+                      return;
+                    }
+                  }
+                  if (e.key === "Escape" && editing) {
+                    e.preventDefault();
+                    cancelEdit();
+                    return;
+                  }
                   // On phones Enter adds a new line and the send button sends, as in
                   // other mobile chat apps. With a keyboard, Enter sends.
                   const touch = window.matchMedia("(pointer: coarse)").matches;
@@ -364,24 +671,56 @@ export function Thread({
                     send();
                   }
                 }}
-                placeholder={`Message ${chat.kind === "dm" ? chat.name.split(" ")[0] : chat.name}`}
+                placeholder={editing ? "Edit your message" : `Message ${chat.kind === "dm" ? chat.name.split(" ")[0] : chat.name}`}
                 className="field-sizing-content max-h-40 min-h-10 w-full resize-none bg-transparent px-1 py-2 text-[15px] leading-6 outline-none placeholder:text-muted focus-visible:outline-none"
               />
               <button
                 type="submit"
-                disabled={!chat.draft.trim()}
+                disabled={!canSend}
                 className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-accent text-on-accent transition-[transform,background-color] active:scale-95 disabled:bg-surface-2 disabled:text-muted"
-                aria-label="Send message"
+                aria-label={editing ? "Save edit" : "Send message"}
               >
                 <PaperPlaneTilt size={18} weight="fill" />
               </button>
             </div>
           </div>
           <p className="mt-2 hidden text-center text-xs text-muted md:block">
-            Enter to send, Shift + Enter for a new line
+            {editing
+              ? "Enter to save, Escape to cancel"
+              : chat.kind === "group"
+                ? "Enter to send · Shift + Enter for a new line · @ to mention · drop files to attach"
+                : "Enter to send · Shift + Enter for a new line · drop files to attach"}
           </p>
         </div>
       </form>
+
+      <Lightbox
+        photos={lightbox?.photos ?? []}
+        index={lightbox?.index ?? null}
+        onIndex={(index) => setLightbox((l) => (l ? { ...l, index } : l))}
+        onClose={() => setLightbox(null)}
+      />
+
+      <Dialog
+        open={Boolean(toDelete)}
+        onClose={() => setToDelete(null)}
+        title="Delete this message?"
+        description="It's removed for everyone in the chat. A note shows where it was."
+      >
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button onClick={() => setToDelete(null)}>Cancel</Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              if (toDelete) onDelete(toDelete.id);
+              if (editing?.id === toDelete?.id) cancelEdit();
+              setToDelete(null);
+            }}
+          >
+            Delete for everyone
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

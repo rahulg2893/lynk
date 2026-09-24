@@ -7,16 +7,19 @@ import { ArrowRight, At, GearSix, Lightbulb, ListChecks } from "@phosphor-icons/
 import { Logo } from "@/components/landing/Logo";
 import { useAccount } from "@/lib/account";
 import { Avatar } from "./primitives";
+import { NewChatDialog, type NewChatTab } from "./NewChatDialog";
+import { loadChats, saveChats } from "@/lib/chat-store";
 import { ChatList } from "./ChatList";
 import { Thread } from "./Thread";
 import { ContextPanel, type PanelTab } from "./ContextPanel";
 import { CommandPalette, type PaletteAction } from "./CommandPalette";
 import {
+  PEOPLE,
   REPLIES,
-  createMockChats,
   displayName,
   firstName,
   newId,
+  type Attachment,
   type Chat,
   type KnowledgeStatus,
   type Message,
@@ -36,7 +39,14 @@ type Action =
   | { type: "react"; id: string; messageId: string; emoji: string }
   | { type: "mute"; id: string }
   | { type: "decision"; id: string; itemId: string; status: KnowledgeStatus }
-  | { type: "task"; id: string; itemId: string; status: Task["status"] };
+  | { type: "task"; id: string; itemId: string; status: Task["status"] }
+  | { type: "create"; chat: Chat }
+  | { type: "edit"; id: string; messageId: string; text: string }
+  | { type: "remove"; id: string; messageId: string }
+  | { type: "pin"; id: string }
+  | { type: "rename"; id: string; name: string }
+  | { type: "members"; id: string; add?: string[]; remove?: string[] }
+  | { type: "leave"; id: string };
 
 function update(state: State, id: string, fn: (chat: Chat) => Chat): State {
   return { ...state, chats: state.chats.map((c) => (c.id === id ? fn(c) : c)) };
@@ -62,8 +72,38 @@ function reducer(state: State, action: Action): State {
     case "status":
       return update(state, action.id, (c) => ({
         ...c,
-        messages: c.messages.map((m) => (m.id === action.messageId ? { ...m, status: action.status } : m)),
+        messages: c.messages.map((m) =>
+          m.id === action.messageId
+            ? { ...m, status: action.status, readBy: action.status === "read" && c.kind === "group" ? c.members : m.readBy }
+            : m,
+        ),
       }));
+    case "create":
+      return { ...state, chats: [action.chat, ...state.chats] };
+    case "edit":
+      return update(state, action.id, (c) => ({
+        ...c,
+        messages: c.messages.map((m) => (m.id === action.messageId ? { ...m, text: action.text, editedAt: Date.now() } : m)),
+      }));
+    case "remove":
+      return update(state, action.id, (c) => ({
+        ...c,
+        messages: c.messages.map((m) =>
+          m.id === action.messageId ? { ...m, text: "", attachments: undefined, reactions: undefined, deleted: true } : m,
+        ),
+      }));
+    case "pin":
+      return update(state, action.id, (c) => ({ ...c, pinned: !c.pinned }));
+    case "rename":
+      return update(state, action.id, (c) => ({ ...c, name: action.name }));
+    case "members":
+      return update(state, action.id, (c) => ({
+        ...c,
+        members: [...c.members.filter((m) => !action.remove?.includes(m)), ...(action.add ?? []).filter((m) => !c.members.includes(m))],
+        admins: c.admins?.filter((m) => !action.remove?.includes(m)),
+      }));
+    case "leave":
+      return { ...state, chats: state.chats.filter((c) => c.id !== action.id), activeId: state.activeId === action.id ? null : state.activeId };
     case "typing":
       return update(state, action.id, (c) => ({ ...c, typing: action.who }));
     case "react":
@@ -112,22 +152,34 @@ export function ChatApp() {
   const [state, dispatch] = useReducer(reducer, { chats: [], activeId: null, loaded: false, now: 0 });
   const [panel, setPanel] = useState<PanelTab | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [newChat, setNewChat] = useState<NewChatTab | null>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
   const replyIndex = useRef<Record<string, number>>({});
 
-  // Simulated fetch so the loading state is visible, then the mock inbox.
+  const username = account?.profile.username;
+  const seeded = account?.seeded ?? true;
+
+  // Simulated fetch so the loading state is visible, then this account's chats.
   useEffect(() => {
+    if (!username) return;
     const t = window.setTimeout(() => {
       const now = Date.now();
-      dispatch({ type: "load", chats: createMockChats(now), now });
-    }, 650);
+      dispatch({ type: "load", chats: loadChats(username, seeded, now), now });
+    }, 450);
     const pending = timers.current;
     return () => {
       clearTimeout(t);
       pending.forEach(clearTimeout);
     };
-  }, []);
+  }, [username, seeded]);
+
+  // Keep chats in this browser until the server exists.
+  useEffect(() => {
+    if (!state.loaded || !username) return;
+    const t = window.setTimeout(() => saveChats(username, state.chats), 400);
+    return () => window.clearTimeout(t);
+  }, [state.chats, state.loaded, username]);
 
   // ⌘K / Ctrl+K opens the command palette from anywhere.
   useEffect(() => {
@@ -168,14 +220,73 @@ export function ChatApp() {
     setHighlight(messageId ?? null);
   }, []);
 
+  /** Open the one-to-one chat with someone, starting it if it doesn't exist yet. */
+  const startChat = useCallback(
+    (personId: string) => {
+      setNewChat(null);
+      const existing = state.chats.find((c) => c.kind === "dm" && c.members[0] === personId);
+      if (existing) return open(existing.id);
+      const id = newId("c");
+      dispatch({
+        type: "create",
+        chat: {
+          id,
+          kind: "dm",
+          name: PEOPLE[personId]?.name ?? personId,
+          members: [personId],
+          unread: 0,
+          mentions: 0,
+          muted: false,
+          typing: null,
+          draft: "",
+          messages: [],
+          decisions: [],
+          tasks: [],
+          memory: [],
+        },
+      });
+      open(id);
+    },
+    [state.chats, open],
+  );
+
+  const createGroup = useCallback(
+    (name: string, members: string[]) => {
+      setNewChat(null);
+      const id = newId("c");
+      dispatch({
+        type: "create",
+        chat: {
+          id,
+          kind: "group",
+          name,
+          members,
+          admins: ["me"],
+          unread: 0,
+          mentions: 0,
+          muted: false,
+          typing: null,
+          draft: "",
+          messages: [],
+          decisions: [],
+          tasks: [],
+          memory: [],
+        },
+      });
+      open(id);
+    },
+    [open],
+  );
+
   const send = useCallback(
-    (chat: Chat, text: string, replyTo?: string) => {
+    (chat: Chat, text: string, replyTo?: string, attachments?: Attachment[]) => {
       const id = newId();
-      dispatch({ type: "append", id: chat.id, message: { id, from: "me", text, at: Date.now(), status: "sending", replyTo } });
+      dispatch({ type: "append", id: chat.id, message: { id, from: "me", text, at: Date.now(), status: "sending", replyTo, attachments } });
       // The delivery lifecycle the real gateway will drive: sent, delivered, read.
       later(350, () => dispatch({ type: "status", id: chat.id, messageId: id, status: "sent" }));
       later(900, () => dispatch({ type: "status", id: chat.id, messageId: id, status: "delivered" }));
 
+      if (!chat.members.length) return;
       const replier = chat.members[Math.floor(Math.random() * chat.members.length)];
       const pool = REPLIES[chat.id] ?? ["👍"];
       const n = replyIndex.current[chat.id] ?? 0;
@@ -201,6 +312,7 @@ export function ChatApp() {
     else if (action.type === "catchup") open(null);
     else if (action.type === "panel") setPanel(action.tab);
     else if (action.type === "go") router.push(action.href);
+    else if (action.type === "new") setNewChat(action.tab);
   };
 
   return (
@@ -237,6 +349,7 @@ export function ChatApp() {
             now={state.now}
             onSelect={(id) => open(id)}
             onOpenPalette={() => setPaletteOpen(true)}
+            onNewChat={(tab) => setNewChat(tab)}
           />
         </div>
       </aside>
@@ -249,7 +362,10 @@ export function ChatApp() {
               chat={active}
               now={state.now}
               highlightId={highlight}
-              onSend={(text, replyTo) => send(active, text, replyTo)}
+              me={(account?.profile.name ?? "You").split(" ")[0]}
+              onSend={(text, replyTo, attachments) => send(active, text, replyTo, attachments)}
+              onEdit={(messageId, text) => dispatch({ type: "edit", id: active.id, messageId, text })}
+              onDelete={(messageId) => dispatch({ type: "remove", id: active.id, messageId })}
               onDraft={(text) => dispatch({ type: "draft", id: active.id, text })}
               onReact={(messageId, emoji) => dispatch({ type: "react", id: active.id, messageId, emoji })}
               onBack={() => open(null)}
@@ -257,7 +373,7 @@ export function ChatApp() {
             />
           </div>
         ) : (
-          <CatchUp chats={state.chats} loaded={state.loaded} onOpen={open} />
+          <CatchUp chats={state.chats} loaded={state.loaded} onOpen={open} onNewChat={setNewChat} />
         )}
 
         {active && panel ? (
@@ -273,9 +389,27 @@ export function ChatApp() {
             onDecision={(itemId, status) => dispatch({ type: "decision", id: active.id, itemId, status })}
             onTask={(itemId, status) => dispatch({ type: "task", id: active.id, itemId, status })}
             onMute={() => dispatch({ type: "mute", id: active.id })}
+            onPin={() => dispatch({ type: "pin", id: active.id })}
+            onRename={(name) => dispatch({ type: "rename", id: active.id, name })}
+            onMembers={(change) => dispatch({ type: "members", id: active.id, ...change })}
+            onLeave={() => {
+              setPanel(null);
+              dispatch({ type: "leave", id: active.id });
+              open(null);
+            }}
           />
         ) : null}
       </main>
+
+      <NewChatDialog
+        open={newChat !== null}
+        initialTab={newChat ?? "chat"}
+        username={account?.profile.username ?? ""}
+        blocked={account?.blocked ?? []}
+        onClose={() => setNewChat(null)}
+        onStart={startChat}
+        onCreateGroup={createGroup}
+      />
 
       <CommandPalette
         open={paletteOpen}
@@ -296,10 +430,12 @@ function CatchUp({
   chats,
   loaded,
   onOpen,
+  onNewChat,
 }: {
   chats: Chat[];
   loaded: boolean;
   onOpen: (chatId: string, messageId?: string) => void;
+  onNewChat: (tab: NewChatTab) => void;
 }) {
   const data = useMemo(() => {
     const mentions = chats
@@ -322,6 +458,31 @@ function CatchUp({
     return (
       <div className="flex flex-1 items-center justify-center text-muted" role="status">
         Syncing your chats
+      </div>
+    );
+  }
+
+  if (!chats.length) {
+    return (
+      <div className="flex min-w-0 flex-1 items-center justify-center px-6 py-10">
+        <div className="max-w-md text-center">
+          <p className="text-[12px] font-semibold text-muted">Welcome to Lynk</p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight">Bring your people over.</h2>
+          <p className="mt-3 text-[15px] leading-relaxed text-muted">
+            Start a chat with someone on Lynk, make a group for the people you plan things with, or send your invite link.
+          </p>
+          <div className="mt-7 flex flex-wrap justify-center gap-3">
+            <button type="button" onClick={() => onNewChat("chat")} className="inline-flex h-11 items-center rounded-full bg-accent px-5 font-medium text-on-accent">
+              Start a chat
+            </button>
+            <button type="button" onClick={() => onNewChat("group")} className="inline-flex h-11 items-center rounded-full border border-line bg-surface px-5 font-medium">
+              New group
+            </button>
+            <button type="button" onClick={() => onNewChat("invite")} className="inline-flex h-11 items-center rounded-full px-5 font-medium text-accent-ink hover:bg-accent-soft">
+              Show my QR code
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

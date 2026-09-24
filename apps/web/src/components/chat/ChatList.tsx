@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BellSlash, Command, MagnifyingGlass, X } from "@phosphor-icons/react";
+import { BellSlash, Command, MagnifyingGlass, NotePencil, PushPin, X } from "@phosphor-icons/react";
 import { ChatAvatar, StatusNode } from "./primitives";
 import { firstName, formatListTime, type Chat } from "@/lib/chat";
 
@@ -20,6 +20,7 @@ export function ChatList({
   now,
   onSelect,
   onOpenPalette,
+  onNewChat,
 }: {
   chats: Chat[];
   activeId: string | null;
@@ -27,6 +28,7 @@ export function ChatList({
   now: number;
   onSelect: (id: string) => void;
   onOpenPalette: () => void;
+  onNewChat: (tab: "chat" | "group" | "invite") => void;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -60,15 +62,26 @@ export function ChatList({
             {!loaded ? "Syncing" : unreadTotal ? `${unreadTotal} unread` : "All caught up"}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onOpenPalette}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 text-[13px] text-muted hover:text-ink"
-          aria-label="Open command palette"
-          aria-keyshortcuts="Meta+K Control+K"
-        >
-          <Command size={14} weight="bold" /> K
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onOpenPalette}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 text-[13px] text-muted hover:text-ink"
+            aria-label="Open command palette"
+            aria-keyshortcuts="Meta+K Control+K"
+          >
+            <Command size={14} weight="bold" /> K
+          </button>
+          <button
+            type="button"
+            onClick={() => onNewChat("chat")}
+            className="inline-flex size-9 items-center justify-center rounded-full bg-accent text-on-accent active:scale-95"
+            aria-label="New chat"
+            title="New chat"
+          >
+            <NotePencil size={17} weight="bold" />
+          </button>
+        </div>
       </div>
 
       <div className="px-4">
@@ -114,6 +127,18 @@ export function ChatList({
       <div className="mt-3 min-h-0 flex-1 overflow-y-auto px-2 pb-4">
         {!loaded ? (
           <ListSkeleton />
+        ) : chats.length === 0 ? (
+          <div className="px-6 py-16 text-center">
+            <p className="font-medium">No chats yet</p>
+            <p className="mt-1 text-sm text-muted">Start one, or share your invite link.</p>
+            <button
+              type="button"
+              onClick={() => onNewChat("chat")}
+              className="mt-4 inline-flex h-10 items-center rounded-full bg-accent px-4 text-[14px] font-medium text-on-accent"
+            >
+              Start a chat
+            </button>
+          </div>
         ) : total === 0 ? (
           <div className="px-6 py-16 text-center">
             <p className="font-medium">{query ? `Nothing matches "${query}"` : "Nothing here right now"}</p>
@@ -205,12 +230,17 @@ function Row({
                 {mine && last?.status ? <StatusNode status={last.status} className="shrink-0" /> : null}
                 <span className="truncate">
                   {who}
-                  {last?.text}
+                  {!last
+                    ? "No messages yet"
+                    : last.deleted
+                      ? "Message deleted"
+                      : last.text || attachmentSummary(last.attachments ?? [])}
                 </span>
               </>
             )}
           </span>
           <span className="flex shrink-0 items-center gap-1.5 text-muted">
+            {chat.pinned ? <PushPin size={13} weight="fill" aria-label="Pinned" /> : null}
             {chat.muted ? <BellSlash size={14} aria-label="Muted" /> : null}
             {chat.mentions ? (
               <span
@@ -252,4 +282,11 @@ function ListSkeleton() {
       ))}
     </ul>
   );
+}
+
+/** "Photo", "3 photos" or a file's name, for a message with no text. */
+function attachmentSummary(items: { kind: string; name: string }[]) {
+  const photos = items.filter((a) => a.kind === "image").length;
+  if (photos) return photos === 1 ? "Photo" : `${photos} photos`;
+  return items[0]?.name ?? "File";
 }
