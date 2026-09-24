@@ -119,7 +119,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 
 <div class="wrap">
 <header class="hero">
-  <span class="eyebrow">Product &amp; engineering roadmap, v4.6 · Sep 2026</span>
+  <span class="eyebrow">Product &amp; engineering roadmap, v4.7 · Sep 2026</span>
   <h1>Lynk Roadmap</h1>
   <p class="lede">A personal chat app for friends and family that remembers the plan. Messaging comes first. Plans, to-dos, memories and search that finds things again are what make it different, and every one of them respects who can see what.</p>
   <div class="flow" aria-label="Product thesis">
@@ -133,7 +133,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 
 <section id="progress">
   <div class="sec-head"><span class="eyebrow">Where things stand</span><h2>Progress so far</h2>
-  <p>The web frontend for phases 0 and 1, and the user-facing half of phase 2, is complete, running on mock data kept in the browser. Nothing on the server side exists yet. Everything below lives in <code>apps/web</code> and passes type-check, lint and a production build (24 routes).</p></div>
+  <p>The web frontend for phases 0, 1 and 4, and the user-facing half of phase 2, is complete, running on mock data kept in the browser. Nothing on the server side exists yet. Everything below lives in <code>apps/web</code> and passes type-check, lint and a production build (26 routes).</p></div>
   <div class="two">
     <div class="card"><h3>Done</h3>
       <ul class="check">
@@ -181,6 +181,16 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
             <li>Notification permission asked in context, the first time you open a chat, never on page load. "Not now" is remembered.</li>
             <li>Browser alerts for new messages while the tab is in the background, following your settings (one-to-one chats, groups all or mentions only, previews, sounds; muted chats stay quiet), one alert per chat.</li>
             <li>A notifications list behind a bell in the chat list: one row per chat ("and 2 more"), mentions of you marked, a badge until you look. Settings › Notifications shows and turns on this browser's alerts.</li>
+          </ul>
+        </li>
+        <li><b>Phase 4 structure without AI, on the web:</b>
+          <ul>
+            <li>Side chats from any message: their own thread with a way back, the message they started from at the top, and a live count on the chip. Sending, the outbox, reactions and saving work inside them. Addressed as <code>/app?chat=&lt;chat&gt;~&lt;side chat&gt;</code>.</li>
+            <li>Plans made by hand (what, date, optional time, where) from the chat panel, any message, ⌘K or the calendar, with edit and remove.</li>
+            <li>RSVPs on every confirmed plan (Going, Maybe, Can't go) with a summary of who's coming, and "Add to calendar" as a real <code>.ics</code> file (RFC 5545, all-day or timed).</li>
+            <li>Shared lists in a new Lists tab: create from a starter (Shopping, Packing, Ideas), add, tick off with progress, remove, clear ticked, delete.</li>
+            <li>Saved messages: a bookmark on any message, and <code>/app/saved</code> with search, unsave and "Show in chat", which opens the chat and flashes the message.</li>
+            <li>An in-app calendar at <code>/app/calendar</code>: every plan from every chat on a month grid, a day agenda with RSVPs, "Coming up", new plans on any day, and "Export all" as one <code>.ics</code>. It's in the dock, ⌘K and the phone header.</li>
           </ul>
         </li>
         <li><b>Deep links</b> to chats (<code>/app?chat=…</code>), so reload, back and shared links land in the right conversation.</li>
@@ -556,12 +566,13 @@ flowchart LR
       <p class="exit"><b>Exit:</b> a friends-and-family beta runs on phones every day.</p>
     </article>
     <article class="phase">
-      <div class="phase-top"><span class="n">4</span><h3>Structure without AI</h3><span class="pill weeks">Weeks 20–23</span></div>
+      <div class="phase-top"><span class="n">4</span><h3>Structure without AI</h3><span class="pill weeks">Weeks 20–23</span><span class="pill done">Frontend done</span><span class="pill">Server not started</span></div>
       <div class="cols"><div><ol class="ms">
-        <li>Side chats from any message.</li>
-        <li>Plans made by hand, with RSVPs and calendar export.</li>
-        <li>To-dos and shared lists, pins and saved messages.</li>
-        <li>⌘K search and jump on the web.</li>
+        <li><s>Side chats from any message</s> (done in the browser).</li>
+        <li><s>Plans made by hand, with RSVPs and calendar export</s> (done, plus an in-app calendar across all chats).</li>
+        <li><s>Shared lists and saved messages</s> (done). To-dos from hand and pinned messages are still to come.</li>
+        <li><s>⌘K search and jump on the web</s> (done).</li>
+        <li>Server storage and sync for all of the above.</li>
       </ol></div></div>
       <p class="exit"><b>Exit:</b> the beta group uses plans and lists without any smart features.</p>
     </article>
@@ -626,7 +637,7 @@ flowchart LR
   </ol>
 </section>
 
-<footer>Roadmap v4.6, September 2026. The user-facing half of phase 2 on the web: an offline outbox with retry, reconnect sync, a connection banner, in-context notification permission, in-tab alerts and a notifications list. Supersedes v3 (workplace direction).</footer>
+<footer>Roadmap v4.7, September 2026. Phase 4 on the web: side chats, plans made by hand with RSVPs and .ics export, shared lists, saved messages, and an in-app calendar. Supersedes v3 (workplace direction).</footer>
 </div>
 
 <script>
