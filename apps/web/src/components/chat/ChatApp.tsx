@@ -203,12 +203,14 @@ export function ChatApp() {
   // Simulated fetch so the loading state is visible, then this account's chats.
   useEffect(() => {
     if (!username) return;
+    let live = true;
     const t = window.setTimeout(() => {
       const now = Date.now();
-      dispatch({ type: "load", chats: loadChats(username, seeded, now), now });
+      void loadChats(username, seeded, now).then((chats) => live && dispatch({ type: "load", chats, now }));
     }, 450);
     const pending = timers.current;
     return () => {
+      live = false;
       clearTimeout(t);
       pending.forEach(clearTimeout);
     };
@@ -217,7 +219,7 @@ export function ChatApp() {
   // Keep chats in this browser until the server exists.
   useEffect(() => {
     if (!state.loaded || !username) return;
-    const t = window.setTimeout(() => saveChats(username, state.chats), 400);
+    const t = window.setTimeout(() => void saveChats(username, state.chats), 400);
     return () => window.clearTimeout(t);
   }, [state.chats, state.loaded, username]);
 
@@ -229,7 +231,7 @@ export function ChatApp() {
   useEffect(
     () => () => {
       const { username: user, chats, loaded } = latest.current;
-      if (user && loaded) saveChats(user, chats);
+      if (user && loaded) void saveChats(user, chats);
     },
     [],
   );

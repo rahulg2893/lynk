@@ -3,22 +3,36 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAccount } from "./account";
 import { createMockChats, type Chat } from "./chat";
+import { deleteSecure, readSecure, secureStorageAvailable, writeSecure } from "./secure-store";
 
 /**
- * Chats kept in this browser until the server exists, one list per username.
- * The demo account starts with sample chats; new accounts start empty.
+ * Chats kept in this browser until the server exists, one list per username,
+ * encrypted at rest (see secure-store). The demo account starts with sample
+ * chats; new accounts start empty.
  */
-const key = (username: string) => `lynk-chats-${username}`;
+const legacyKey = (username: string) => `lynk-chats-${username}`;
+const record = (username: string) => `chats:${username}`;
 
-export function loadChats(username: string, seeded: boolean, now: number): Chat[] {
+const settle = (chats: Chat[]) => chats.map((c) => ({ ...c, typing: null }));
+
+export async function loadChats(username: string, seeded: boolean, now: number): Promise<Chat[]> {
   try {
-    const raw = localStorage.getItem(key(username));
+    const stored = await readSecure<Chat[]>(record(username));
+    if (stored) return settle(stored);
+  } catch {
+    // Unreadable (key lost with cleared site data): fall through.
+  }
+  // Chats saved before storage was encrypted: move them in, then delete the readable copy.
+  try {
+    const raw = localStorage.getItem(legacyKey(username));
     if (raw) {
-      const chats = JSON.parse(raw) as Chat[];
-      return chats.map((c) => ({ ...c, typing: null }));
+      const chats = settle(JSON.parse(raw) as Chat[]);
+      await saveChats(username, chats);
+      localStorage.removeItem(legacyKey(username));
+      return chats;
     }
   } catch {
-    // Unreadable storage: fall through to a fresh start.
+    // Unreadable storage: a fresh start.
   }
   return seeded ? createMockChats(now) : [];
 }
@@ -36,20 +50,18 @@ function portable(chats: Chat[]): Chat[] {
   }));
 }
 
-export function saveChats(username: string, chats: Chat[]) {
-  const data = portable(chats);
+export async function saveChats(username: string, chats: Chat[]) {
+  if (!secureStorageAvailable()) return; // Nowhere safe to keep them: changes last for this visit only.
   try {
-    localStorage.setItem(key(username), JSON.stringify(data));
+    await writeSecure(record(username), portable(chats));
   } catch {
-    // Storage full (large photos): keep the text, drop the photos from storage.
+    // Out of space (large photos): keep the text, drop the photos from storage.
     try {
-      const light = data.map((c) => ({
+      const light = portable(chats).map((c) => ({
         ...c,
-        messages: c.messages.map((m) =>
-          m.attachments ? { ...m, attachments: m.attachments.map((a) => ({ ...a, url: null })) } : m,
-        ),
+        messages: c.messages.map((m) => (m.attachments ? { ...m, attachments: m.attachments.map((a) => ({ ...a, url: null })) } : m)),
       }));
-      localStorage.setItem(key(username), JSON.stringify(light));
+      await writeSecure(record(username), light);
     } catch {
       // Still no room; changes last for this visit only.
     }
@@ -57,8 +69,9 @@ export function saveChats(username: string, chats: Chat[]) {
 }
 
 export function clearChats(username: string) {
+  void deleteSecure(record(username)).catch(() => undefined);
   try {
-    localStorage.removeItem(key(username));
+    localStorage.removeItem(legacyKey(username));
   } catch {
     // Nothing stored is fine.
   }
@@ -76,17 +89,19 @@ export function useStoredChats() {
 
   useEffect(() => {
     if (!username) return;
+    let live = true;
     const now = Date.now();
-    // Read after mount: storage isn't available during server rendering.
-    const t = window.setTimeout(() => setState({ chats: loadChats(username, seeded, now), loaded: true, now }), 0);
-    return () => window.clearTimeout(t);
+    void loadChats(username, seeded, now).then((chats) => live && setState({ chats, loaded: true, now }));
+    return () => {
+      live = false;
+    };
   }, [username, seeded]);
 
   const change = useCallback(
     (fn: (chats: Chat[]) => Chat[]) =>
       setState((s) => {
         const chats = fn(s.chats);
-        if (username) saveChats(username, chats);
+        if (username) void saveChats(username, chats);
         return { ...s, chats };
       }),
     [username],
