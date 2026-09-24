@@ -7,6 +7,7 @@ import {
   ArrowClockwise,
   ArrowUUpLeft,
   BookmarkSimple,
+  LockSimple,
   Microphone,
   Translate,
   CalendarPlus,
@@ -361,6 +362,11 @@ export function Thread({
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 pt-6 pb-48 md:px-6" aria-live="polite">
         <div className="relative mx-auto max-w-3xl">
+          <p className="mx-auto mb-5 flex w-fit max-w-full items-center gap-1.5 rounded-full bg-surface-2/70 px-3 py-1.5 text-center text-[12px] text-muted">
+            <LockSimple size={13} weight="fill" className="shrink-0" aria-hidden />
+            End-to-end encrypted. Only people in this chat can read it, not even Lynk.
+          </p>
+
           {chat.side ? (
             <motion.div
               initial={{ opacity: 0, y: -8 }}

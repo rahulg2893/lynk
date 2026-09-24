@@ -2,7 +2,7 @@
 
 import { motion, useScroll, useSpring, useTransform, useVelocity } from "motion/react";
 
-const ROW_A = ["Plans", "Shared lists", "Birthdays", "Side chats", "Voice notes", "Find it again", "Catch-up", "Private chats"];
+const ROW_A = ["Plans", "Shared lists", "Birthdays", "Side chats", "Voice notes", "Find it again", "Catch-up", "End-to-end encrypted"];
 const ROW_B = ["Families", "Flatmates", "Climbing clubs", "Book clubs", "Road trips", "Group gifts", "Wedding party", "Five-a-side"];
 
 /**

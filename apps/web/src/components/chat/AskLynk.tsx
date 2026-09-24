@@ -163,7 +163,7 @@ export function AskLynk({
                   </div>
                   <p className="mt-5 text-[12px] leading-relaxed text-muted">
                     {smart
-                      ? "Answers only use chats you're in, and every one links to the messages it came from. This preview searches the chats saved in your browser; the full version arrives with the server."
+                      ? "Answers come from your chats on this device, since every chat is end-to-end encrypted, and each one links to the messages it came from."
                       : "Smart features are off in Settings, so this shows matching messages without an answer."}
                   </p>
                 </div>

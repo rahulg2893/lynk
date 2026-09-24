@@ -21,11 +21,11 @@ export function Control() {
         <FadeIn inView>
           <ShieldCheck size={30} className="text-accent-ink" aria-hidden />
           <h2 className="mt-4 max-w-[16ch] text-4xl leading-[1.05] font-semibold tracking-tight text-balance md:text-5xl">
-            Private chats stay private.
+            Every chat is end-to-end encrypted.
           </h2>
           <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-muted">
-            Lynk only ever looks at chats you are in, never shows ads, and never sells your data. Every smart feature
-            can be switched off for you, or for a single chat.
+            Only the people in a chat can read it. Not Lynk, not anyone else. The smart features run on your own
+            device, Lynk never shows ads or sells your data, and every smart feature can be switched off.
           </p>
         </FadeIn>
 

@@ -616,7 +616,8 @@ const LANGUAGES = [
 
 /**
  * Suggest, never decide (roadmap). Everything Lynk spots stays a suggestion
- * until someone confirms it, and private chats never use any of it
+ * until someone confirms it, and it all runs on the device because every
+ * chat is end-to-end encrypted
  * (HIG `generative-ai.md`: disclose, give control, work well when off).
  */
 function SmartPane({ account }: { account: Account }) {
@@ -628,14 +629,15 @@ function SmartPane({ account }: { account: Account }) {
   return (
     <>
       <p className="mt-2 text-[15px] leading-relaxed text-muted">
-        Lynk reads your normal chats to suggest plans, to-dos and things worth remembering. It only ever suggests: nothing is
-        saved until someone in the chat confirms it, and every suggestion links to the messages it came from.
+        Every chat is end-to-end encrypted, so smart features run on this device, not on Lynk&apos;s servers: they read your
+        chats here and nowhere else. They only ever suggest. Nothing is saved until someone in the chat confirms it, and every
+        suggestion links to the messages it came from.
       </p>
 
-      <Section title="All smart features" footnote="Private chats are end-to-end encrypted, so smart features are always off there.">
+      <Section title="All smart features" footnote="Answers and summaries are best on newer phones and computers that can run a small model on the device. Elsewhere you get plain results.">
         <SwitchRow
           label="Smart features"
-          description={off ? "Off. Lynk is a plain chat app, and nothing is read for suggestions." : "On for your normal chats."}
+          description={off ? "Off. Lynk is a plain chat app, and nothing is read for suggestions." : "On, running on this device."}
           checked={s.enabled}
           onChange={(v) => set("enabled", v)}
         />

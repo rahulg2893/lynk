@@ -5,7 +5,7 @@ import { Logo } from "@/components/landing/Logo";
 
 export const metadata: Metadata = {
   title: "How Lynk handles your chats",
-  description: "A plain-language overview of how Lynk decides who can see what, and what its smart features can and can't read.",
+  description: "A plain-language overview of Lynk's end-to-end encryption, who can see what, and how smart features work on your device.",
 };
 
 const POINTS = [
@@ -16,13 +16,13 @@ const POINTS = [
   },
   {
     icon: LockKey,
-    title: "Two kinds of chat, clearly marked",
-    body: "Normal chats are encrypted in transit and at rest, with strict membership checks, and can use smart features. Private chats are end-to-end encrypted, so Lynk's servers can't read them and every smart feature is off. The mode is shown in the chat header, and switching needs everyone's agreement.",
+    title: "Every chat is end-to-end encrypted",
+    body: "Messages, photos, voice notes, plans and lists are encrypted on your device, and only the people in the chat hold the keys. Lynk's servers pass them along but can't read them, and neither can anyone at Lynk. This is on for every chat, always; there's no setting to turn it off. What the servers do see is who is in which chat and when messages are sent, so they can be delivered."
   },
   {
     icon: Sparkle,
-    title: "Smart features suggest, you decide",
-    body: "Plans, to-dos and memories are suggestions until someone in the chat confirms them, and each links to the messages it came from. Search and answers only ever see messages you're allowed to read. You can turn smart features off in Settings.",
+    title: "Smart features run on your device",
+    body: "Search, answers, plan and to-do suggestions, memories, voice-note transcripts and translation all happen on your phone or computer, inside the encryption, so they never need Lynk to read your chats. They only suggest: nothing is saved until someone in the chat confirms it, and each suggestion links to the messages it came from. You can turn them off in Settings.",
   },
   {
     icon: EyeSlash,
