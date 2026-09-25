@@ -1,0 +1,59 @@
+# End-to-end walk through the app on a simulator: sign in, chats, a conversation
+# (with plan spotting), Ask Lynk, and every tab. Screenshots land in
+# .maestro/screenshots. Run: maestro test .maestro/smoke.yaml
+appId: com.rahulgandhi.lynk
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "I already have an account"
+    timeout: 60000
+- takeScreenshot: .maestro/screenshots/01-welcome
+- tapOn: "I already have an account"
+- takeScreenshot: .maestro/screenshots/02-sign-in
+- tapOn: "Continue with a passkey"
+- extendedWaitUntil:
+    visible: "Weekend climbers.*"
+    timeout: 20000
+- takeScreenshot: .maestro/screenshots/03-chats
+
+# A group conversation
+- tapOn: "Weekend climbers.*"
+- extendedWaitUntil:
+    visible: "End-to-end encrypted.*"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: .maestro/screenshots/04-conversation
+- tapOn: "Message Weekend climbers.*"
+- inputText: "Dinner Friday 8pm at Nando's?"
+- tapOn: "Send message"
+- extendedWaitUntil:
+    visible: "Dinner Friday at Nando's"
+    timeout: 8000
+- takeScreenshot: .maestro/screenshots/05-plan-spotted
+- tapOn: "Chat info"
+- extendedWaitUntil:
+    visible: "New plan"
+    timeout: 5000
+- takeScreenshot: .maestro/screenshots/06-chat-info
+- tapOn: "Close"
+- tapOn: "Back to chats"
+
+# Ask Lynk
+- tapOn: "Ask Lynk"
+- tapOn: "Where did Mei say that ramen place was?"
+- extendedWaitUntil:
+    visible: "Sources"
+    timeout: 8000
+- takeScreenshot: .maestro/screenshots/07-ask
+- tapOn: "Close"
+
+# Tabs
+- tapOn: "Catch up"
+- takeScreenshot: .maestro/screenshots/08-catch-up
+- tapOn: "Calendar"
+- takeScreenshot: .maestro/screenshots/09-calendar
+- tapOn: "Saved"
+- takeScreenshot: .maestro/screenshots/10-saved
+- tapOn: "You"
+- takeScreenshot: .maestro/screenshots/11-you
