@@ -119,7 +119,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 
 <div class="wrap">
 <header class="hero">
-  <span class="eyebrow">Product &amp; engineering roadmap, v5.0 · Sep 2026</span>
+  <span class="eyebrow">Product &amp; engineering roadmap, v5.1 · Sep 2026</span>
   <h1>Lynk Roadmap</h1>
   <p class="lede">A personal chat app for friends and family that remembers the plan. Messaging comes first, and every chat is end-to-end encrypted. Plans, to-dos, memories and search that finds things again are what make it different, and they all run on your own device, so nobody else ever reads your chats.</p>
   <div class="flow" aria-label="Product thesis">
@@ -128,12 +128,32 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 </header>
 
 <nav class="toc" aria-label="Sections">
-  <a href="#progress">Progress</a><a href="#changes">What changed</a><a href="#conflicts">Conflicts</a><a href="#stack">Stack</a><a href="#architecture">Architecture</a><a href="#repo">Repo</a><a href="#schema">Schema</a><a href="#protocol">Protocol</a><a href="#authz">Privacy model</a><a href="#e2ee">Encryption</a><a href="#jobs">Jobs</a><a href="#ai">Smart features</a><a href="#risks">Risks</a><a href="#phases">Milestones</a><a href="#timeline">Timeline</a><a href="#adrs">ADRs</a>
+  <a href="#why">Why Lynk</a><a href="#progress">Progress</a><a href="#changes">What changed</a><a href="#conflicts">Conflicts</a><a href="#stack">Stack</a><a href="#architecture">Architecture</a><a href="#repo">Repo</a><a href="#schema">Schema</a><a href="#protocol">Protocol</a><a href="#authz">Privacy model</a><a href="#e2ee">Encryption</a><a href="#jobs">Jobs</a><a href="#ai">Smart features</a><a href="#risks">Risks</a><a href="#phases">Milestones</a><a href="#timeline">Timeline</a><a href="#adrs">ADRs</a>
 </nav>
+
+<section id="why">
+  <div class="sec-head"><span class="eyebrow">Positioning</span><h2>The problem Lynk solves</h2>
+  <p><b>Group chats are where plans get made, and where they get lost.</b> A group agrees on "dinner Friday 8pm at Nando's". By Thursday it's buried under 200 messages: nobody knows who's coming, nobody put it in a calendar, and someone asks "wait, what time?" three times. The same goes for "can you pick up Mum from the airport", a friend's ramen tip or an address sent once. WhatsApp, iMessage and Telegram are good at moving messages and bad at remembering what they meant.</p>
+  <p class="lede" style="margin-top:12px">One line: <b>a private group chat that remembers the plans, so your friends actually show up.</b></p></div>
+  <div class="two">
+    <div class="card"><h3>Why it's different</h3>
+      <ul class="check">
+        <li><b>It keeps what matters from a chat:</b> plan spotting with RSVPs and a calendar, to-dos and lists, Saved, and Ask Lynk to find things again. Catch up shows what's waiting on you instead of making you scroll.</li>
+        <li><b>Without reading your chats:</b> every chat is end-to-end encrypted and the smart features run on the phone. Private apps (WhatsApp, Signal) aren't smart about your chats, and apps that are smart usually read them on a server. Doing both is the part that's hard to copy.</li>
+      </ul></div>
+    <div class="card"><h3>The hard truths</h3>
+      <ul class="check">
+        <li><b>Nobody switches chat apps for features.</b> People move when their group moves. The pitch has to be strong enough for one person to bring a whole group over.</li>
+        <li><b>"WhatsApp plus everything" blurs the story.</b> Side chats, voice notes, translation and memories are nice, but they're not the reason to switch. Plans are.</li>
+        <li><b>Big apps can copy the feature.</b> Apple or Meta could add plan detection. Doing it on the device, under end-to-end encryption, is the defensible part.</li>
+      </ul></div>
+  </div>
+  <p class="note"><b>Next step:</b> pick one kind of group and one moment and make it great, such as friend groups making weekend plans or families coordinating pickups and school runs. Talk to 10 people in that group before building more features.</p>
+</section>
 
 <section id="progress">
   <div class="sec-head"><span class="eyebrow">Where things stand</span><h2>Progress so far</h2>
-  <p>The web frontend for phases 0, 1 and 4, the user-facing half of phase 2, and sample versions of the phase 5–6 smart features are complete, running on mock data kept in the browser. No model is called yet: the smart features run on rules and sample data, and say so. Nothing on the server side exists yet. Everything below lives in <code>apps/web</code> and passes type-check, lint and a production build (26 routes).</p></div>
+  <p>The web frontend for phases 0, 1 and 4, the user-facing half of phase 2, and sample versions of the phase 5–6 smart features are complete, running on mock data kept in the browser. The iPhone and Android app (<code>apps/mobile</code>) has every one of those features on the same mock data. No model is called yet: the smart features run on rules and sample data, and say so. Nothing on the server side exists yet. The web app passes type-check, lint and a production build (26 routes).</p></div>
   <div class="two">
     <div class="card"><h3>Done</h3>
       <ul class="check">
@@ -202,6 +222,16 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
             <li>Translate a message in place with "View original": Chrome's on-device translator when present, otherwise labelled sample translations for the demo messages.</li>
           </ul>
         </li>
+        <li><b>iPhone and Android app, frontend only (<code>apps/mobile</code>):</b>
+          <ul>
+            <li>One Expo app (SDK 57, React Native 0.86, Expo Router, React Compiler) with everything the web has, on the same mock data and no backend. It imports the web's chat, plan-spotting, search, notification and <code>.ics</code> code directly, so both apps behave the same.</li>
+            <li>Sign-in and sign-up (mock passkey, Apple, Google). Five native tabs: Chats, Catch up (swipe deck), Calendar (month grid and agenda), Saved and You. Conversations with replies, reactions, edit and delete, photos, recorded voice notes, side chats, suggestion cards, translation and the offline outbox. Chat info (plans with RSVPs, to-dos, lists, memories, members), Ask Lynk, notifications, contact profiles and all seven Settings panes.</li>
+            <li>Chats are stored on the phone in an encrypted SQLCipher database, with its key in the iOS Keychain or Android Keystore (this device only).</li>
+            <li>The glass-rings app icon (with an Android adaptive icon) and a Lynk wordmark splash screen that lifts into the app once your data has loaded.</li>
+            <li>Builds and runs on the iOS 27 simulator. iOS 27 requires the scene lifecycle, so a config plugin adds it. Two build scripts broke on the space in the folder name "Chat APP"; a patch and a config plugin fix them.</li>
+            <li>A Maestro UI test (<code>apps/mobile/.maestro/smoke.yaml</code>) signs in, opens a group, sends "Dinner Friday 8pm at Nando's?", checks the plan suggestion, asks Lynk a question and visits every tab.</li>
+          </ul>
+        </li>
         <li><b>Deep links</b> to chats (<code>/app?chat=…</code>), so reload, back and shared links land in the right conversation.</li>
         <li><b>Profile photos</b> for the demo friends in <code>public/people</code>.</li>
         <li><b>Logo and app icon:</b> two interlocking rings, one blue and one silver, drawn as a vector in <code>Logo.tsx</code>. The silver ring turns graphite on light backgrounds. The site uses <code>icon.svg</code> and a 180px <code>apple-icon.png</code>, and there's a 1024px master in <code>public/app-icon-1024.png</code> for the stores.</li>
@@ -216,7 +246,8 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li>Real-time messaging over WebSockets, and the <code>packages/protocol</code> schemas.</li>
         <li>Server side of reliability: the NATS outbox and relay, gap replay by per-chat <code>seq</code>, rate limits, metrics and load tests. The browser outbox runs on <code>localStorage</code> until then.</li>
         <li>End-to-end encryption (MLS via OpenMLS) for every chat, key transparency, device linking and encrypted backups. The web app already says every chat is encrypted; the encryption itself arrives with the server in phase 1.</li>
-        <li>Mobile app, push notifications, and on-device models for smart features.</li>
+        <li>Phone push notifications (APNs, FCM), and on-device models for smart features. On phones, voice-note transcripts and translation are samples until native speech and translation modules are added.</li>
+        <li>Mobile checks still to run: voice recording and photo picking on a real phone, and the Android build.</li>
       </ul>
       <h3 style="margin-top:8px">Decisions made along the way</h3>
       <ul class="check">
@@ -225,15 +256,16 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li>Moved from pink and plum to Apple greys with a blue accent.</li>
         <li>Account screens run on a mock store shaped like the future API (<code>src/lib/account.ts</code>), so wiring the server changes data calls, not pages.</li>
         <li>The theme switch moved from the app dock into Settings › Appearance, with Match system as the default.</li>
-        <li>One repo for every app: <code>apps/web</code> now, then <code>apps/ios</code> and <code>apps/android</code>, plus <code>apps/server</code> for the Go backend.</li>
-        <li><b>Open decision:</b> the plan so far is one Expo app for both phones, but the repo now expects separate <code>ios</code> and <code>android</code> folders. Decide before phase 3: one Expo app (shared code, generated protocol, one team) or two native apps (SwiftUI and Kotlin, roughly double the mobile work).</li>
+        <li>One repo for every app: <code>apps/web</code>, <code>apps/mobile</code>, and later <code>apps/server</code> for the Go backend.</li>
+        <li><b>One Expo app for both phones (v5.1):</b> <code>apps/mobile</code> replaces the planned <code>apps/ios</code> and <code>apps/android</code>. It shares the web's logic and will share the generated protocol, and there is one mobile codebase instead of two.</li>
+        <li><b>No unread badge on the Chats tab:</b> iOS pins tab badges past the icon's corner, onto the next tab's highlight. The count shows in the Chats header and on Catch up instead.</li>
         <li><b>Full motion for everyone:</b> the OS "Reduce motion" setting is deliberately not honoured, by product decision. Revisit before launch (WCAG 2.3.3); recorded in <code>MASTER.md</code>.</li>
         <li>A red token for destructive actions only: <code>--danger</code> #D70015 (white text 5.38:1) and <code>--danger-ink</code> #FF6961 in dark (6.03:1).</li>
         <li>"Nearby mode" (chatting with no internet over Bluetooth and Wi-Fi) is possible in the mobile app but deferred until after v1.</li>
         <li><b>End-to-end encryption by default (v4.9):</b> every chat, with no opt-out and no server-readable mode. Smart features move onto the device, and the server never reads message content. This replaces the earlier "normal and private chat modes" plan (conflict 1, ADR-09).</li>
       </ul></div>
   </div>
-  <p class="note">Next up: the backend half of phase 0. Add <code>apps/server</code> with the Go skeleton and Docker Compose, then connect the existing sign-in screens to real passkeys, Apple and Google.</p>
+  <p class="note">Next up: the positioning work above, then the backend half of phase 0. Add <code>apps/server</code> with the Go skeleton and Docker Compose, then connect the existing sign-in screens to real passkeys, Apple and Google.</p>
 </section>
 
 <section id="changes">
@@ -283,7 +315,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
   <div class="conflict">
     <h3>3. Web first vs phone first</h3>
     <div class="vs"><div><b>Built so far</b>A web client and landing page.</div><div><b>Reality</b>Personal chat happens on phones, with push notifications.</div></div>
-    <p class="call"><b>Web for the messaging core, then the phone apps immediately after.</b> The protocol is generated for every client, so the phone apps reuse the same server with no API changes. Anyone testing Lynk with friends needs the phone app before the smart features matter. Whether that is one Expo app or separate iOS and Android apps is still open (see Progress).</p>
+    <p class="call"><b>Web for the messaging core, then the phone apps immediately after.</b> The protocol is generated for every client, so the phone apps reuse the same server with no API changes. Anyone testing Lynk with friends needs the phone app before the smart features matter. It is one Expo app for iPhone and Android, and its frontend is built.</p>
   </div>
 
   <div class="conflict">
@@ -307,8 +339,8 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
     <tbody>
     <tr class="group-row"><td colspan="4">Clients</td></tr>
     <tr><td class="layer">Web</td><td>Next.js App Router + React, Tailwind, Radix primitives</td><td><span class="ver">Next 16.3 · React 19.2 · TW 4</span></td><td class="why">Already running the landing page and the client prototype.</td></tr>
-    <tr><td class="layer">Mobile</td><td>Expo (React Native, New Architecture) · <i>open decision</i></td><td><span class="ver">SDK 54+ · RN 0.81+</span></td><td class="why">One app for iOS and Android, sharing types and design tokens with the web. The alternative is native SwiftUI and Kotlin apps in <code>apps/ios</code> and <code>apps/android</code>.</td></tr>
-    <tr><td class="layer">Local cache</td><td>IndexedDB (web) · expo-sqlite (mobile)</td><td><span class="ver">latest</span></td><td class="why">Instant open, offline reading, and an outbox for messages sent offline.</td></tr>
+    <tr><td class="layer">Mobile</td><td>Expo (React Native, New Architecture), Expo Router</td><td><span class="ver">SDK 57 · RN 0.86</span></td><td class="why">One app for iOS and Android in <code>apps/mobile</code>, sharing logic with the web.</td></tr>
+    <tr><td class="layer">Local cache</td><td>IndexedDB (web) · expo-sqlite with SQLCipher (mobile)</td><td><span class="ver">latest</span></td><td class="why">Instant open, offline reading, and an outbox for messages sent offline.</td></tr>
     <tr><td class="layer">Client state</td><td>TanStack Query + Zustand, TanStack Virtual / FlashList</td><td><span class="ver">Query 5 · Zustand 5</span></td><td class="why">Optimistic sends and smooth long timelines.</td></tr>
     <tr class="group-row"><td colspan="4">Backend</td></tr>
     <tr><td class="layer">Language</td><td>Go modular monolith</td><td><span class="ver">1.25+</span></td><td class="why">Long-lived WebSocket connections, one binary, portfolio goal.</td></tr>
@@ -381,8 +413,7 @@ flowchart LR
 <pre class="code">lynk/
 ├─ apps/
 │  ├─ web/                  Next.js client + landing (on GitHub today)
-│  ├─ ios/                  iPhone app (phase 3)
-│  ├─ android/              Android app (phase 3)
+│  ├─ mobile/               Expo app for iPhone and Android (frontend built)
 │  └─ server/               Go modular monolith
 │     ├─ cmd/lynk/          `lynk api | worker | relay | migrate`
 │     └─ internal/
@@ -567,6 +598,7 @@ flowchart LR
 <section id="risks">
   <div class="sec-head"><span class="eyebrow">What could go wrong</span><h2>Risks</h2></div>
   <div class="card">
+    <div class="risk"><span class="sev h">High</span><h3>Nobody switches chat apps alone</h3><p>A chat app is worthless until your friends are on it. Win one kind of group with plans first, make inviting a group one tap, and let people still see a plan's link from outside Lynk.</p></div>
     <div class="risk"><span class="sev h">High</span><h3>Memories about people who never agreed</h3><p>Keep them scoped to one chat, visible to its members only, removable by the person described, and deleted with their source.</p></div>
     <div class="risk"><span class="sev h">High</span><h3>Getting the encryption right</h3><p>Use OpenMLS, never custom crypto; external cryptography review before launch; interop, fuzz and state-machine tests for membership changes, device loss and key rotation; key transparency and security codes so a swapped key can't go unnoticed.</p></div>
     <div class="risk"><span class="sev h">High</span><h3>Encryption on the web</h3><p>A web app is re-downloaded from the server on every visit, so a compromised server could serve bad code. Pin and publish build hashes, use Subresource Integrity, and recommend the phone apps for people who need the strongest guarantee.</p></div>
@@ -620,9 +652,9 @@ flowchart LR
     <article class="phase">
       <div class="phase-top"><span class="n">3</span><h3>Mobile app</h3><span class="pill weeks">Weeks 16–21</span></div>
       <div class="cols"><div><ol class="ms">
-        <li>Phone apps in <code>apps/ios</code> and <code>apps/android</code> on the same protocol, with a SQLite cache and offline outbox. Decide first between one Expo app and two native apps.</li>
+        <li>Phone app on the same protocol, with a SQLite cache and offline outbox (<s>one Expo app in <code>apps/mobile</code>, every web feature on mock data, encrypted local storage</s> done; connecting it to the server comes with phase 1).</li>
         <li>Push through APNs and FCM, reply from the notification.</li>
-        <li>Recording and playing voice notes.</li>
+        <li><s>Recording and playing voice notes</s> done on mock data.</li>
         <li>TestFlight and Play internal testing with friends.</li>
       </ol></div></div>
       <p class="exit"><b>Exit:</b> a friends-and-family beta runs on phones every day.</p>
@@ -696,10 +728,11 @@ flowchart LR
     <li>Suggestions, never automatic actions</li>
     <li>On-device model providers behind interfaces, rules as the fallback</li>
     <li>Web first, mobile in phase 3</li>
+    <li>One Expo app for iPhone and Android</li>
   </ol>
 </section>
 
-<footer>Roadmap v5.0, September 2026. An encryption audit: MLS via OpenMLS on every client (libsignal has no supported web build), signed membership changes, key transparency, security codes from phase 1, encrypted profiles and group details, invite keys in the link fragment, sender-side link previews, padding, no IP logs, and on-device storage encryption. v4.9: Every chat end-to-end encrypted by default, with smart features moved onto the device; the server only relays and stores ciphertext. v4.8: Phases 5–6 as sample interactions on the web: Ask Lynk with cited answers, suggestion cards and rule-based plan spotting, editable memories, recorded voice notes with transcripts, and in-place translation. Supersedes v3 (workplace direction).</footer>
+<footer>Roadmap v5.1, September 2026. The iPhone and Android app: one Expo app in <code>apps/mobile</code> with every web feature on mock data, encrypted storage on the phone, the app icon and splash screen, and a Maestro UI test. Adds "The problem Lynk solves" and resolves the Expo-or-native decision. v5.0: An encryption audit: MLS via OpenMLS on every client (libsignal has no supported web build), signed membership changes, key transparency, security codes from phase 1, encrypted profiles and group details, invite keys in the link fragment, sender-side link previews, padding, no IP logs, and on-device storage encryption. v4.9: Every chat end-to-end encrypted by default, with smart features moved onto the device; the server only relays and stores ciphertext. v4.8: Phases 5–6 as sample interactions on the web: Ask Lynk with cited answers, suggestion cards and rule-based plan spotting, editable memories, recorded voice notes with transcripts, and in-place translation. Supersedes v3 (workplace direction).</footer>
 </div>
 
 <script>
