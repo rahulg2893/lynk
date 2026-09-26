@@ -119,7 +119,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 
 <div class="wrap">
 <header class="hero">
-  <span class="eyebrow">Product &amp; engineering roadmap, v5.1 · Sep 2026</span>
+  <span class="eyebrow">Product &amp; engineering roadmap, v5.2 · Sep 2026</span>
   <h1>Lynk Roadmap</h1>
   <p class="lede">A personal chat app for friends and family that remembers the plan. Messaging comes first, and every chat is end-to-end encrypted. Plans, to-dos, memories and search that finds things again are what make it different, and they all run on your own device, so nobody else ever reads your chats.</p>
   <div class="flow" aria-label="Product thesis">
@@ -148,6 +148,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li><b>Big apps can copy the feature.</b> Apple or Meta could add plan detection. Doing it on the device, under end-to-end encryption, is the defensible part.</li>
       </ul></div>
   </div>
+  <p class="note"><b>Market:</b> Lynk starts in India (v5.2). Sign-in is by phone number with +91 as the default, because that is how people there already identify themselves in chat apps.</p>
   <p class="note"><b>Next step:</b> pick one kind of group and one moment and make it great, such as friend groups making weekend plans or families coordinating pickups and school runs. Talk to 10 people in that group before building more features.</p>
 </section>
 
@@ -169,10 +170,10 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
             <li>A catch-up screen, the ⌘K command palette, a phone layout, and loading and empty states.</li>
           </ul>
         </li>
-        <li><b>Sign in and sign up</b> at <code>/sign-in</code> and <code>/sign-up</code>: passkey first, then Continue with Apple and Google, no passwords anywhere. Sign-up is three steps: name and username with a live availability check, choose how to sign in, then a welcome with a photo and your invite link. <code>/app</code> sends signed-out visitors to sign-in.</li>
+        <li><b>Sign in and sign up</b> at <code>/sign-in</code> and <code>/sign-up</code>: a phone number and a 6-digit texted code, no passwords anywhere (v5.2; this replaced passkeys and Apple and Google sign-in). The field starts with +91 and reads 98765 43210 or 098765 43210 as an Indian mobile. Sign-up is three steps: name and username with a live availability check, your number confirmed with a code, then a welcome with a photo and your invite link. <code>/app</code> sends signed-out visitors to sign-in.</li>
         <li><b>Profile</b> at <code>/app/profile</code>: photo, name, username and about line, your invite link, and "What Lynk remembers about you" with remove and undo (conflict 2).</li>
         <li><b>Contact profiles</b> at <code>/app/people/[id]</code>: shared groups, memories from chats you're both in, block and report.</li>
-        <li><b>Settings</b> at <code>/app/settings</code>, seven panes: Account, Sign-in &amp; security (passkeys, Apple and Google, sessions, recent activity), Privacy (who can reach you, last seen, read receipts, blocked), Notifications, Smart features, Appearance, and Your data (JSON download, delete now or in 30 days). ⌘, opens it from anywhere.</li>
+        <li><b>Settings</b> at <code>/app/settings</code>, seven panes: Account, Sign-in &amp; security (your phone number with Change, confirmed by a code; sessions; recent activity), Privacy (who can reach you, last seen, read receipts, blocked), Notifications, Smart features, Appearance, and Your data (JSON download, delete now or in 30 days). ⌘, opens it from anywhere.</li>
         <li><b>Invite links</b> at <code>/invite/[code]</code> for groups and people, a plain-language <code>/privacy</code> overview, and a 404 page.</li>
         <li><b>Phase 1 messaging, on the web:</b>
           <ul>
@@ -225,13 +226,15 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li><b>iPhone and Android app, frontend only (<code>apps/mobile</code>):</b>
           <ul>
             <li>One Expo app (SDK 57, React Native 0.86, Expo Router, React Compiler) with everything the web has, on the same mock data and no backend. It imports the web's chat, plan-spotting, search, notification and <code>.ics</code> code directly, so both apps behave the same.</li>
-            <li>Sign-in and sign-up (mock passkey, Apple, Google). Five native tabs: Chats, Catch up (swipe deck), Calendar (month grid and agenda), Saved and You. Conversations with replies, reactions, edit and delete, photos, recorded voice notes, side chats, suggestion cards, translation and the offline outbox. Chat info (plans with RSVPs, to-dos, lists, memories, members), Ask Lynk, notifications, contact profiles and all seven Settings panes.</li>
+            <li>Sign-in and sign-up with a +91 phone number and a code (mock; the code field fills itself from the SMS on iPhone). Five native tabs: Chats, Catch up (swipe deck), Calendar (month grid and agenda), Saved and You. Conversations with replies, reactions, edit and delete, photos, recorded voice notes, side chats, suggestion cards, translation and the offline outbox. Chat info (plans with RSVPs, to-dos, lists, memories, members), Ask Lynk, notifications, contact profiles and all seven Settings panes.</li>
             <li>Chats are stored on the phone in an encrypted SQLCipher database, with its key in the iOS Keychain or Android Keystore (this device only).</li>
             <li>The glass-rings app icon (with an Android adaptive icon) and a Lynk wordmark splash screen that lifts into the app once your data has loaded.</li>
             <li>Builds and runs on the iOS 27 simulator. iOS 27 requires the scene lifecycle, so a config plugin adds it. Two build scripts broke on the space in the folder name "Chat APP"; a patch and a config plugin fix them.</li>
             <li>A Maestro UI test (<code>apps/mobile/.maestro/smoke.yaml</code>) signs in, opens a group, sends "Dinner Friday 8pm at Nando's?", checks the plan suggestion, asks Lynk a question and visits every tab.</li>
           </ul>
         </li>
+        <li><b>Up next bar, on the web and phones (v5.2):</b> saved plans, to-dos and lists used to live only in chat details. Every chat now has a bar under its header with the next plan, who's going and what's still open. Tapping it opens a sheet (phones) or a drop-down (web) with RSVPs, Add to calendar, to-dos to tick off and editable lists, without leaving the chat. It hides when nothing saved is still ahead. <code>upNext()</code> in the shared chat code decides what counts, so both apps agree.</li>
+        <li><b>Case study</b> for the portfolio, with screens from the iPhone and web apps (published as a separate page).</li>
         <li><b>Deep links</b> to chats (<code>/app?chat=…</code>), so reload, back and shared links land in the right conversation.</li>
         <li><b>Profile photos</b> for the demo friends in <code>public/people</code>.</li>
         <li><b>Logo and app icon:</b> two interlocking rings, one blue and one silver, drawn as a vector in <code>Logo.tsx</code>. The silver ring turns graphite on light backgrounds. The site uses <code>icon.svg</code> and a 180px <code>apple-icon.png</code>, and there's a 1024px master in <code>public/app-icon-1024.png</code> for the stores.</li>
@@ -241,7 +244,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
     <div class="card"><h3>Not started</h3>
       <ul class="check">
         <li>Go server, PostgreSQL, Redis, NATS and Docker Compose.</li>
-        <li>Real sign-in on the server (go-webauthn passkeys, Apple and Google) and real accounts. The screens exist and run on a browser-only mock.</li>
+        <li>Real sign-in on the server: phone number and SMS code through an Indian SMS provider (DLT-registered templates, as TRAI requires), rate limits per number and device, and real accounts. The screens exist and run on a mock where any 6 digits pass.</li>
         <li>Web Push (alerts with Lynk closed), and uploads to real storage (photos are shrunk and kept in the browser for now; other files last until you reload).</li>
         <li>Real-time messaging over WebSockets, and the <code>packages/protocol</code> schemas.</li>
         <li>Server side of reliability: the NATS outbox and relay, gap replay by per-chat <code>seq</code>, rate limits, metrics and load tests. The browser outbox runs on <code>localStorage</code> until then.</li>
@@ -258,6 +261,8 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li>The theme switch moved from the app dock into Settings › Appearance, with Match system as the default.</li>
         <li>One repo for every app: <code>apps/web</code>, <code>apps/mobile</code>, and later <code>apps/server</code> for the Go backend.</li>
         <li><b>One Expo app for both phones (v5.1):</b> <code>apps/mobile</code> replaces the planned <code>apps/ios</code> and <code>apps/android</code>. It shares the web's logic and will share the generated protocol, and there is one mobile codebase instead of two.</li>
+        <li><b>Phone number sign-in, +91 by default (v5.2):</b> replaces passkeys and Apple and Google sign-in. One path, the one people in India already use for chat. Friends still find you by @username and never see your number.</li>
+        <li><b>Saved things live in the chat (v5.2):</b> of three options (a strip on the chat list, a reworked Saved tab, a bar inside the chat), the pinned Up next bar won, because a plan belongs to its conversation.</li>
         <li><b>No unread badge on the Chats tab:</b> iOS pins tab badges past the icon's corner, onto the next tab's highlight. The count shows in the Chats header and on Catch up instead.</li>
         <li><b>Full motion for everyone:</b> the OS "Reduce motion" setting is deliberately not honoured, by product decision. Revisit before launch (WCAG 2.3.3); recorded in <code>MASTER.md</code>.</li>
         <li>A red token for destructive actions only: <code>--danger</code> #D70015 (white text 5.38:1) and <code>--danger-ink</code> #FF6961 in dark (6.03:1).</li>
@@ -265,7 +270,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li><b>End-to-end encryption by default (v4.9):</b> every chat, with no opt-out and no server-readable mode. Smart features move onto the device, and the server never reads message content. This replaces the earlier "normal and private chat modes" plan (conflict 1, ADR-09).</li>
       </ul></div>
   </div>
-  <p class="note">Next up: the positioning work above, then the backend half of phase 0. Add <code>apps/server</code> with the Go skeleton and Docker Compose, then connect the existing sign-in screens to real passkeys, Apple and Google.</p>
+  <p class="note">Next up: the positioning work above, then the backend half of phase 0. Add <code>apps/server</code> with the Go skeleton and Docker Compose, then connect the existing sign-in screens to real SMS codes and a registration-lock PIN.</p>
 </section>
 
 <section id="changes">
@@ -346,10 +351,10 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
     <tr><td class="layer">Language</td><td>Go modular monolith</td><td><span class="ver">1.25+</span></td><td class="why">Long-lived WebSocket connections, one binary, portfolio goal.</td></tr>
     <tr><td class="layer">HTTP and WebSockets</td><td><code>net/http</code> + coder/websocket</td><td><span class="ver">stdlib · 1.8+</span></td><td class="why">No framework needed.</td></tr>
     <tr><td class="layer">Database access</td><td>pgx + sqlc, goose migrations</td><td><span class="ver">pgx 5 · sqlc 1.x · goose 3</span></td><td class="why">Type-safe Go from hand-written SQL.</td></tr>
-    <tr><td class="layer">Auth</td><td>Server sessions, passkeys (go-webauthn), Apple and Google sign-in</td><td><span class="ver">latest</span></td><td class="why">No passwords. One session per device, listed in settings.</td></tr>
+    <tr><td class="layer">Auth</td><td>Phone number + SMS code (MSG91 or Twilio Verify with Indian DLT templates), server sessions, a registration-lock PIN</td><td><span class="ver">latest</span></td><td class="why">No passwords, and the sign-in people in India expect. The PIN stops a swapped or recycled SIM from taking over an account. One session per device, listed in settings.</td></tr>
     <tr><td class="layer">End-to-end encryption</td><td>MLS (RFC 9420) via OpenMLS, one Rust core: WASM on the web, Swift and Kotlin bindings on phones</td><td><span class="ver">OpenMLS 0.6+</span></td><td class="why">Every chat, by default. An IETF standard with forward secrecy, post-compromise security and signed membership changes. One implementation on every client; never home-made crypto.</td></tr>
     <tr><td class="layer">Key transparency</td><td>Append-only, publicly auditable key directory (Merkle log), checked by every client</td><td><span class="ver">—</span></td><td class="why">The server can't swap someone's keys without it showing up. Security codes and QR verification on top.</td></tr>
-    <tr><td class="layer">Keys and backup</td><td>Per-device identity keys, device linking by QR, encrypted backup keyed from the passkey (WebAuthn PRF) or a recovery code</td><td><span class="ver">—</span></td><td class="why">New devices get history without the server ever holding a readable copy.</td></tr>
+    <tr><td class="layer">Keys and backup</td><td>Per-device identity keys, device linking by QR, encrypted backup keyed from your PIN (guarded by a rate-limited secure enclave, like Signal's SVR) or a recovery code</td><td><span class="ver">—</span></td><td class="why">New devices get history without the server ever holding a readable copy.</td></tr>
     <tr class="group-row"><td colspan="4">Data and infrastructure</td></tr>
     <tr><td class="layer">Database</td><td>PostgreSQL</td><td><span class="ver">PG 18</span></td><td class="why">Accounts, memberships, delivery order and encrypted payloads. No message text, so no vectors.</td></tr>
     <tr><td class="layer">Ephemeral state</td><td>Redis (or Valkey)</td><td><span class="ver">8.x</span></td><td class="why">Presence, typing, rate limits. Never messages.</td></tr>
@@ -442,9 +447,9 @@ flowchart LR
   <div class="tbl"><table>
     <thead><tr><th>Group</th><th>Tables</th><th>Key design points</th></tr></thead>
     <tbody>
-    <tr><td class="layer">Identity</td><td class="mono">users (username only), sessions, devices, passkeys, oauth_accounts, encrypted_profiles, encrypted_settings</td><td class="why">Sessions stored hashed. Devices hold push tokens. Name, photo, bio and settings are encrypted with a profile key shared only with your contacts.</td></tr>
+    <tr><td class="layer">Identity</td><td class="mono">users (username, phone number), sessions, devices, registration_locks, sms_attempts, encrypted_profiles, encrypted_settings</td><td class="why">The phone number is used only to sign in and is never shown to other people. Sessions stored hashed. Devices hold push tokens. Name, photo, bio and settings are encrypted with a profile key shared only with your contacts.</td></tr>
     <tr><td class="layer">People</td><td class="mono">contacts, invites, blocks, reports, security_events</td><td class="why">Blocking hides both directions. Security events power the personal security log.</td></tr>
-    <tr><td class="layer">Keys</td><td class="mono">device_credentials, key_packages, transparency_log, key_backups</td><td class="why">Public keys only, each published in the transparency log. Backups are encrypted with a key the server never sees (passkey PRF or recovery code).</td></tr>
+    <tr><td class="layer">Keys</td><td class="mono">device_credentials, key_packages, transparency_log, key_backups</td><td class="why">Public keys only, each published in the transparency log. Backups are encrypted with a key the server never sees (PIN through the secure enclave, or a recovery code).</td></tr>
     <tr><td class="layer">Chats</td><td class="mono">chats (kind: dm | group), chat_members (role, joined_at, last_read_seq, muted, pinned)</td><td class="why"><code>joined_at</code> decides which history a new member receives. Group names and photos travel encrypted.</td></tr>
     <tr><td class="layer">Events</td><td class="mono">chat_events (chat_id, seq, sender_device, idempotency_key, ciphertext, sent_at)</td><td class="why">One ordered log of encrypted events per chat: messages, edits, deletes, reactions, side chats, plans, RSVPs, lists and memories. Unique <code>(chat_id, seq)</code>.</td></tr>
     <tr><td class="layer">Media</td><td class="mono">encrypted_blobs (owner, size, expires_at)</td><td class="why">Photos, files and voice notes encrypted on the device; the key travels inside the message.</td></tr>
@@ -522,7 +527,7 @@ flowchart LR
         <li>Plans, RSVPs, lists, to-dos, memories and saved items: they are events in the chat, not server records.</li>
         <li>Group names, photos and settings; your name, photo, bio and settings (shared with contacts through a profile key).</li>
         <li>Typing indicators, read receipts and push previews.</li>
-        <li>Backups, with a key from your passkey (WebAuthn PRF) or a 64-character recovery code.</li>
+        <li>Backups, with a key from your PIN (through a rate-limited secure enclave) or a 64-character recovery code.</li>
       </ul></div>
   </div>
   <div class="two">
@@ -600,9 +605,11 @@ flowchart LR
   <div class="card">
     <div class="risk"><span class="sev h">High</span><h3>Nobody switches chat apps alone</h3><p>A chat app is worthless until your friends are on it. Win one kind of group with plans first, make inviting a group one tap, and let people still see a plan's link from outside Lynk.</p></div>
     <div class="risk"><span class="sev h">High</span><h3>Memories about people who never agreed</h3><p>Keep them scoped to one chat, visible to its members only, removable by the person described, and deleted with their source.</p></div>
+    <div class="risk"><span class="sev h">High</span><h3>SIM swaps and recycled numbers</h3><p>With the phone number as the login, whoever holds the SIM can ask for a code. A registration-lock PIN is required when a number moves to a new device, and the security log shows every sign-in. Indian operators recycle numbers after about 90 days of inactivity, so the PIN also protects the previous owner.</p></div>
+    <div class="risk"><span class="sev m">Med</span><h3>SMS cost and fraud</h3><p>Sending a code costs money, and attackers pump fake sign-ups to collect SMS fees. Rate limits per number, device and network, a delay before resends, and DLT-registered templates so messages actually arrive.</p></div>
     <div class="risk"><span class="sev h">High</span><h3>Getting the encryption right</h3><p>Use OpenMLS, never custom crypto; external cryptography review before launch; interop, fuzz and state-machine tests for membership changes, device loss and key rotation; key transparency and security codes so a swapped key can't go unnoticed.</p></div>
     <div class="risk"><span class="sev h">High</span><h3>Encryption on the web</h3><p>A web app is re-downloaded from the server on every visit, so a compromised server could serve bad code. Pin and publish build hashes, use Subresource Integrity, and recommend the phone apps for people who need the strongest guarantee.</p></div>
-    <div class="risk"><span class="sev h">High</span><h3>Lost devices, lost history</h3><p>With no server copy, losing every device loses the chats. Device linking, and encrypted backups keyed from the passkey or a recovery code, set up during sign-up.</p></div>
+    <div class="risk"><span class="sev h">High</span><h3>Lost devices, lost history</h3><p>With no server copy, losing every device loses the chats. Device linking, and encrypted backups keyed from your PIN or a recovery code, set up during sign-up.</p></div>
     <div class="risk"><span class="sev m">Med</span><h3>Spam and abuse without reading messages</h3><p>Invite-based contact, rate limits on new accounts, blocking, and reporting that sends the reported messages from the reporter's device (with message franking so reports can't be forged). Required for the app stores anyway.</p></div>
     <div class="risk"><span class="sev m">Med</span><h3>Uneven smart features across devices</h3><p>Rules and search work everywhere; model features light up where an on-device model exists and say so plainly where it doesn't.</p></div>
     <div class="risk"><span class="sev m">Med</span><h3>Prompt injection in messages</h3><p>Messages are treated as untrusted data by the on-device model. It only suggests; every field is validated before saving, and it can never take actions.</p></div>
@@ -622,7 +629,7 @@ flowchart LR
         <li><s>Git repository and monorepo layout, with the web app in <code>apps/web</code></s> (done: <code>rahulg2893/lynk</code>).</li>
         <li><s>Logo and app icon</s> (done).</li>
         <li>Monorepo, Docker Compose, Go skeleton with logging, tracing and health checks.</li>
-        <li>goose + sqlc, passkeys, Apple and Google sign-in.</li>
+        <li>goose + sqlc, phone number sign-in with SMS codes, and a registration-lock PIN.</li>
         <li><code>packages/protocol</code> with generated Go and TypeScript.</li>
       </ol></div></div>
       <p class="exit"><b>Exit:</b> sign in on the web against the real Go server.</p>
@@ -732,7 +739,7 @@ flowchart LR
   </ol>
 </section>
 
-<footer>Roadmap v5.1, September 2026. The iPhone and Android app: one Expo app in <code>apps/mobile</code> with every web feature on mock data, encrypted storage on the phone, the app icon and splash screen, and a Maestro UI test. Adds "The problem Lynk solves" and resolves the Expo-or-native decision. v5.0: An encryption audit: MLS via OpenMLS on every client (libsignal has no supported web build), signed membership changes, key transparency, security codes from phase 1, encrypted profiles and group details, invite keys in the link fragment, sender-side link previews, padding, no IP logs, and on-device storage encryption. v4.9: Every chat end-to-end encrypted by default, with smart features moved onto the device; the server only relays and stores ciphertext. v4.8: Phases 5–6 as sample interactions on the web: Ask Lynk with cited answers, suggestion cards and rule-based plan spotting, editable memories, recorded voice notes with transcripts, and in-place translation. Supersedes v3 (workplace direction).</footer>
+<footer>Roadmap v5.2, September 2026. Lynk starts in India: sign-in by phone number and SMS code with +91 by default, replacing passkeys and Apple and Google; a registration-lock PIN and PIN-based backups planned for the server. Every chat gets a pinned Up next bar with its plans, to-dos and lists. New risks: SIM swaps and SMS fraud. v5.1: The iPhone and Android app: one Expo app in <code>apps/mobile</code> with every web feature on mock data, encrypted storage on the phone, the app icon and splash screen, and a Maestro UI test. Adds "The problem Lynk solves" and resolves the Expo-or-native decision. v5.0: An encryption audit: MLS via OpenMLS on every client (libsignal has no supported web build), signed membership changes, key transparency, security codes from phase 1, encrypted profiles and group details, invite keys in the link fragment, sender-side link previews, padding, no IP logs, and on-device storage encryption. v4.9: Every chat end-to-end encrypted by default, with smart features moved onto the device; the server only relays and stores ciphertext. v4.8: Phases 5–6 as sample interactions on the web: Ask Lynk with cited answers, suggestion cards and rule-based plan spotting, editable memories, recorded voice notes with transcripts, and in-place translation. Supersedes v3 (workplace direction).</footer>
 </div>
 
 <script>
