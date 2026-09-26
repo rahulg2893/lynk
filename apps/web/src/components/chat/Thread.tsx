@@ -84,6 +84,7 @@ export function Thread({
   onDecision,
   onTask,
   onEditPlan,
+  banner,
 }: {
   chat: Chat;
   now: number;
@@ -108,6 +109,8 @@ export function Thread({
   onSideChat: (messageId: string) => void;
   onSave: (messageId: string) => void;
   onMakePlan: (message: Message) => void;
+  /** Pinned under the header, e.g. the chat's Up next bar. */
+  banner?: React.ReactNode;
   /** Smart-feature settings; null before the account loads. */
   smart: Account["smart"] | null;
   onDecision: (id: string, status: KnowledgeStatus) => void;
@@ -359,6 +362,7 @@ export function Thread({
           </button>
         </div>
       </header>
+      {banner}
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 pt-6 pb-48 md:px-6" aria-live="polite">
         <div className="relative mx-auto max-w-3xl">

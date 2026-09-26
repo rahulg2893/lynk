@@ -27,6 +27,7 @@ import {
 import { languageName, translateSample } from "@/lib/translate";
 import { radius, useColors } from "@/lib/theme";
 import { SuggestionCard } from "@/components/chat/Cards";
+import { UpNext } from "@/components/chat/UpNext";
 import { Composer } from "@/components/chat/Composer";
 import { MessageItem, type Translation } from "@/components/chat/MessageItem";
 import { MessageMenu, type MenuAction } from "@/components/chat/MessageMenu";
@@ -172,6 +173,7 @@ export default function ChatScreen() {
           <Info size={24} color={c.accentInk} />
         </Pressable>
       </View>
+      {chat.side ? null : <UpNext chat={chat} now={now} onJump={setHighlight} />}
 
       <FlatList
         ref={list}

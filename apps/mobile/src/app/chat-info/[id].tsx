@@ -2,14 +2,14 @@ import { useState } from "react";
 import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BellSlash, CalendarPlus, CheckCircle, LockSimple, PencilSimple, PushPin, SignOut, Sparkle, UserMinus, UserPlus, X } from "phosphor-react-native";
-import { firstName, PEOPLE, personName, type Memory, type Task } from "@shared/chat";
+import { BellSlash, CalendarPlus, LockSimple, PencilSimple, PushPin, SignOut, UserMinus, UserPlus, X } from "phosphor-react-native";
+import { PEOPLE, personName, type Memory } from "@shared/chat";
 import { applyListOp, editMemory, removeMemory, setRsvp } from "@shared/chat-ops";
 import { useAccount } from "@/lib/account";
 import { actionSheet, confirm } from "@/lib/sheet";
 import { change, changeMembers, leaveChat, renameChat, setDecision, setTask, toggleMute, togglePin, useChatStore } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
-import { Lists, PlanCard, SmallButton } from "@/components/chat/Cards";
+import { Lists, PlanCard, SmallButton, TaskCard } from "@/components/chat/Cards";
 import { Avatar, Button, ChatAvatar, Row, Section, Segmented, SwitchRow, Text } from "@/components/ui";
 
 type Tab = "plans" | "tasks" | "lists" | "memory" | "info";
@@ -120,38 +120,6 @@ export default function ChatInfo() {
 
         {tab === "info" ? <InfoTab chatId={chat.id} meIsAdmin={Boolean(chat.admins?.includes("me"))} blocked={account?.blocked ?? []} /> : null}
       </ScrollView>
-    </View>
-  );
-}
-
-function TaskCard({ task, onStatus, onJump }: { task: Task; onStatus: (s: Task["status"]) => void; onJump: (id: string) => void }) {
-  const c = useColors();
-  const proposed = task.status === "proposed";
-  return (
-    <View style={{ borderRadius: radius.lg, padding: 14, backgroundColor: proposed ? c.bg : c.surface, borderWidth: 1, borderStyle: proposed ? "dashed" : "solid", borderColor: c.line, opacity: task.status === "rejected" ? 0.6 : 1 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        {proposed ? <Sparkle size={13} color={c.accentInk} weight="fill" /> : <CheckCircle size={14} color={c.positive} weight="fill" />}
-        <Text variant="caption" tone="muted" weight="600">
-          {proposed ? "Suggested" : task.status === "done" ? "Done" : task.status === "rejected" ? "Rejected" : "Confirmed"}
-        </Text>
-      </View>
-      <Text variant="headline" style={{ marginTop: 4, textDecorationLine: task.status === "done" ? "line-through" : "none" }}>
-        {task.title}
-      </Text>
-      <Text variant="footnote" tone="muted" style={{ marginTop: 2 }}>
-        {task.assignee === "me" ? "You" : firstName(task.assignee)}, {task.due}
-      </Text>
-      <View style={{ flexDirection: "row", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-        {proposed ? (
-          <>
-            <SmallButton label="Confirm" primary onPress={() => onStatus("confirmed")} />
-            <SmallButton label="Reject" onPress={() => onStatus("rejected")} />
-          </>
-        ) : task.status === "confirmed" && task.assignee === "me" ? (
-          <SmallButton label="Mark done" icon={<CheckCircle size={15} color={c.ink} />} onPress={() => onStatus("done")} />
-        ) : null}
-        {task.sources.length ? <SmallButton label="Source" onPress={() => onJump(task.sources[0])} /> : null}
-      </View>
     </View>
   );
 }

@@ -31,6 +31,12 @@ appId: com.rahulgandhi.lynk
     timeout: 10000
 - waitForAnimationToEnd
 - takeScreenshot: .maestro/screenshots/04-conversation
+- tapOn: "Up next:.*"
+- extendedWaitUntil:
+    visible: "Saved in Weekend climbers"
+    timeout: 5000
+- takeScreenshot: .maestro/screenshots/04b-up-next
+- tapOn: "Done"
 - tapOn: "Message Weekend climbers.*"
 - inputText: "Dinner Friday 8pm at Nando's?"
 - tapOn: "Send message"

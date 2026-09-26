@@ -550,6 +550,34 @@ export function allPlans(chats: Chat[]) {
     .sort((a, b) => (a.plan.when ?? 0) - (b.plan.when ?? 0));
 }
 
+/**
+ * What a chat has saved that still matters, for the pinned "Up next" bar:
+ * plans that haven't happened yet (soonest first, undated last), open to-dos,
+ * and lists with something left to tick. Null when there's nothing.
+ */
+export function upNext(chat: Chat, now: number) {
+  const plans = chat.decisions
+    .filter((d) => d.status === "confirmed" && (!d.when || d.when > now - 3 * 3_600_000))
+    .sort((a, b) => (a.when ?? Infinity) - (b.when ?? Infinity));
+  const todos = chat.tasks.filter((t) => t.status === "confirmed");
+  const lists = (chat.lists ?? []).filter((l) => l.items.some((i) => !i.done));
+  return plans.length || todos.length || lists.length ? { plans, todos, lists } : null;
+}
+
+/** "3 going · 2 to-dos · Shopping, 4 left": the bar's second line. */
+export function upNextSummary(u: NonNullable<ReturnType<typeof upNext>>) {
+  const going = u.plans[0] ? Object.values(u.plans[0].rsvp ?? {}).filter((a) => a === "going").length : 0;
+  const left = (l: SharedList) => l.items.filter((i) => !i.done).length;
+  return [
+    going ? `${going} going` : "",
+    u.plans.length > 1 ? `${u.plans.length - 1} more ${u.plans.length === 2 ? "plan" : "plans"}` : "",
+    u.todos.length ? `${u.todos.length} ${u.todos.length === 1 ? "to-do" : "to-dos"}` : "",
+    u.lists.length === 1 ? `${u.lists[0].title}, ${left(u.lists[0])} left` : u.lists.length ? `${u.lists.length} lists` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 /* ---------- Translation samples ---------- */
 
 export const LANGUAGE_NAMES: Record<string, string> = {

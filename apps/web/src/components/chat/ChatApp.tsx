@@ -16,6 +16,7 @@ import { loadChats, saveChats } from "@/lib/chat-store";
 import { ChatList } from "./ChatList";
 import { Thread } from "./Thread";
 import { ContextPanel, type PanelTab } from "./ContextPanel";
+import { UpNext } from "./UpNext";
 import { CommandPalette, type PaletteAction } from "./CommandPalette";
 import { PlanDialog, type PlanDraft } from "./PlanDialog";
 import { AskLynk } from "./AskLynk";
@@ -628,6 +629,23 @@ export function ChatApp() {
               onEditPlan={(plan) => parent && setPlanDraft({ ...plan, chatId: parent.id })}
               onMakePlan={(message) =>
                 parent && setPlanDraft({ chatId: parent.id, title: message.text.slice(0, 80), sources: active.side ? [] : [message.id] })
+              }
+              banner={
+                active.side ? null : (
+                  <UpNext
+                    chat={active}
+                    now={state.now}
+                    onJump={(messageId) => {
+                      setHighlight(null);
+                      window.requestAnimationFrame(() => setHighlight(messageId));
+                    }}
+                    onRsvp={(planId, answer) => change(active.id, (c) => setRsvp(c, planId, "me", answer))}
+                    onEditPlan={(plan) => setPlanDraft({ ...plan, chatId: active.id })}
+                    onDone={(taskId) => dispatch({ type: "task", id: active.id, itemId: taskId, status: "done" })}
+                    onList={(op) => change(active.id, (c) => applyListOp(c, op))}
+                    onMore={() => setPanel("decisions")}
+                  />
+                )
               }
             />
           </div>

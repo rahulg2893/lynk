@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Animated, Pressable, TextInput, View } from "react-native";
-import { CalendarPlus, Check, CheckSquare, Clock, DotsThree, ListChecks, MapPin, PencilSimple, Plus, Sparkle, Square, X } from "phosphor-react-native";
+import { CalendarPlus, Check, CheckCircle, CheckSquare, Clock, DotsThree, ListChecks, MapPin, PencilSimple, Plus, Sparkle, Square, X } from "phosphor-react-native";
 import { firstName, formatWhen, newId, personName, rsvpSummary, RSVP_LABEL, type Chat, type Decision, type Rsvp, type SharedList, type Task } from "@shared/chat";
 import type { ListOp } from "@shared/chat-ops";
 import { shareIcs } from "@/lib/calendar-export";
@@ -345,6 +345,39 @@ function ListCard({ list, onChange }: { list: SharedList; onChange: (op: ListOp)
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 2 }}>
         <Plus size={18} color={c.muted} />
         <TextInput value={text} onChangeText={setText} placeholder="Add an item" placeholderTextColor={c.muted} onSubmitEditing={add} returnKeyType="done" blurOnSubmit={false} style={{ flex: 1, fontSize: 17, color: c.ink, paddingVertical: 8 }} />
+      </View>
+    </View>
+  );
+}
+
+/** A to-do: suggested ones ask to be confirmed; yours can be marked done. */
+export function TaskCard({ task, onStatus, onJump }: { task: Task; onStatus: (s: Task["status"]) => void; onJump: (id: string) => void }) {
+  const c = useColors();
+  const proposed = task.status === "proposed";
+  return (
+    <View style={{ borderRadius: radius.lg, padding: 14, backgroundColor: proposed ? c.bg : c.surface, borderWidth: 1, borderStyle: proposed ? "dashed" : "solid", borderColor: c.line, opacity: task.status === "rejected" ? 0.6 : 1 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        {proposed ? <Sparkle size={13} color={c.accentInk} weight="fill" /> : <CheckCircle size={14} color={c.positive} weight="fill" />}
+        <Text variant="caption" tone="muted" weight="600">
+          {proposed ? "Suggested" : task.status === "done" ? "Done" : task.status === "rejected" ? "Rejected" : "Confirmed"}
+        </Text>
+      </View>
+      <Text variant="headline" style={{ marginTop: 4, textDecorationLine: task.status === "done" ? "line-through" : "none" }}>
+        {task.title}
+      </Text>
+      <Text variant="footnote" tone="muted" style={{ marginTop: 2 }}>
+        {task.assignee === "me" ? "You" : firstName(task.assignee)}, {task.due}
+      </Text>
+      <View style={{ flexDirection: "row", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+        {proposed ? (
+          <>
+            <SmallButton label="Confirm" primary onPress={() => onStatus("confirmed")} />
+            <SmallButton label="Reject" onPress={() => onStatus("rejected")} />
+          </>
+        ) : task.status === "confirmed" && task.assignee === "me" ? (
+          <SmallButton label="Mark done" icon={<CheckCircle size={15} color={c.ink} />} onPress={() => onStatus("done")} />
+        ) : null}
+        {task.sources.length ? <SmallButton label="Source" onPress={() => onJump(task.sources[0])} /> : null}
       </View>
     </View>
   );
