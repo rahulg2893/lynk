@@ -1,16 +1,45 @@
 # Lynk
 
-A chat app for friends and family that remembers plans, lists and the little things people tell you.
+A private group chat for friends and family that remembers the plan.
+
+When a group agrees on a time and place, Lynk turns it into a plan with RSVPs and pins it at the top of the chat, next to the group's to-dos and lists. Every chat is end-to-end encrypted, and the smart features run on your own device. Lynk starts in India, so you sign in with your phone number (+91 by default).
+
+<p>
+  <img src="docs/screenshots/m04-chats.webp" width="200" alt="Chat list with pinned groups and unread badges">
+  <img src="docs/screenshots/m06-up-next-bar.webp" width="200" alt="A group chat with the pinned Up next bar showing Saturday's climbing plan">
+  <img src="docs/screenshots/m07-up-next-sheet.webp" width="200" alt="The Up next sheet with the plan, RSVP buttons, a to-do and a packing list">
+  <img src="docs/screenshots/m09-catch-up.webp" width="200" alt="Catch up: counts of unread messages and mentions, and a swipeable plan suggestion">
+</p>
+
+**Status:** the web app and the iPhone and Android app are built and run on realistic sample data. There is no backend yet; it is designed in [`roadmap.html`](roadmap.html) (v5.2).
+
+## What it does
+
+- **Plan spotting.** When messages settle on a day, a time and a place, a "Save this plan?" card appears under them. Asks aimed at you become to-do suggestions. Nothing is saved without a tap.
+- **Up next.** Every chat has a pinned bar with the next plan, who's going and what's left to do. Tap it to RSVP, add the plan to your calendar, tick off to-dos and edit lists without leaving the chat.
+- **Catch up.** Everything waiting on you across all chats, with suggestions dealt as a deck of cards: swipe right to save, left to dismiss.
+- **Ask Lynk.** Ask "where did Mei say that ramen place was?" and get an answer that cites the message it came from.
+- **Calendar.** Every plan from every chat on one month grid, exportable as `.ics`.
+- **Also:** side chats, shared lists, saved messages, voice notes with transcripts, translation, an offline outbox, and memories you can edit or remove.
+
+## Privacy
+
+- Every chat will be end-to-end encrypted with MLS (OpenMLS), with no setting to turn it off. The server only relays and stores ciphertext.
+- Search, plan spotting, transcripts and translation run on the device, over messages already decrypted there.
+- Friends find you by @username and never see your phone number.
+- Today, before the server exists: the phone app keeps chats in a SQLCipher database keyed from the iOS Keychain or Android Keystore, and the web app encrypts its store with a non-extractable WebCrypto key.
 
 ## Repository layout
 
 | Folder | What it is | Status |
 | --- | --- | --- |
-| `apps/web` | Next.js web app and landing page | Frontend built, running on mock data |
-| `apps/ios` | iOS app | Not started |
-| `apps/android` | Android app | Not started |
+| `apps/web` | Next.js web app and landing page | Built, on sample data |
+| `apps/mobile` | Expo app for iPhone and Android | Built, on sample data |
 | `design-system/lynk` | Design system (`MASTER.md`) shared by every app | Active |
-| `roadmap.html` | Product and engineering roadmap | v4.2 |
+| `docs/screenshots` | Screens used in this README | |
+| `roadmap.html` | Product and engineering roadmap | v5.2 |
+
+The phone app imports the web app's chat logic (`apps/web/src/lib`: plan spotting, search, notifications, calendar export, phone-number rules) through the `@shared/*` path, so both apps behave the same.
 
 ## Run the web app
 
@@ -20,4 +49,29 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:3000. Sign-in is simulated in the browser for now; the demo account is `@rahul`.
+Open http://localhost:3000 and sign in with **+91 98765 43210**. No text is sent in the preview: any 6 digits work as the code.
+
+## Run the phone app
+
+Needs Xcode (for iPhone) or Android Studio (for Android). See [`apps/mobile/README.md`](apps/mobile/README.md) for details.
+
+```bash
+cd apps/mobile
+npm install
+npx expo run:ios        # or: npx expo run:android
+```
+
+Sign in with the same number and any 6 digits.
+
+## Tests
+
+A [Maestro](https://maestro.dev) flow drives the phone app on a simulator: it signs in with a +91 number, sends "Dinner Friday 8pm at Nando's?", checks the plan suggestion, opens Up next and Ask Lynk, and visits every tab.
+
+```bash
+cd apps/mobile
+maestro test .maestro/smoke.yaml
+```
+
+## Built with
+
+Next.js 16, React 19, Tailwind 4 and Motion on the web; Expo SDK 57, React Native 0.86, Expo Router and the React Compiler on phones; TypeScript throughout. The planned backend is a Go modular monolith with PostgreSQL, Redis and NATS (see the roadmap).
