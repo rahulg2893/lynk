@@ -10,7 +10,7 @@ import { Avatar, Button, LogoMark, Row, Section, Text } from "@/components/ui";
 
 const PANES = [
   { id: "account", label: "Account", detail: "Profile, email, sign out", icon: UserCircle },
-  { id: "security", label: "Sign-in & security", detail: "Passkeys, Apple and Google, sessions", icon: Fingerprint },
+  { id: "security", label: "Sign-in & security", detail: "Phone number, sessions", icon: Fingerprint },
   { id: "privacy", label: "Privacy", detail: "Who can reach you, last seen, blocked", icon: Eye },
   { id: "notifications", label: "Notifications", detail: "Chats, groups, previews", icon: Bell },
   { id: "smart-features", label: "Smart features", detail: "Plans, to-dos, memories, catch-up", icon: Sparkle },

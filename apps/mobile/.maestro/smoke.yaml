@@ -1,4 +1,4 @@
-# End-to-end walk through the app on a simulator: sign in, chats, a conversation
+# End-to-end walk through the app on a simulator: sign in with a phone number and code, chats, a conversation
 # (with plan spotting), Ask Lynk, and every tab. Screenshots land in
 # .maestro/screenshots. Run: maestro test .maestro/smoke.yaml
 appId: com.rahulgandhi.lynk
@@ -11,7 +11,14 @@ appId: com.rahulgandhi.lynk
 - takeScreenshot: .maestro/screenshots/01-welcome
 - tapOn: "I already have an account"
 - takeScreenshot: .maestro/screenshots/02-sign-in
-- tapOn: "Continue with a passkey"
+- tapOn: "\\+91.*"
+- inputText: "9876543210"
+- tapOn: "Send code"
+- extendedWaitUntil:
+    visible: "We texted a code to.*"
+    timeout: 5000
+- takeScreenshot: .maestro/screenshots/02b-code
+- inputText: "123456"
 - extendedWaitUntil:
     visible: "Weekend climbers.*"
     timeout: 20000

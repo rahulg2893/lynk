@@ -1,17 +1,14 @@
 "use client";
 
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  AppleLogo,
   CaretRight,
   Check,
   Desktop,
   DeviceMobile,
   DownloadSimple,
-  Fingerprint,
-  GoogleLogo,
   Laptop,
   Moon,
   Sun,
@@ -28,17 +25,13 @@ import { SettingsNav } from "./SettingsNav";
 import { PANES, type PaneId } from "./panes";
 import {
   DELETION_GRACE_DAYS,
-  addPasskey,
   cancelDeletion,
   deleteAccountNow,
   endSession,
   exportAccount,
+  changePhone,
   formatDate,
-  methodLabel,
-  removePasskey,
   scheduleDeletion,
-  setLinked,
-  signInMethodCount,
   signOut,
   timeAgo,
   updateAccount,
@@ -46,6 +39,7 @@ import {
   type Account,
   type Audience,
 } from "@/lib/account";
+import { PhoneVerify } from "@/components/auth/PhoneVerify";
 import { PEOPLE } from "@/lib/chat";
 import { setTheme, useTheme, type ThemeChoice } from "@/lib/theme";
 
@@ -183,7 +177,6 @@ function AccountPane({ account }: { account: Account }) {
   const [email, setEmail] = useState(account.profile.email);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
-  const method = account.session?.method;
 
   const saveEmail = (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,7 +243,7 @@ function AccountPane({ account }: { account: Account }) {
 
       <Section title="Session">
         <Row
-          label={method ? `Using ${method === "passkey" ? "a passkey" : `Sign in with ${methodLabel(method)}`}` : "Signed in"}
+          label={`Signed in as ${account.profile.phone}`}
           description={account.session ? `Signed in on this browser ${timeAgo(account.session.since).toLowerCase()}.` : undefined}
           control={
             <Button
@@ -273,85 +266,25 @@ function AccountPane({ account }: { account: Account }) {
 /* ---------- Sign-in & security ---------- */
 
 function SecurityPane({ account }: { account: Account }) {
-  const [adding, setAdding] = useState(false);
-  const [removing, setRemoving] = useState<string | null>(null);
+  const [changing, setChanging] = useState(false);
   const [confirmOthers, setConfirmOthers] = useState(false);
-  const lastMethod = signInMethodCount(account) <= 1;
   const others = account.sessions.filter((s) => !s.current);
-
-  useEffect(() => {
-    if (!adding) return;
-    // Stand-in for navigator.credentials.create().
-    const t = window.setTimeout(() => {
-      addPasskey();
-      setAdding(false);
-    }, 1300);
-    return () => window.clearTimeout(t);
-  }, [adding]);
-
-  const key = account.passkeys.find((p) => p.id === removing);
 
   return (
     <>
-      <p className="mt-2 text-[15px] text-muted">Lynk has no passwords. You sign in with a passkey, Apple or Google.</p>
+      <p className="mt-2 text-[15px] text-muted">Lynk has no passwords. You sign in with your phone number and a code we text you.</p>
 
-      <Section
-        title="Passkeys"
-        footnote="A passkey lives on your device and is unlocked with Face ID, Touch ID or your screen lock. It can't be phished or leaked."
-      >
-        {account.passkeys.map((p) => (
-          <Row
-            key={p.id}
-            icon={<Fingerprint size={22} />}
-            label={p.name}
-            description={`Added ${formatDate(p.createdAt)} · ${p.lastUsedAt ? `Last used ${timeAgo(p.lastUsedAt).toLowerCase()}` : "Not used yet"}`}
-            control={
-              <Button
-                size="sm"
-                variant="danger-quiet"
-                onClick={() => setRemoving(p.id)}
-                disabled={lastMethod}
-                title={lastMethod ? "Add another way to sign in first" : undefined}
-              >
-                Remove
-              </Button>
-            }
-          />
-        ))}
-        <div className="px-5 py-4">
-          <Button size="sm" variant="primary" loading={adding} onClick={() => setAdding(true)}>
-            {adding ? "Waiting for your device" : "Add a passkey"}
-          </Button>
-        </div>
-      </Section>
-
-      <Section
-        title="Apple and Google"
-        footnote={lastMethod ? "This is your only way to sign in, so it can't be disconnected until you add another." : undefined}
-      >
-        {(["apple", "google"] as const).map((provider) => {
-          const on = account.linked[provider];
-          const Icon = provider === "apple" ? AppleLogo : GoogleLogo;
-          return (
-            <Row
-              key={provider}
-              icon={<Icon size={22} weight="fill" />}
-              label={provider === "apple" ? "Sign in with Apple" : "Sign in with Google"}
-              description={on ? "Connected" : "Not connected"}
-              control={
-                on ? (
-                  <Button size="sm" onClick={() => setLinked(provider, false)} disabled={lastMethod}>
-                    Disconnect
-                  </Button>
-                ) : (
-                  <Button size="sm" onClick={() => setLinked(provider, true)}>
-                    Connect
-                  </Button>
-                )
-              }
-            />
-          );
-        })}
+      <Section title="Phone number" footnote="Friends find you by your username and never see your number.">
+        <Row
+          icon={<DeviceMobile size={22} />}
+          label={<span className="tabular-nums">{account.profile.phone}</span>}
+          description="Used to sign in"
+          control={
+            <Button size="sm" onClick={() => setChanging(true)}>
+              Change
+            </Button>
+          }
+        />
       </Section>
 
       <Section title="Where you're signed in">
@@ -389,7 +322,7 @@ function SecurityPane({ account }: { account: Account }) {
         ) : null}
       </Section>
 
-      <Section title="Recent activity" footnote="If something here wasn't you, sign out of that session and remove any passkey you don't recognise.">
+      <Section title="Recent activity" footnote="If something here wasn't you, sign out of that session.">
         <ul className="divide-y divide-line">
           {account.log.slice(0, 8).map((e) => (
             <li key={e.id} className="flex items-baseline justify-between gap-4 px-5 py-3">
@@ -401,23 +334,19 @@ function SecurityPane({ account }: { account: Account }) {
       </Section>
 
       <Dialog
-        open={Boolean(removing)}
-        onClose={() => setRemoving(null)}
-        title="Remove this passkey?"
-        description={`You won't be able to sign in with “${key?.name ?? "this passkey"}” any more. Also delete it from your device's password manager.`}
+        open={changing}
+        onClose={() => setChanging(false)}
+        title="Change your number"
+        description="We'll text a code to the new number. Your chats, groups and settings stay with you."
       >
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button onClick={() => setRemoving(null)}>Cancel</Button>
-          <Button
-            variant="danger"
-            onClick={() => {
-              if (removing) removePasskey(removing);
-              setRemoving(null);
-            }}
-          >
-            Remove passkey
-          </Button>
-        </div>
+        <PhoneVerify
+          submitLabel="Send code"
+          check={(phone) => (phone === account.profile.phone ? "That's already your number." : null)}
+          onVerified={(phone) => {
+            changePhone(phone);
+            setChanging(false);
+          }}
+        />
       </Dialog>
 
       <Dialog
@@ -751,7 +680,7 @@ function DataPane({ account }: { account: Account }) {
         </Note>
       ) : null}
 
-      <Section title="Download your data" footnote="A JSON file with your profile, settings, sign-in methods and what Lynk remembers about you.">
+      <Section title="Download your data" footnote="A JSON file with your profile and phone number, settings and what Lynk remembers about you.">
         <Row
           label="Your Lynk data"
           description="Ready right away."
@@ -775,7 +704,7 @@ function DataPane({ account }: { account: Account }) {
 
       <Section
         title="Delete account"
-        footnote="Deleting removes your profile, your sign-in methods, your settings and everything remembered about you."
+        footnote="Deleting removes your profile, your phone number, your settings and everything remembered about you."
       >
         <Row
           label="Delete your account"

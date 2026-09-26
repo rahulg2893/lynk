@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from "react";
 import { Platform } from "react-native";
-import type { Account as WebAccount, SignInMethod } from "@shared/account";
+import type { Account as WebAccount } from "@shared/account";
 import { PEOPLE } from "@shared/chat";
+import { DEMO_PHONE } from "@shared/phone";
 import { getJSON, removeKey, setJSON } from "./storage";
 
 /**
@@ -10,7 +11,6 @@ import { getJSON, removeKey, setJSON } from "./storage";
  * keeps separately. Stored in the encrypted database; nothing leaves the phone.
  */
 export type Account = WebAccount & { appearance: "system" | "light" | "dark" };
-export type { SignInMethod };
 
 const KEY = "account";
 const HOUR = 3_600_000;
@@ -29,16 +29,14 @@ function defaults(now = Date.now()): Account {
   return {
     version: 1,
     session: null,
-    profile: { name: "Rahul", username: "rahul", bio: "Climbing on weekends, cooking on weeknights.", photo: null, email: "", emailVerified: false },
-    passkeys: [{ id: "pk-1", name: "iCloud Keychain", createdAt: now - 40 * DAY, lastUsedAt: now - 2 * HOUR }],
-    linked: { apple: true, google: false },
+    profile: { name: "Rahul", username: "rahul", bio: "Climbing on weekends, cooking on weeknights.", photo: null, phone: DEMO_PHONE, email: "", emailVerified: false },
     sessions: [
       { id: "s-this", device: `This ${DEVICE}`, browser: "Lynk app", place: "Your current session", lastActiveAt: now, current: true },
-      { id: "s-web", device: "Mac", browser: "Safari", place: "London, UK", lastActiveAt: now - 3 * HOUR, current: false },
+      { id: "s-web", device: "Mac", browser: "Safari", place: "Bengaluru, India", lastActiveAt: now - 3 * HOUR, current: false },
     ],
     log: [
-      { id: "l-1", at: now - 2 * HOUR, text: `Signed in with a passkey on this ${DEVICE}` },
-      { id: "l-2", at: now - 40 * DAY, text: "Passkey added: iCloud Keychain" },
+      { id: "l-1", at: now - 2 * HOUR, text: `Signed in with your phone number on this ${DEVICE}` },
+      { id: "l-2", at: now - 3 * HOUR, text: "Signed in with your phone number on Mac" },
     ],
     privacy: { newChats: "everyone", presence: "chats", readReceipts: true },
     notifications: { direct: true, groups: "mentions", previews: true, sounds: true, asked: false, seenAt: 0 },
@@ -65,8 +63,8 @@ export async function hydrateAccount() {
     ? {
         ...base,
         ...saved,
-        profile: { ...base.profile, ...saved.profile },
-        linked: { ...base.linked, ...saved.linked },
+        // The preview number moved from a UK one to +91 when Lynk started in India.
+        profile: { ...base.profile, ...saved.profile, ...(saved.profile?.phone === "+447700900123" ? { phone: base.profile.phone } : {}) },
         privacy: { ...base.privacy, ...saved.privacy },
         notifications: { ...base.notifications, ...saved.notifications },
         smart: { ...base.smart, ...saved.smart },
@@ -99,71 +97,38 @@ export function updateAccount(fn: (a: Account) => Account) {
 }
 
 const eventId = () => `l-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-const METHOD_LABEL: Record<SignInMethod, string> = { passkey: "a passkey", apple: "Apple", google: "Google" };
-export const methodLabel = (m: SignInMethod) => METHOD_LABEL[m];
 
 function logged(a: Account, text: string): Account {
   return { ...a, log: [{ id: eventId(), at: Date.now(), text }, ...a.log].slice(0, 20) };
 }
 
-export function signIn(method: SignInMethod) {
-  updateAccount((a) =>
-    logged(
-      {
-        ...a,
-        session: { method, since: Date.now() },
-        linked: method === "passkey" ? a.linked : { ...a.linked, [method]: true },
-        passkeys: method === "passkey" ? a.passkeys.map((p, i) => (i === 0 ? { ...p, lastUsedAt: Date.now() } : p)) : a.passkeys,
-      },
-      `Signed in with ${METHOD_LABEL[method]} on this ${DEVICE}`,
-    ),
-  );
-}
+/** Call once the texted code checks out. */
+export const signIn = () => updateAccount((a) => logged({ ...a, session: { since: Date.now() } }, `Signed in with your phone number on this ${DEVICE}`));
 
-/** Finish sign-up: open the session the new account was created with. */
-export const startSession = (method: SignInMethod) => updateAccount((a) => ({ ...a, session: { method, since: Date.now() } }));
+/** Finish sign-up: open the session held back during the welcome step. */
+export const startSession = () => updateAccount((a) => ({ ...a, session: { since: Date.now() } }));
 
 export const signOut = () => updateAccount((a) => ({ ...a, session: null }));
 
 /** A new account replaces the demo one and starts with an empty inbox. */
-export function createAccount(input: { name: string; username: string; method: SignInMethod }, { startSession = true } = {}) {
+export function createAccount(input: { name: string; username: string; phone: string }, { startSession = true } = {}) {
   const now = Date.now();
   void removeKey(`chats:${input.username}`);
   const base = defaults(now);
   updateAccount(() => ({
     ...base,
     // Sign-up holds the session back until its welcome step is done.
-    session: startSession ? { method: input.method, since: now } : null,
-    profile: { ...base.profile, name: input.name, username: input.username, bio: "" },
-    passkeys: input.method === "passkey" ? [{ id: `pk-${now}`, name: `Passkey on this ${DEVICE}`, createdAt: now, lastUsedAt: now }] : [],
-    linked: { apple: input.method === "apple", google: input.method === "google" },
+    session: startSession ? { since: now } : null,
+    profile: { ...base.profile, name: input.name, username: input.username, phone: input.phone, bio: "" },
     sessions: base.sessions.filter((s) => s.current),
-    log: [{ id: eventId(), at: now, text: `Account created with ${METHOD_LABEL[input.method]}` }],
+    log: [{ id: eventId(), at: now, text: "Account created with your phone number" }],
     removedMemories: MEMORIES_ABOUT_ME.map((m) => m.id),
     seeded: false,
   }));
 }
 
-export function addPasskey() {
-  const now = Date.now();
-  updateAccount((a) =>
-    logged({ ...a, passkeys: [...a.passkeys, { id: `pk-${now}`, name: `Passkey on this ${DEVICE}`, createdAt: now, lastUsedAt: null }] }, `Passkey added on this ${DEVICE}`),
-  );
-}
-
-export function removePasskey(id: string) {
-  updateAccount((a) => {
-    const key = a.passkeys.find((p) => p.id === id);
-    return logged({ ...a, passkeys: a.passkeys.filter((p) => p.id !== id) }, `Passkey removed: ${key?.name ?? "unknown"}`);
-  });
-}
-
-export function setLinked(provider: "apple" | "google", on: boolean) {
-  const label = provider === "apple" ? "Apple" : "Google";
-  updateAccount((a) => logged({ ...a, linked: { ...a.linked, [provider]: on } }, `${on ? "Connected" : "Disconnected"} ${label}`));
-}
-
-export const signInMethodCount = (a: Account) => a.passkeys.length + Number(a.linked.apple) + Number(a.linked.google);
+/** Call once a code texted to the new number checks out. */
+export const changePhone = (phone: string) => updateAccount((a) => logged({ ...a, profile: { ...a.profile, phone } }, "Phone number changed"));
 
 export function endSession(id: string | "others") {
   updateAccount((a) =>
@@ -228,7 +193,6 @@ export function accountExport(a: Account) {
   return {
     exportedAt: new Date().toISOString(),
     profile: a.profile,
-    signInMethods: { passkeys: a.passkeys, apple: a.linked.apple, google: a.linked.google },
     sessions: a.sessions,
     securityLog: a.log,
     settings: { privacy: a.privacy, notifications: a.notifications, smartFeatures: a.smart, appearance: a.appearance },

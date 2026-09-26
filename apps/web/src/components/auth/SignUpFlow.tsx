@@ -4,22 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, ArrowRight, Check, Copy, Fingerprint, Info } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, Check, Copy, Info } from "@phosphor-icons/react";
 import { Button, buttonClass } from "@/components/ui/controls";
 import { TextField } from "@/components/ui/Field";
 import { PhotoPicker } from "@/components/account/PhotoPicker";
 import { UsernameStatus, usernameError } from "@/components/account/UsernameStatus";
-import { OrDivider, ProviderButtons } from "./ProviderButtons";
-import { createAccount, updateAccount, useAccount, type SignInMethod } from "@/lib/account";
+import { PhoneVerify } from "./PhoneVerify";
+import { createAccount, updateAccount, useAccount } from "@/lib/account";
 import { useUsername } from "@/lib/use-username";
 import { MOTION } from "@/lib/motion";
 
 type Step = 1 | 2 | 3;
 
 /**
- * Account setup before sign-in options (HIG `sign-in-with-apple.md`: if you
- * require an account, set it up first, then offer ways to sign in), and a
- * welcome that gets people into their chats straight away.
+ * Name and username, then your phone number confirmed with a texted code,
+ * then a welcome that gets people into their chats straight away.
  */
 export function SignUpFlow({ next }: { next: string }) {
   const router = useRouter();
@@ -28,15 +27,9 @@ export function SignUpFlow({ next }: { next: string }) {
   const [name, setName] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
   const [username, setUsername] = useState("");
-  const [busy, setBusy] = useState<SignInMethod | null>(null);
   const [copied, setCopied] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
-  const timer = useRef<number | null>(null);
   const check = useUsername(username);
-
-  useEffect(() => () => {
-    if (timer.current) window.clearTimeout(timer.current);
-  }, []);
 
   // Move focus to the new step's heading so screen readers announce it.
   useEffect(() => {
@@ -46,14 +39,9 @@ export function SignUpFlow({ next }: { next: string }) {
   const nameError = nameTouched && !name.trim() ? "Enter the name friends know you by." : null;
   const canContinue = name.trim().length > 0 && check.kind === "available";
 
-  const create = (method: SignInMethod) => {
-    setBusy(method);
-    // Stand-in for navigator.credentials.create() or the provider's sheet.
-    timer.current = window.setTimeout(() => {
-      createAccount({ name: name.trim(), username: username.trim(), method });
-      setBusy(null);
-      setStep(3);
-    }, method === "passkey" ? 1400 : 1100);
+  const create = (phone: string) => {
+    createAccount({ name: name.trim(), username: username.trim(), phone });
+    setStep(3);
   };
 
   const inviteLink = typeof window !== "undefined" ? `${window.location.origin}/invite/${username.trim()}` : "";
@@ -75,7 +63,7 @@ export function SignUpFlow({ next }: { next: string }) {
         <p className="text-[13px] text-muted tabular-nums">Step {step} of 3</p>
       </div>
 
-      {account?.session && step === 1 && busy === null ? (
+      {account?.session && step === 1 ? (
         <p role="status" className="mb-6 flex items-start gap-2.5 rounded-2xl border border-line bg-surface px-4 py-3 text-[14px]">
           <Info size={18} className="mt-px shrink-0 text-accent-ink" aria-hidden />
           <span>
@@ -157,44 +145,20 @@ export function SignUpFlow({ next }: { next: string }) {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                disabled={busy !== null}
-                className="-ml-2 mb-4 inline-flex h-10 items-center gap-1.5 rounded-full px-2 text-[15px] text-accent-ink hover:bg-accent-soft disabled:opacity-45"
+                className="-ml-2 mb-4 inline-flex h-10 items-center gap-1.5 rounded-full px-2 text-[15px] text-accent-ink hover:bg-accent-soft"
               >
                 <ArrowLeft size={18} aria-hidden /> Back
               </button>
               <h1 ref={heading} tabIndex={-1} className="text-4xl leading-tight tracking-tight outline-none">
-                How will you sign in?
+                What&apos;s your number?
               </h1>
               <p className="mt-3 text-[15px] leading-relaxed text-muted">
-                @{username.trim()} is yours. Pick how you&apos;d like to get back in. You can add more ways later in Settings.
+                @{username.trim()} is yours. You&apos;ll sign in with your phone number and a code we text you. Friends find you by
+                username and never see your number.
               </p>
-
-              <div className="mt-8 rounded-3xl border border-line bg-surface p-5">
-                <p className="flex items-center gap-2 font-semibold">
-                  <Fingerprint size={20} className="text-accent-ink" aria-hidden /> Passkey
-                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[12px] font-medium text-accent-ink">Recommended</span>
-                </p>
-                <p className="mt-1.5 text-[14px] leading-relaxed text-muted">
-                  Sign in with Face ID, Touch ID or your device&apos;s screen lock. Nothing to remember, nothing to leak.
-                </p>
-                <Button
-                  variant="primary"
-                  size="lg"
-                  className="mt-4 w-full"
-                  loading={busy === "passkey"}
-                  disabled={busy !== null && busy !== "passkey"}
-                  onClick={() => create("passkey")}
-                >
-                  {busy === "passkey" ? "Waiting for your device" : "Create a passkey"}
-                </Button>
+              <div className="mt-8">
+                <PhoneVerify submitLabel="Send code" onVerified={create} />
               </div>
-
-              <OrDivider />
-              <ProviderButtons
-                busy={busy === "apple" || busy === "google" ? busy : null}
-                disabled={busy === "passkey"}
-                onChoose={create}
-              />
             </div>
           ) : null}
 

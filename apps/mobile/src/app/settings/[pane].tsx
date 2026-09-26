@@ -1,20 +1,17 @@
 import { useState, type ReactNode } from "react";
-import { Pressable, ScrollView, Share, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, Share, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CaretLeft, Fingerprint } from "phosphor-react-native";
+import { CaretLeft, DeviceMobile } from "phosphor-react-native";
 import { LANGUAGE_NAMES, PEOPLE, personName } from "@shared/chat";
 import {
   accountExport,
-  addPasskey,
+  changePhone,
   cancelDeletion,
   deleteAccountNow,
   DELETION_GRACE_DAYS,
   endSession,
-  removePasskey,
   scheduleDeletion,
-  setLinked,
-  signInMethodCount,
   signOut,
   timeAgo,
   updateAccount,
@@ -24,6 +21,7 @@ import {
 import { setSimulatedOffline, useSimulatedOffline } from "@/lib/connection";
 import { actionSheet, confirm } from "@/lib/sheet";
 import { radius, useColors } from "@/lib/theme";
+import { PhoneVerify } from "@/components/PhoneVerify";
 import { Avatar, Button, Row, Section, Segmented, SwitchRow, Text } from "@/components/ui";
 
 const TITLES: Record<string, string> = {
@@ -107,29 +105,32 @@ function AccountPane({ account }: { account: Account }) {
 
 function SecurityPane({ account }: { account: Account }) {
   const c = useColors();
-  const methods = signInMethodCount(account);
+  const [changing, setChanging] = useState(false);
   return (
     <>
-      <Section title="Passkeys" footnote="Passkeys use Face ID or Touch ID. There's no Lynk password to steal.">
-        {account.passkeys.map((p) => (
-          <Row
-            key={p.id}
-            label={p.name}
-            detail={`Added ${timeAgo(p.createdAt)}${p.lastUsedAt ? ` · used ${timeAgo(p.lastUsedAt).toLowerCase()}` : ""}`}
-            icon={<Fingerprint size={22} color={c.accentInk} />}
-            onPress={() =>
-              methods > 1
-                ? confirm(`Remove ${p.name}?`, "You won't be able to sign in with it any more.", "Remove", () => removePasskey(p.id))
-                : actionSheet("This is your only way to sign in", [], "Add another passkey or connect Apple or Google before removing it.")
-            }
+      <Section title="Phone number" footnote="You sign in with your number and a code we text you. Friends find you by username and never see it.">
+        <Row label={account.profile.phone} detail="Used to sign in" icon={<DeviceMobile size={22} color={c.accentInk} />} right={<Text tone="accent">Change</Text>} onPress={() => setChanging(true)} last />
+      </Section>
+      <Modal visible={changing} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setChanging(false)}>
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: c.bg, padding: 24, gap: 16 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text variant="title">Change your number</Text>
+            <Text tone="accent" onPress={() => setChanging(false)}>
+              Cancel
+            </Text>
+          </View>
+          <Text variant="callout" tone="muted">
+            We&apos;ll text a code to the new number. Your chats, groups and settings stay with you.
+          </Text>
+          <PhoneVerify
+            check={(phone) => (phone === account.profile.phone ? "That's already your number." : null)}
+            onVerified={(phone) => {
+              changePhone(phone);
+              setChanging(false);
+            }}
           />
-        ))}
-        <Row label="Add a passkey" last onPress={addPasskey} right={<Text tone="accent">Add</Text>} />
-      </Section>
-      <Section title="Connected accounts">
-        <SwitchRow label="Apple" value={account.linked.apple} disabled={account.linked.apple && methods <= 1} onChange={(v) => setLinked("apple", v)} />
-        <SwitchRow label="Google" value={account.linked.google} disabled={account.linked.google && methods <= 1} onChange={(v) => setLinked("google", v)} last />
-      </Section>
+        </KeyboardAvoidingView>
+      </Modal>
       <Section title="Where you're signed in">
         {account.sessions.map((s, i) => (
           <Row

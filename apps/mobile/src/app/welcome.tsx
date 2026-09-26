@@ -49,7 +49,7 @@ export default function Welcome() {
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 }}>
           <LockSimple size={13} color="#a1a1a6" weight="fill" />
           <Text variant="caption" style={{ color: "#a1a1a6" }}>
-            No passwords. Sign in with a passkey, Apple or Google.
+            No passwords. Sign in with your phone number.
           </Text>
         </View>
       </Animated.View>

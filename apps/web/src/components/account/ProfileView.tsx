@@ -132,7 +132,7 @@ function Profile({ account }: { account: Account }) {
 
       <Section title="More">
         <MoreLink href="/app/settings/privacy" label="Privacy" detail="Who can message you, last seen, read receipts" />
-        <MoreLink href="/app/settings/security" label="Sign-in & security" detail="Passkeys, Apple and Google, sessions" />
+        <MoreLink href="/app/settings/security" label="Sign-in & security" detail="Phone number, sessions" />
       </Section>
     </PageShell>
   );

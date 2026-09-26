@@ -3,13 +3,13 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, View } fr
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera, CaretLeft, CheckCircle, ShareNetwork, WarningCircle } from "phosphor-react-native";
-import { checkUsername, createAccount, startSession, suggestUsernames, updateAccount, usernameProblem, USERNAME_RULES, type SignInMethod } from "@/lib/account";
+import { checkUsername, createAccount, startSession, suggestUsernames, updateAccount, usernameProblem, USERNAME_RULES } from "@/lib/account";
 import { pickProfilePhoto } from "@/lib/media";
 import { useColors } from "@/lib/theme";
-import { ProviderButtons } from "@/components/Providers";
+import { PhoneVerify } from "@/components/PhoneVerify";
 import { Avatar, Button, Field, IconButton, Text } from "@/components/ui";
 
-/** Three steps, like the web: who you are, how you sign in, then a welcome with a photo and your invite link. */
+/** Three steps, like the web: who you are, your phone number, then a welcome with a photo and your invite link. */
 export default function SignUp() {
   const insets = useSafeAreaInsets();
   const c = useColors();
@@ -19,7 +19,6 @@ export default function SignUp() {
   const [status, setStatus] = useState<"idle" | "checking" | "free" | "taken">("idle");
   const [photo, setPhoto] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
-  const [method, setMethod] = useState<SignInMethod>("passkey");
 
   const problem = usernameProblem(username);
   useEffect(() => {
@@ -36,9 +35,8 @@ export default function SignUp() {
   }, [username, problem]);
 
   const canContinue = name.trim().length > 0 && !problem && status === "free";
-  const finish = (m: SignInMethod) => {
-    createAccount({ name: name.trim(), username, method: m }, { startSession: false });
-    setMethod(m);
+  const finish = (phone: string) => {
+    createAccount({ name: name.trim(), username, phone }, { startSession: false });
     setStep(2);
   };
 
@@ -92,11 +90,11 @@ export default function SignUp() {
 
         {step === 1 ? (
           <View style={{ gap: 20, marginTop: 24 }}>
-            <Text variant="largeTitle">How will you sign in?</Text>
+            <Text variant="largeTitle">What&apos;s your number?</Text>
             <Text variant="callout" tone="muted">
-              A passkey uses Face ID or Touch ID, so there&apos;s nothing to type or leak. You can add Apple or Google later.
+              You&apos;ll sign in with your phone number and a code we text you. Friends find you by @{username} and never see your number.
             </Text>
-            <ProviderButtons onChoose={finish} passkeyLabel="Create a passkey" />
+            <PhoneVerify onVerified={finish} />
           </View>
         ) : null}
 
@@ -131,7 +129,7 @@ export default function SignUp() {
               onPress={() => void Share.share({ message: `Chat with me on Lynk: https://lynk.app/invite/${username}` })}
               style={{ alignSelf: "stretch" }}
             />
-            <Button title="Open Lynk" variant="primary" size="lg" onPress={() => startSession(method)} style={{ alignSelf: "stretch" }} />
+            <Button title="Open Lynk" variant="primary" size="lg" onPress={startSession} style={{ alignSelf: "stretch" }} />
           </View>
         ) : null}
       </ScrollView>

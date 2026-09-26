@@ -1,7 +1,7 @@
 /** Settings panes. Shared by the server routes and the client nav; keep it free of React. */
 export const PANES = [
   { id: "account", label: "Account", summary: "Profile, email, sign out" },
-  { id: "security", label: "Sign-in & security", summary: "Passkeys, Apple and Google, sessions" },
+  { id: "security", label: "Sign-in & security", summary: "Phone number, sessions" },
   { id: "privacy", label: "Privacy", summary: "Who can reach you, last seen, blocked" },
   { id: "notifications", label: "Notifications", summary: "Chats, groups, previews" },
   { id: "smart-features", label: "Smart features", summary: "Plans, to-dos, memories, catch-up" },

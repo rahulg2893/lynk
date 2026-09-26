@@ -3,16 +3,14 @@
 import { useSyncExternalStore } from "react";
 import { PEOPLE } from "./chat";
 import { clearChats } from "./chat-store";
+import { DEMO_PHONE } from "./phone";
 
 /**
- * The signed-in person, their sign-in methods and their settings. Frontend
+ * The signed-in person, their phone number and their settings. You sign in
+ * with your phone number and a texted code; there are no passwords. Frontend
  * only: everything lives in localStorage until the Go server exists, and the
  * shape mirrors what the API will return so the pages can be rewired later.
  */
-
-export type SignInMethod = "passkey" | "apple" | "google";
-
-export type Passkey = { id: string; name: string; createdAt: number; lastUsedAt: number | null };
 
 export type DeviceSession = {
   id: string;
@@ -29,18 +27,18 @@ export type Audience = "everyone" | "chats" | "nobody";
 
 export type Account = {
   version: 1;
-  session: { method: SignInMethod; since: number } | null;
+  session: { since: number } | null;
   profile: {
     name: string;
     username: string;
     bio: string;
     /** A small data URL; real uploads go to signed storage later. */
     photo: string | null;
+    /** E.164. Used to sign in; friends find you by username and never see it. */
+    phone: string;
     email: string;
     emailVerified: boolean;
   };
-  passkeys: Passkey[];
-  linked: { apple: boolean; google: boolean };
   sessions: DeviceSession[];
   log: SecurityEvent[];
   privacy: {
@@ -96,18 +94,15 @@ function defaults(now = Date.now()): Account {
   return {
     version: 1,
     session: null,
-    profile: { name: "Rahul", username: "rahul", bio: "Climbing on weekends, cooking on weeknights.", photo: null, email: "", emailVerified: false },
-    passkeys: [{ id: "pk-1", name: "iCloud Keychain", createdAt: now - 40 * DAY, lastUsedAt: now - 2 * HOUR }],
-    linked: { apple: true, google: false },
+    profile: { name: "Rahul", username: "rahul", bio: "Climbing on weekends, cooking on weeknights.", photo: null, phone: DEMO_PHONE, email: "", emailVerified: false },
     sessions: [
       { id: "s-this", device: "This browser", browser: browserName(), place: "Your current session", lastActiveAt: now, current: true },
-      { id: "s-phone", device: "iPhone", browser: "Safari", place: "London, UK", lastActiveAt: now - 3 * HOUR, current: false },
-      { id: "s-laptop", device: "Mac", browser: "Chrome", place: "London, UK", lastActiveAt: now - 6 * DAY, current: false },
+      { id: "s-phone", device: "iPhone", browser: "Safari", place: "Bengaluru, India", lastActiveAt: now - 3 * HOUR, current: false },
+      { id: "s-laptop", device: "Mac", browser: "Chrome", place: "Bengaluru, India", lastActiveAt: now - 6 * DAY, current: false },
     ],
     log: [
-      { id: "l-1", at: now - 2 * HOUR, text: "Signed in with a passkey on this browser" },
-      { id: "l-2", at: now - 3 * HOUR, text: "Signed in with Apple on iPhone" },
-      { id: "l-3", at: now - 40 * DAY, text: "Passkey added: iCloud Keychain" },
+      { id: "l-1", at: now - 2 * HOUR, text: "Signed in with your phone number on this browser" },
+      { id: "l-2", at: now - 3 * HOUR, text: "Signed in with your phone number on iPhone" },
     ],
     privacy: { newChats: "everyone", presence: "chats", readReceipts: true },
     notifications: { direct: true, groups: "mentions", previews: true, sounds: true, asked: false, seenAt: 0 },
@@ -152,8 +147,8 @@ function read(): Account {
       cache = {
         ...base,
         ...saved,
-        profile: { ...base.profile, ...saved.profile },
-        linked: { ...base.linked, ...saved.linked },
+        // The preview number moved from a UK one to +91 when Lynk started in India.
+        profile: { ...base.profile, ...saved.profile, ...(saved.profile?.phone === "+447700900123" ? { phone: base.profile.phone } : {}) },
         privacy: { ...base.privacy, ...saved.privacy },
         notifications: { ...base.notifications, ...saved.notifications },
         smart: { ...base.smart, ...saved.smart },
@@ -207,31 +202,13 @@ export function useAccount(): Account | null {
 
 const eventId = () => `l-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
-const METHOD_LABEL: Record<SignInMethod, string> = {
-  passkey: "a passkey",
-  apple: "Apple",
-  google: "Google",
-};
-
-export const methodLabel = (m: SignInMethod) => METHOD_LABEL[m];
-
 function logged(a: Account, text: string): Account {
   return { ...a, log: [{ id: eventId(), at: Date.now(), text }, ...a.log].slice(0, 20) };
 }
 
-export function signIn(method: SignInMethod) {
-  updateAccount((a) =>
-    logged(
-      {
-        ...a,
-        session: { method, since: Date.now() },
-        linked: method === "passkey" ? a.linked : { ...a.linked, [method]: true },
-        passkeys:
-          method === "passkey" ? a.passkeys.map((p, i) => (i === 0 ? { ...p, lastUsedAt: Date.now() } : p)) : a.passkeys,
-      },
-      `Signed in with ${METHOD_LABEL[method]} on this browser`,
-    ),
-  );
+/** Call once the texted code checks out. */
+export function signIn() {
+  updateAccount((a) => logged({ ...a, session: { since: Date.now() } }, "Signed in with your phone number on this browser"));
 }
 
 export function signOut() {
@@ -239,48 +216,26 @@ export function signOut() {
 }
 
 /** A new account replaces the demo one. */
-export function createAccount(input: { name: string; username: string; method: SignInMethod }) {
+export function createAccount(input: { name: string; username: string; phone: string }) {
   const now = Date.now();
   clearChats(input.username);
   const base = defaults(now);
   const next: Account = {
     ...base,
-    session: { method: input.method, since: now },
-    profile: { ...base.profile, name: input.name, username: input.username, bio: "" },
-    passkeys: input.method === "passkey" ? [{ id: `pk-${now}`, name: `Passkey on ${browserName()}`, createdAt: now, lastUsedAt: now }] : [],
-    linked: { apple: input.method === "apple", google: input.method === "google" },
+    session: { since: now },
+    profile: { ...base.profile, name: input.name, username: input.username, phone: input.phone, bio: "" },
     sessions: base.sessions.filter((s) => s.current),
-    log: [{ id: eventId(), at: now, text: `Account created with ${METHOD_LABEL[input.method]}` }],
+    log: [{ id: eventId(), at: now, text: "Account created with your phone number" }],
     removedMemories: MEMORIES_ABOUT_ME.map((m) => m.id),
     seeded: false,
   };
   updateAccount(() => next);
 }
 
-export function addPasskey() {
-  const now = Date.now();
-  updateAccount((a) =>
-    logged(
-      { ...a, passkeys: [...a.passkeys, { id: `pk-${now}`, name: `Passkey on ${browserName()}`, createdAt: now, lastUsedAt: null }] },
-      `Passkey added: ${browserName()}`,
-    ),
-  );
+/** Call once a code texted to the new number checks out. */
+export function changePhone(phone: string) {
+  updateAccount((a) => logged({ ...a, profile: { ...a.profile, phone } }, "Phone number changed"));
 }
-
-export function removePasskey(id: string) {
-  updateAccount((a) => {
-    const key = a.passkeys.find((p) => p.id === id);
-    return logged({ ...a, passkeys: a.passkeys.filter((p) => p.id !== id) }, `Passkey removed: ${key?.name ?? "unknown"}`);
-  });
-}
-
-export function setLinked(provider: "apple" | "google", on: boolean) {
-  const label = provider === "apple" ? "Apple" : "Google";
-  updateAccount((a) => logged({ ...a, linked: { ...a.linked, [provider]: on } }, `${on ? "Connected" : "Disconnected"} ${label}`));
-}
-
-/** How many ways this person can still sign in. */
-export const signInMethodCount = (a: Account) => a.passkeys.length + Number(a.linked.apple) + Number(a.linked.google);
 
 export function endSession(id: string | "others") {
   updateAccount((a) =>
@@ -396,7 +351,6 @@ export function exportAccount(a: Account) {
   const data = {
     exportedAt: new Date().toISOString(),
     profile: a.profile,
-    signInMethods: { passkeys: a.passkeys, apple: a.linked.apple, google: a.linked.google },
     sessions: a.sessions,
     securityLog: a.log,
     settings: { privacy: a.privacy, notifications: a.notifications, smartFeatures: a.smart },

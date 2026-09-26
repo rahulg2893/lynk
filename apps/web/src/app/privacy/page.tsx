@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { EyeSlash, Fingerprint, LockKey, Sparkle, Trash, UsersThree } from "@phosphor-icons/react/ssr";
+import { DeviceMobile, EyeSlash, LockKey, Sparkle, Trash, UsersThree } from "@phosphor-icons/react/ssr";
 import { Logo } from "@/components/landing/Logo";
 
 export const metadata: Metadata = {
@@ -30,9 +30,9 @@ const POINTS = [
     body: "Plans, lists and memories belong to the chat they came from and never appear outside it. If a memory is about you, you can see it and remove it from your profile. Blocking someone hides messages, online status and invites in both directions.",
   },
   {
-    icon: Fingerprint,
+    icon: DeviceMobile,
     title: "No passwords",
-    body: "You sign in with a passkey, Apple or Google, so there's no Lynk password to reuse, phish or leak. Settings shows every device you're signed in on, and you can sign any of them out.",
+    body: "You sign in with your phone number and a code we text you, so there's no Lynk password to reuse, phish or leak. Friends find you by username and never see your number. Settings shows every device you're signed in on, and you can sign any of them out.",
   },
   {
     icon: Trash,
