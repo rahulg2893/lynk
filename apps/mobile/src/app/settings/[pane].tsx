@@ -23,6 +23,7 @@ import { actionSheet, confirm } from "@/lib/sheet";
 import { radius, useColors } from "@/lib/theme";
 import { PhoneVerify } from "@/components/PhoneVerify";
 import { Avatar, Button, Row, Section, Segmented, SwitchRow, Text } from "@/components/ui";
+import { useTopMargin } from "@/lib/layout";
 
 const TITLES: Record<string, string> = {
   account: "Account",
@@ -37,13 +38,14 @@ const TITLES: Record<string, string> = {
 export default function SettingsPane() {
   const { pane } = useLocalSearchParams<{ pane: string }>();
   const insets = useSafeAreaInsets();
+  const topMargin = useTopMargin();
   const c = useColors();
   const account = useAccount();
   if (!account) return null;
   const set = (fn: (a: Account) => Account) => updateAccount(fn);
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ paddingTop: insets.top + 4, paddingBottom: insets.bottom + 40 }} keyboardShouldPersistTaps="handled">
+    <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ paddingTop: insets.top + topMargin + 4, paddingBottom: insets.bottom + 40 }} keyboardShouldPersistTaps="handled">
       <Pressable onPress={() => router.back()} accessibilityLabel="Back" style={{ flexDirection: "row", alignItems: "center", height: 44, paddingHorizontal: 8 }}>
         <CaretLeft size={24} color={c.accentInk} weight="bold" />
         <Text tone="accent">You</Text>

@@ -5,12 +5,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LockSimple } from "phosphor-react-native";
 import { Button, LogoMark, Text } from "@/components/ui";
+import { useTopMargin } from "@/lib/layout";
 
 const LINES = ["Chat with the people", "who matter.", "Lynk remembers the plan."];
 
 /** The first screen when signed out: a dark stage, the rings, and a headline that arrives word by word. */
 export default function Welcome() {
   const insets = useSafeAreaInsets();
+  const topMargin = useTopMargin();
   const anims = useState(() => LINES.map(() => new Animated.Value(0)))[0];
   const cta = useState(() => new Animated.Value(0))[0];
 
@@ -22,7 +24,7 @@ export default function Welcome() {
   }, [anims, cta]);
 
   return (
-    <LinearGradient colors={["#0f2250", "#070c16", "#05070d"]} locations={[0, 0.55, 1]} style={{ flex: 1, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 16, paddingHorizontal: 24 }}>
+    <LinearGradient colors={["#0f2250", "#070c16", "#05070d"]} locations={[0, 0.55, 1]} style={{ flex: 1, paddingTop: insets.top + topMargin + 24, paddingBottom: insets.bottom + 16, paddingLeft: insets.left + 24, paddingRight: insets.right + 24 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <LogoMark height={30} />
         <Text variant="title2" style={{ color: "#f5f5f7" }}>

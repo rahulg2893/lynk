@@ -1,27 +1,40 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, ScrollView, TextInput, View } from "react-native";
 import { router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Bell, BellRinging, BellSlash, MagnifyingGlass, NotePencil, PushPin, Sparkle, XCircle } from "phosphor-react-native";
 import { firstName, formatListTime, messagePreview, type Chat } from "@shared/chat";
 import { notificationGroups } from "@shared/notify";
 import { useAccount } from "@/lib/account";
 import { useOnline } from "@/lib/connection";
+import { selectChat, useSelectedChat, useTopMargin } from "@/lib/layout";
 import { actionSheet } from "@/lib/sheet";
 import { toggleMute, togglePin, useChatStore } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
+import { ChatView } from "@/components/chat/ChatView";
+import { FoldSplit, isFolded } from "@/components/FoldSplit";
 import { Badge, ChatAvatar, Empty, IconButton, Pill, StatusNode, Text, tap } from "@/components/ui";
+import { SideSafe } from "@/components/SideSafe";
 
 type Filter = "all" | "unread" | "groups";
 
-export default function Chats() {
-  const insets = useSafeAreaInsets();
+function ChatsContent() {
+  const topMargin = useTopMargin();
   const c = useColors();
   const account = useAccount();
   const online = useOnline();
   const { chats, loaded, now } = useChatStore();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  // True while a partly folded Duo shows the list and a conversation side by side.
+  const [split, setSplit] = useState(isFolded);
+  const selected = useSelectedChat();
+
+  // Opening the Duo flat (or closing it) with a chat in the right pane keeps it open, full screen (HIG: consistent state across displays).
+  useEffect(() => {
+    if (split || !selected) return;
+    router.push({ pathname: "/chat/[id]", params: selected.m ? { id: selected.id, m: selected.m } : { id: selected.id } });
+    selectChat(null);
+  }, [split, selected]);
 
   const { pinned, recent } = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -38,7 +51,7 @@ export default function Chats() {
   const showStrip = filter === "all" && !query && pinned.length > 0;
   const rows = showStrip ? recent : [...pinned, ...recent];
 
-  const open = (id: string) => router.push({ pathname: "/chat/[id]", params: { id } });
+  const open = (id: string) => (split ? selectChat({ id }) : router.push({ pathname: "/chat/[id]", params: { id } }));
   const menu = (ch: Chat) =>
     actionSheet(ch.name, [
       { label: ch.pinned ? "Unpin" : "Pin", onPress: () => togglePin(ch.id) },
@@ -48,7 +61,7 @@ export default function Chats() {
 
   const header = (
     <View>
-      <View style={{ paddingHorizontal: 20, paddingTop: 8, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 16 + topMargin, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
         <View style={{ flexShrink: 1 }}>
           <Text variant="largeTitle">Chats</Text>
           <Text variant="footnote" tone="muted">
@@ -141,11 +154,11 @@ export default function Chats() {
     </View>
   );
 
-  return (
+  const list = (
     <FlatList
-      contentInsetAdjustmentBehavior="never"
+      contentInsetAdjustmentBehavior="automatic"
       style={{ flex: 1, backgroundColor: c.bg }}
-      contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}
+      contentContainerStyle={{ paddingBottom: 32 }}
       data={loaded ? rows : []}
       keyExtractor={(ch) => ch.id}
       keyboardShouldPersistTaps="handled"
@@ -170,12 +183,30 @@ export default function Chats() {
           <Empty title={query ? `Nothing matches “${query}”` : "Nothing here right now"} body={query ? "Try Ask Lynk to search inside messages." : "Switch the filter back to All."} />
         ) : null
       }
-      renderItem={({ item }) => <ChatRow chat={item} now={now} onPress={() => open(item.id)} onLongPress={() => menu(item)} />}
+      renderItem={({ item }) => <ChatRow chat={item} now={now} selected={split && selected?.id === item.id} onPress={() => open(item.id)} onLongPress={() => menu(item)} />}
+    />
+  );
+
+  // Partly folded Duo: the list and a conversation on either side of the fold, like Mail.
+  return (
+    <FoldSplit
+      single={list}
+      onSplitChange={setSplit}
+      left={list}
+      right={
+        selected ? (
+          <ChatView key={selected.id} id={selected.id} jumpTo={selected.m} embedded />
+        ) : (
+          <View style={{ flex: 1, justifyContent: "center" }}>
+            <Empty icon={<NotePencil size={34} color={c.accentInk} />} title="Pick a chat" body="Your conversation opens here, next to the list." />
+          </View>
+        )
+      }
     />
   );
 }
 
-function ChatRow({ chat, now, onPress, onLongPress }: { chat: Chat; now: number; onPress: () => void; onLongPress: () => void }) {
+function ChatRow({ chat, now, selected, onPress, onLongPress }: { chat: Chat; now: number; selected?: boolean; onPress: () => void; onLongPress: () => void }) {
   const c = useColors();
   const last = chat.messages.at(-1);
   const mine = last?.from === "me";
@@ -190,7 +221,8 @@ function ChatRow({ chat, now, onPress, onLongPress }: { chat: Chat; now: number;
       onLongPress={onLongPress}
       accessibilityRole="button"
       accessibilityLabel={`${chat.name}${chat.unread ? `, ${chat.unread} unread` : ""}`}
-      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: pressed ? c.surface2 : "transparent" })}
+      accessibilityState={{ selected }}
+      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: pressed ? c.surface2 : selected ? c.accentSoft : "transparent" })}
     >
       <ChatAvatar chat={chat} size={52} />
       <View style={{ flex: 1, gap: 3, borderBottomWidth: 0.5, borderBottomColor: c.line, paddingBottom: 10, paddingTop: 2 }}>
@@ -228,5 +260,13 @@ function ChatRow({ chat, now, onPress, onLongPress }: { chat: Chat; now: number;
         </View>
       </View>
     </Pressable>
+  );
+}
+
+export default function Chats() {
+  return (
+    <SideSafe>
+      <ChatsContent />
+    </SideSafe>
   );
 }

@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Animated, Platform, Pressable, ScrollView, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { At, Check, ListChecks, Sparkle, X } from "phosphor-react-native";
 import { messagePreview, personName, type Chat } from "@shared/chat";
 import { useAccount } from "@/lib/account";
 import { setDecision, setTask, useChatStore } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
 import { Avatar, Button, ChatAvatar, Text } from "@/components/ui";
+import { FoldSplit } from "@/components/FoldSplit";
+import { SideSafe } from "@/components/SideSafe";
+import { useTopMargin } from "@/lib/layout";
 
 const SERIF = Platform.select({ ios: "Georgia", default: "serif" });
 
@@ -28,15 +29,15 @@ function Count({ to }: { to: number }) {
     return () => clearInterval(t);
   }, [to]);
   return (
-    <Text style={{ fontSize: 34, lineHeight: 40, fontWeight: "700", color: "#f5f5f7", fontVariant: ["tabular-nums"], marginTop: 4 }}>
+    <Text style={{ fontSize: 34, lineHeight: 40, fontWeight: "700", fontVariant: ["tabular-nums"], marginTop: 4 }}>
       {n}
     </Text>
   );
 }
 
 /** "While you were away": what needs you across every chat. */
-export default function CatchUp() {
-  const insets = useSafeAreaInsets();
+function CatchUpContent() {
+  const topMargin = useTopMargin();
   const c = useColors();
   const account = useAccount();
   const { chats, loaded } = useChatStore();
@@ -57,94 +58,104 @@ export default function CatchUp() {
   const greeting = hour < 5 ? "Up late" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const open = (id: string, m?: string) => router.push({ pathname: "/chat/[id]", params: m ? { id, m } : { id } });
 
-  return (
-    <ScrollView contentInsetAdjustmentBehavior="never" style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 100, paddingHorizontal: 16, gap: 22 }}>
-      <LinearGradient colors={["#132a5c", "#0b0c10", "#0b0c10"]} locations={[0, 0.6, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: radius.xl, padding: 22 }}>
-        <Text variant="footnote" weight="600" style={{ color: "rgba(255,255,255,0.6)" }}>
-          {chats.length ? "While you were away" : "Welcome to Lynk"}
-        </Text>
-        <Text style={{ fontFamily: SERIF, fontSize: 40, lineHeight: 44, color: "#f5f5f7", marginTop: 6 }}>
-          {chats.length ? `${greeting}, ${name}.` : "Bring your people over."}
-        </Text>
-        {chats.length ? (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 20 }}>
-            {[
-              { label: "Unread", value: data.unread },
-              { label: "Mentions", value: data.mentions.length },
-              { label: "Waiting on you", value: data.deck.length },
-              { label: "On your list", value: data.tasks.length },
-            ].map((s) => (
-              <View key={s.label} style={{ width: "47%", flexGrow: 1, padding: 14, borderRadius: radius.lg, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: "rgba(255,255,255,0.05)" }}>
-                <Text variant="caption" style={{ color: "rgba(255,255,255,0.6)" }}>
-                  {s.label}
-                </Text>
-                {loaded ? <Count to={s.value} /> : null}
-              </View>
+  const head = (
+    <>
+        <View>
+          <Text variant="footnote" weight="600" tone="muted">
+            {chats.length ? "While you were away" : "Welcome to Lynk"}
+          </Text>
+          <Text style={{ fontFamily: SERIF, fontSize: 40, lineHeight: 44, marginTop: 6 }}>
+            {chats.length ? `${greeting}, ${name}.` : "Bring your people over."}
+          </Text>
+          {chats.length ? (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 20 }}>
+              {[
+                { label: "Unread", value: data.unread },
+                { label: "Mentions", value: data.mentions.length },
+                { label: "Waiting on you", value: data.deck.length },
+                { label: "On your list", value: data.tasks.length },
+              ].map((s) => (
+                <View key={s.label} style={{ width: "47%", flexGrow: 1, padding: 14, borderRadius: radius.lg, backgroundColor: c.surface }}>
+                  <Text variant="caption" tone="muted">
+                    {s.label}
+                  </Text>
+                  {loaded ? <Count to={s.value} /> : null}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={{ gap: 10, marginTop: 20 }}>
+              <Button title="Start a chat" onPress={() => router.push("/new-chat")} />
+            </View>
+          )}
+        </View>
+    </>
+  );
+  const rest = (
+    <>
+        {data.deck.length ? (
+          <View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 }}>
+              <Sparkle size={18} color={c.accentInk} weight="fill" />
+              <Text variant="title2" style={{ flex: 1 }}>
+                Waiting on you
+              </Text>
+              <Text variant="caption" tone="muted">
+                Swipe right to save
+              </Text>
+            </View>
+            <Deck cards={data.deck} onOpen={open} />
+          </View>
+        ) : null}
+
+        {data.tasks.length ? (
+          <View style={{ gap: 8 }}>
+            <Text variant="title2">On your list</Text>
+            {data.tasks.map(({ chat, t }) => (
+              <Pressable key={t.id} onPress={() => open(chat.id, t.sources[0])} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: c.surface }}>
+                <Pressable onPress={() => setTask(chat.id, t.id, "done")} accessibilityLabel={`Mark ${t.title} done`} hitSlop={8} style={{ width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: c.muted }} />
+                <View style={{ flex: 1 }}>
+                  <Text weight="600">{t.title}</Text>
+                  <Text variant="footnote" tone="muted">
+                    {chat.name} · {t.due}
+                  </Text>
+                </View>
+                <ListChecks size={18} color={c.muted} />
+              </Pressable>
             ))}
           </View>
-        ) : (
-          <View style={{ gap: 10, marginTop: 20 }}>
-            <Button title="Start a chat" onPress={() => router.push("/new-chat")} />
-          </View>
-        )}
-      </LinearGradient>
+        ) : null}
 
-      {data.deck.length ? (
-        <View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 }}>
-            <Sparkle size={18} color={c.accentInk} weight="fill" />
-            <Text variant="title2" style={{ flex: 1 }}>
-              Waiting on you
-            </Text>
-            <Text variant="caption" tone="muted">
-              Swipe right to save
-            </Text>
-          </View>
-          <Deck cards={data.deck} onOpen={open} />
-        </View>
-      ) : null}
-
-      {data.tasks.length ? (
-        <View style={{ gap: 8 }}>
-          <Text variant="title2">On your list</Text>
-          {data.tasks.map(({ chat, t }) => (
-            <Pressable key={t.id} onPress={() => open(chat.id, t.sources[0])} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: c.surface }}>
-              <Pressable onPress={() => setTask(chat.id, t.id, "done")} accessibilityLabel={`Mark ${t.title} done`} hitSlop={8} style={{ width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: c.muted }} />
-              <View style={{ flex: 1 }}>
-                <Text weight="600">{t.title}</Text>
-                <Text variant="footnote" tone="muted">
-                  {chat.name} · {t.due}
-                </Text>
-              </View>
-              <ListChecks size={18} color={c.muted} />
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
-
-      {data.mentions.length ? (
-        <View style={{ gap: 8 }}>
-          <Text variant="title2">Mentions</Text>
-          {data.mentions.map(({ chat, msg }) => (
-            <Pressable key={chat.id} onPress={() => open(chat.id, msg?.id)} style={{ flexDirection: "row", gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: c.surface }}>
-              <ChatAvatar chat={chat} size={40} />
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <At size={14} color={c.accentInk} weight="bold" />
-                  <Text weight="600">{chat.name}</Text>
+        {data.mentions.length ? (
+          <View style={{ gap: 8 }}>
+            <Text variant="title2">Mentions</Text>
+            {data.mentions.map(({ chat, msg }) => (
+              <Pressable key={chat.id} onPress={() => open(chat.id, msg?.id)} style={{ flexDirection: "row", gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: c.surface }}>
+                <ChatAvatar chat={chat} size={40} />
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <At size={14} color={c.accentInk} weight="bold" />
+                    <Text weight="600">{chat.name}</Text>
+                  </View>
+                  {msg ? (
+                    <Text variant="subhead" tone="muted" numberOfLines={2}>
+                      {personName(msg.from).split(" ")[0]}: {messagePreview(msg)}
+                    </Text>
+                  ) : null}
                 </View>
-                {msg ? (
-                  <Text variant="subhead" tone="muted" numberOfLines={2}>
-                    {personName(msg.from).split(" ")[0]}: {messagePreview(msg)}
-                  </Text>
-                ) : null}
-              </View>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+    </>
+  );
+  // Partly folded Duo: greeting and counts on the left, what needs you on the right.
+  const pane = (children: ReactNode) => (
+  <ScrollView contentInsetAdjustmentBehavior="automatic" style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ paddingTop: 16 + topMargin, paddingBottom: 32, paddingHorizontal: 16, gap: 22 }}>
+      {children}
     </ScrollView>
   );
+  return <FoldSplit single={pane(<>{head}{rest}</>)} left={pane(head)} right={pane(rest)} />;
 }
 
 /** Suggestions as a card deck: swipe right to save, left to dismiss, or use the buttons. */
@@ -257,5 +268,13 @@ function Deck({ cards, onOpen }: { cards: Card[]; onOpen: (chatId: string) => vo
         </Pressable>
       </View>
     </View>
+  );
+}
+
+export default function CatchUp() {
+  return (
+    <SideSafe>
+      <CatchUpContent />
+    </SideSafe>
   );
 }

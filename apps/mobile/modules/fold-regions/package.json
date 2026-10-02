@@ -1,0 +1,9 @@
+{
+  "name": "fold-regions",
+  "version": "1.0.0",
+  "description": "Reports iPhone Duo reserved regions (the fold and the cameras) to JavaScript",
+  "main": "index.ts",
+  "license": "MIT",
+  "author": "Lynk",
+  "homepage": "https://github.com/rahulg2893/lynk"
+}

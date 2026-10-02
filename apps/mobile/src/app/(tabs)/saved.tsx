@@ -1,18 +1,20 @@
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, TextInput, View } from "react-native";
 import { router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BookmarkSimple, GitBranch, MagnifyingGlass } from "phosphor-react-native";
 import { formatListTime, messagePreview, personName, sideChatId, type Chat, type Message } from "@shared/chat";
 import { toggleSave, useChatStore } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
 import { Avatar, Empty, Text } from "@/components/ui";
+import { FoldSplit } from "@/components/FoldSplit";
+import { SideSafe } from "@/components/SideSafe";
+import { useTopMargin } from "@/lib/layout";
 
 type Entry = { chat: Chat; threadId: string; sideName?: string; message: Message };
 
 /** Everything you bookmarked, newest first. Only you can see what you save. */
-export default function Saved() {
-  const insets = useSafeAreaInsets();
+function SavedContent() {
+  const topMargin = useTopMargin();
   const c = useColors();
   const { chats, now } = useChatStore();
   const [query, setQuery] = useState("");
@@ -26,16 +28,16 @@ export default function Saved() {
     return all.filter((e) => !q || e.message.text.toLowerCase().includes(q) || e.chat.name.toLowerCase().includes(q)).sort((a, b) => b.message.at - a.message.at);
   }, [chats, query]);
 
-  return (
+  const list = (data: Entry[], withHeader: boolean) => (
     <FlatList
-      contentInsetAdjustmentBehavior="never"
+      contentInsetAdjustmentBehavior="automatic"
       style={{ flex: 1, backgroundColor: c.bg }}
-      contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 100, paddingHorizontal: 16, gap: 10 }}
-      data={entries}
+      contentContainerStyle={{ paddingTop: 16 + topMargin, paddingBottom: 32, paddingHorizontal: 16, gap: 10 }}
+      data={data}
       keyExtractor={(e) => `${e.threadId}-${e.message.id}`}
       keyboardShouldPersistTaps="handled"
       ListHeaderComponent={
-        <View style={{ gap: 12, marginBottom: 6 }}>
+        !withHeader ? null : <View style={{ gap: 12, marginBottom: 6 }}>
           <Text variant="largeTitle">Saved</Text>
           <Text variant="subhead" tone="muted">
             Messages you bookmarked, from every chat. Hold a message and choose Save.
@@ -47,14 +49,14 @@ export default function Saved() {
         </View>
       }
       ListEmptyComponent={
-        <Empty
+        !withHeader ? null : <Empty
           icon={<BookmarkSimple size={40} color={c.accentInk} weight="fill" />}
           title={query ? `Nothing saved matches “${query}”` : "Nothing saved yet"}
           body={query ? undefined : "Addresses, recipes, that link you'll need later: hold a message and choose Save to keep it here."}
         />
       }
       renderItem={({ item: e }) => (
-        <View style={{ padding: 14, borderRadius: radius.lg, backgroundColor: c.surface, gap: 10 }}>
+        <View style={{ flex: 1, padding: 14, borderRadius: radius.lg, backgroundColor: c.surface, gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <Text variant="caption" weight="700" numberOfLines={1}>
               {e.chat.name}
@@ -96,5 +98,16 @@ export default function Saved() {
         </View>
       )}
     />
+  );
+
+  // Partly folded Duo: the header and every other card on the left, the rest on the right, clear of the crease.
+  return <FoldSplit single={list(entries, true)} left={list(entries.filter((_, n) => n % 2 === 0), true)} right={list(entries.filter((_, n) => n % 2 === 1), false)} />;
+}
+
+export default function Saved() {
+  return (
+    <SideSafe>
+      <SavedContent />
+    </SideSafe>
   );
 }

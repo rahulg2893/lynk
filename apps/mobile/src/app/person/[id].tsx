@@ -8,11 +8,13 @@ import { confirm } from "@/lib/sheet";
 import { startChat, useChatStore } from "@/lib/store";
 import { useColors } from "@/lib/theme";
 import { Avatar, Button, ChatAvatar, Row, Section, Text } from "@/components/ui";
+import { useTopMargin } from "@/lib/layout";
 
 /** Someone's profile: shared groups, memories from chats you're both in, block and report. */
 export default function Person() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const topMargin = useTopMargin();
   const c = useColors();
   const account = useAccount();
   const { chats } = useChatStore();
@@ -23,7 +25,7 @@ export default function Person() {
   const memories = chats.filter((ch) => ch.members.includes(id)).flatMap((ch) => ch.memory.map((m) => ({ ...m, chat: ch })));
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ paddingTop: insets.top + 4, paddingBottom: insets.bottom + 40 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ paddingTop: insets.top + topMargin + 4, paddingBottom: insets.bottom + 40 }}>
       <Pressable onPress={() => router.back()} accessibilityLabel="Back" style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", marginLeft: 6 }}>
         <CaretLeft size={26} color={c.accentInk} weight="bold" />
       </Pressable>

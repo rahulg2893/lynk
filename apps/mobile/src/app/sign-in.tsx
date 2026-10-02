@@ -6,14 +6,16 @@ import { signIn, useAccount } from "@/lib/account";
 import { useColors } from "@/lib/theme";
 import { PhoneVerify } from "@/components/PhoneVerify";
 import { IconButton, LogoMark, Text } from "@/components/ui";
+import { useTopMargin } from "@/lib/layout";
 
 export default function SignIn() {
   const insets = useSafeAreaInsets();
+  const topMargin = useTopMargin();
   const c = useColors();
   const account = useAccount();
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24, paddingHorizontal: 24, flexGrow: 1 }}>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingTop: insets.top + topMargin + 8, paddingBottom: insets.bottom + 24, paddingHorizontal: 24, flexGrow: 1 }}>
       <IconButton label="Back" onPress={() => router.back()} style={{ marginLeft: -8 }}>
         <CaretLeft size={24} color={c.accentInk} weight="bold" />
       </IconButton>

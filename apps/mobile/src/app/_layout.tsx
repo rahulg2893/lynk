@@ -9,6 +9,7 @@ import { hydrateAccount, useAccount } from "@/lib/account";
 import { setNetworkOnline } from "@/lib/connection";
 import { loadChats, resetStore, useChatStore } from "@/lib/store";
 import { palette, useScheme } from "@/lib/theme";
+import { SideSafe } from "@/components/SideSafe";
 import { SplashOverlay } from "@/components/Splash";
 import { Banners } from "@/components/Banners";
 
@@ -53,7 +54,11 @@ export default function RootLayout() {
         <ThemeProvider value={navTheme}>
           <StatusBar style={scheme === "dark" ? "light" : "dark"} />
           {hydrated ? (
-            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
+            <Stack
+              screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}
+              // Every screen stays clear of side bars; the tab screens and the full-bleed welcome handle their own.
+              screenLayout={({ route, children }) => (route.name === "(tabs)" || route.name === "welcome" ? children : <SideSafe>{children}</SideSafe>)}
+            >
               <Stack.Protected guard={signedIn}>
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="chat/[id]" />

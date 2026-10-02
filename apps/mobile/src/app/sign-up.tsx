@@ -8,10 +8,12 @@ import { pickProfilePhoto } from "@/lib/media";
 import { useColors } from "@/lib/theme";
 import { PhoneVerify } from "@/components/PhoneVerify";
 import { Avatar, Button, Field, IconButton, Text } from "@/components/ui";
+import { useTopMargin } from "@/lib/layout";
 
 /** Three steps, like the web: who you are, your phone number, then a welcome with a photo and your invite link. */
 export default function SignUp() {
   const insets = useSafeAreaInsets();
+  const topMargin = useTopMargin();
   const c = useColors();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
@@ -42,7 +44,7 @@ export default function SignUp() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24, paddingHorizontal: 24, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + topMargin + 8, paddingBottom: insets.bottom + 24, paddingHorizontal: 24, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           {step < 2 ? (
             <IconButton label="Back" onPress={() => (step ? setStep(step - 1) : router.back())} style={{ marginLeft: -8 }}>
