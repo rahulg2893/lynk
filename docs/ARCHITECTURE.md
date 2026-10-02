@@ -2,7 +2,7 @@
 
 How Lynk is built today, and where the planned server fits. For the product plan, phases and the full encryption design, see [`roadmap.html`](../roadmap.html). For why things are the way they are, see [`DECISIONS.md`](DECISIONS.md).
 
-_Last updated: 26 Sep 2026 (roadmap v5.2)._
+_Last updated: 30 Sep 2026 (roadmap v5.3)._
 
 ## Today at a glance
 
@@ -86,7 +86,7 @@ These modules in `apps/web/src/lib` are imported by both apps. The phone app rea
 | --- | --- |
 | `welcome`, `sign-in`, `sign-up` | Signed-out flow (`Stack.Protected` in `_layout.tsx`) |
 | `(tabs)/` | Native tabs: `chats`, `catch-up`, `calendar`, `saved`, `you` |
-| `chat/[id]` | Conversation with the Up next bar; side chats use the same route |
+| `chat/[id]` | Conversation (`components/chat/ChatView.tsx`) with the Up next bar; side chats use the same route |
 | `chat-info/[id]`, `ask`, `notifications`, `new-chat`, `plan` | Modals and sheets |
 | `person/[id]`, `settings/[pane]` | Contact profile, the seven settings panes |
 
@@ -95,10 +95,18 @@ These modules in `apps/web/src/lib` are imported by both apps. The phone app rea
 - `lib/storage.ts` opens `lynk.db` with SQLCipher. The key is 32 random bytes kept in expo-secure-store (`WHEN_UNLOCKED_THIS_DEVICE_ONLY`). Data sits in one key-value table, written through a queue.
 - `lib/account.ts` has the same account shape as the web, plus `appearance`, stored in the encrypted database.
 
+**iPhone Duo** (HIG: `designing-for-iphone-duo`):
+- `components/FoldSplit.tsx`: one full-width screen, split into two panes only while the Duo is partly folded, one on each side of the fold with a gap its width. Used by Chats (list and conversation), Catch up, Calendar, Saved and You. The fold is shared by every mounted screen, so hidden tabs switch with it. Folding animates on the screen in view (Reanimated layout animations: the panes slide apart, the single screen fades); screens out of view or just coming into view switch without animating.
+- `modules/fold-regions`: a local Expo module whose native view reports UIKit's reserved regions (`UIView.reservedRegions(kind:)`, iOS 27.1+): the fold (`division`, with an `active` flag) and the cameras (`occlusion`). Elsewhere it's a plain View.
+- `lib/layout.ts`: `useTopMargin()` adds 28pt at the top when no status bar sits there (the Duo, whose status bar is on the side). `selectChat()` holds the chat open in the right pane, so it survives unfolding.
+- `components/SideSafe.tsx`: keeps content clear of the left and right safe areas, where the Duo puts its status bar, camera and tab bar. The root `Stack` applies it to every screen through `screenLayout`; the tab screens wrap themselves.
+- Tab screens use `contentInsetAdjustmentBehavior="automatic"`, so iOS adds bottom space only where the tab bar actually is. Unfolding or closing the Duo with a chat open in the right pane opens that chat full screen.
+
 **Native setup** (all in config, no hand-edited `ios/` or `android/`):
 - `plugins/with-scene-lifecycle.js`: adopts the scene lifecycle iOS 27 requires.
 - `plugins/with-quoted-bundle-script.js` and `patches/expo-constants+*.patch`: fix build scripts that break on a space in the project path.
-- `app.json`: bundle id `com.rahulgandhi.lynk`, icon, splash, and plugin settings (SQLCipher on, microphone and photo permissions).
+- `app.json`: bundle id `com.rahulgandhi.lynk`, icon, splash, any orientation (the Duo's poses need it), and plugin settings (SQLCipher on, microphone and photo permissions).
+- `modules/fold-regions`: autolinked local module (see above). It needs an iOS 27.1+ SDK to build.
 
 ## Key flows
 
@@ -137,3 +145,4 @@ When it lands, the client-side stores become caches of the server's event log, a
 - **Type-check and lint** in each app: `npx tsc --noEmit`, then `npm run lint` (web) or `npx expo lint` (mobile).
 - **Web production build:** `npm run build` in `apps/web`.
 - **UI test:** `apps/mobile/.maestro/smoke.yaml` drives the real app on a simulator: sign-in with +91, a group chat, plan spotting, Up next, chat info, Ask Lynk and every tab.
+- **iPhone Duo:** test on the iPhone Duo simulator (iOS 27.1 runtime) in Device Hub. Maestro only drives the outer display; capture the inner one with `xcrun simctl io <device> screenshot --display=internal`. Change poses in Device Hub.

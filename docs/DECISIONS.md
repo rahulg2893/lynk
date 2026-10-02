@@ -20,6 +20,7 @@ The roadmap keeps a short list of the same decisions as ADRs; this file holds th
 | 12 | [Passkeys, Apple and Google sign-in](#12-passkeys-apple-and-google-sign-in) | 2026-09-24 | Superseded by 13 |
 | 13 | [India first, sign in with a phone number](#13-india-first-sign-in-with-a-phone-number) | 2026-09-26 | Accepted |
 | 14 | [Saved plans live in a pinned Up next bar](#14-saved-plans-live-in-a-pinned-up-next-bar) | 2026-09-26 | Accepted |
+| 15 | [On iPhone Duo, split only while partly folded](#15-on-iphone-duo-split-only-while-partly-folded) | 2026-09-30 | Accepted |
 
 ---
 
@@ -106,3 +107,9 @@ The roadmap keeps a short list of the same decisions as ADRs; this file holds th
 **Decision:** every chat has a bar under its header with the next plan, who's going and what's still open. Tapping it opens a sheet (phones) or a drop-down (web) to RSVP, add the plan to a calendar, tick off to-dos and edit lists. The bar hides when nothing saved is still ahead.
 **Why:** saved items lived only in chat details, so checking a plan meant leaving the conversation. Three options were compared: a strip on the chat list, a reworked Saved tab, and a bar inside the chat. The bar won because a plan belongs to its conversation.
 **Consequences:** `upNext()` in the shared layer decides what counts, so both apps agree. Chat details still hold past plans, done to-dos and memories.
+
+### 15. On iPhone Duo, split only while partly folded
+
+**Decision:** on the Duo's inner display, Lynk is one full-width screen while the device is fully open. Only while it's partly folded do Chats, Catch up, Calendar, Saved and You split into two panes, one on each side of the fold with a gap its width. The switch animates on the screen in view. Every screen stays clear of the side safe areas, and the app allows any orientation.
+**Why:** an earlier version split the inner display into two panes whenever it was wide, as Apple's Mail does. Tested on the Duo simulator, the fully open display read as the folded layout; the product choice is a big single screen when flat and a split only when the crease would otherwise run through content. The outer display moves the status bar, camera and tab bar to the side, and Lynk's screens ignored the side safe areas, so content ran under them.
+**Consequences:** the fold's position and state come from UIKit's reserved-regions API through a small native module (`modules/fold-regions`), which needs an iOS 27.1+ SDK; the Duo simulator needs the iOS 27.1 runtime. Only a vertical fold is handled. Phones on their side stay one screen. Lynk's own conversation header and composer are drawn in JavaScript, so iOS doesn't move them to the side the way it moves native bars; moving them to native bars is possible later.

@@ -11,7 +11,7 @@ When a group agrees on a time and place, Lynk turns it into a plan with RSVPs an
   <img src="docs/screenshots/m09-catch-up.webp" width="200" alt="Catch up: counts of unread messages and mentions, and a swipeable plan suggestion">
 </p>
 
-**Status:** the web app and the iPhone and Android app are built and run on realistic sample data. There is no backend yet; it is designed in [`roadmap.html`](roadmap.html) (v5.2).
+**Status:** the web app and the iPhone and Android app are built and run on realistic sample data. There is no backend yet; it is designed in [`roadmap.html`](roadmap.html) (v5.3).
 
 ## What it does
 
@@ -20,6 +20,7 @@ When a group agrees on a time and place, Lynk turns it into a plan with RSVPs an
 - **Catch up.** Everything waiting on you across all chats, with suggestions dealt as a deck of cards: swipe right to save, left to dismiss.
 - **Ask Lynk.** Ask "where did Mei say that ramen place was?" and get an answer that cites the message it came from.
 - **Calendar.** Every plan from every chat on one month grid, exportable as `.ics`.
+- **iPhone Duo.** Fully open, the inner display is one full-width screen. Partly folded, the chat list and the conversation sit on either side of the fold, and every other tab splits the same way.
 - **Also:** side chats, shared lists, saved messages, voice notes with transcripts, translation, an offline outbox, and memories you can edit or remove.
 
 ## Privacy
@@ -37,7 +38,7 @@ When a group agrees on a time and place, Lynk turns it into a plan with RSVPs an
 | `apps/mobile` | Expo app for iPhone and Android | Built, on sample data |
 | `design-system/lynk` | Design system (`MASTER.md`) shared by every app | Active |
 | `docs/screenshots` | Screens used in this README | |
-| `roadmap.html` | Product and engineering roadmap | v5.2 |
+| `roadmap.html` | Product and engineering roadmap | v5.3 |
 
 The phone app imports the web app's chat logic (`apps/web/src/lib`: plan spotting, search, notifications, calendar export, phone-number rules) through the `@shared/*` path, so both apps behave the same.
 
