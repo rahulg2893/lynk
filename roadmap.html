@@ -119,7 +119,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 
 <div class="wrap">
 <header class="hero">
-  <span class="eyebrow">Product &amp; engineering roadmap, v5.3 · Sep 2026</span>
+  <span class="eyebrow">Product &amp; engineering roadmap, v5.4 · Oct 2026</span>
   <h1>Lynk Roadmap</h1>
   <p class="lede">A personal chat app for friends and family that remembers the plan. Messaging comes first, and every chat is end-to-end encrypted. Plans, to-dos, memories and search that finds things again are what make it different, and they all run on your own device, so nobody else ever reads your chats.</p>
   <div class="flow" aria-label="Product thesis">
@@ -234,6 +234,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
           </ul>
         </li>
         <li><b>iPhone Duo (v5.3):</b> the phone app adapts to both displays. Fully open, the inner display is one full-width screen; partly folded, Chats shows the list and the conversation side by side and Catch up, Calendar, Saved and You split into two panes, one on each side of the fold, with an animated switch. The fold comes from UIKit's reserved-regions API through a small native module. Every screen stays clear of the status bar, camera and tab bar the Duo moves to the side, and a chat open in the right pane stays open when the device closes. Tested on the iPhone Duo simulator (iOS 27.1).</li>
+        <li><b>Closing the plan loop, on the web and phones (v5.4):</b> make a to-do yourself from Up next, chat info or any message (who it's for, and a due date picked from Today, Tomorrow, This weekend, Next week or No date). Pin any message (an address, a booking) to Up next. Plan cards offer "Ask the 3 who haven't answered", which posts the question in the chat. A reminder goes off an hour before timed plans you said Going or Maybe to: a local notification on phones (scheduled on the device, permission asked when you first say Going), a browser notification on the web while Lynk is open. The Maestro test covers saving a plan, the nudge, a pin and a new to-do. The landing page gets a fifth chapter, "Getting there", with a working Up next card, and lists the iPhone app (and iPhone Duo) as in testing.</li>
         <li><b>Up next bar, on the web and phones (v5.2):</b> saved plans, to-dos and lists used to live only in chat details. Every chat now has a bar under its header with the next plan, who's going and what's still open. Tapping it opens a sheet (phones) or a drop-down (web) with RSVPs, Add to calendar, to-dos to tick off and editable lists, without leaving the chat. It hides when nothing saved is still ahead. <code>upNext()</code> in the shared chat code decides what counts, so both apps agree.</li>
         <li><b>Case study</b> for the portfolio, with screens from the iPhone and web apps (published as a separate page).</li>
         <li><b>Deep links</b> to chats (<code>/app?chat=…</code>), so reload, back and shared links land in the right conversation.</li>
@@ -263,6 +264,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li>One repo for every app: <code>apps/web</code>, <code>apps/mobile</code>, and later <code>apps/server</code> for the Go backend.</li>
         <li><b>One Expo app for both phones (v5.1):</b> <code>apps/mobile</code> replaces the planned <code>apps/ios</code> and <code>apps/android</code>. It shares the web's logic and will share the generated protocol, and there is one mobile codebase instead of two.</li>
         <li><b>Phone number sign-in, +91 by default (v5.2):</b> replaces passkeys and Apple and Google sign-in. One path, the one people in India already use for chat. Friends still find you by @username and never see your number.</li>
+        <li><b>Plan reminders on the device (v5.4):</b> an hour before, scheduled as local notifications on phones so they work without a server; on the web they need an open tab until Web Push exists. Nudges post a normal message, so the people asked see who asked.</li>
         <li><b>Saved things live in the chat (v5.2):</b> of three options (a strip on the chat list, a reworked Saved tab, a bar inside the chat), the pinned Up next bar won, because a plan belongs to its conversation.</li>
         <li><b>No unread badge on the Chats tab:</b> iOS pins tab badges past the icon's corner, onto the next tab's highlight. The count shows in the Chats header and on Catch up instead.</li>
         <li><b>Full motion for everyone:</b> the OS "Reduce motion" setting is deliberately not honoured, by product decision. Revisit before launch (WCAG 2.3.3); recorded in <code>MASTER.md</code>.</li>
@@ -672,7 +674,7 @@ flowchart LR
       <div class="cols"><div><ol class="ms">
         <li><s>Side chats from any message</s> (done in the browser).</li>
         <li><s>Plans made by hand, with RSVPs and calendar export</s> (done, plus an in-app calendar across all chats).</li>
-        <li><s>Shared lists and saved messages</s> (done). To-dos from hand and pinned messages are still to come.</li>
+        <li><s>Shared lists and saved messages</s> (done). <s>To-dos made by hand and pinned messages</s> (done, v5.4).</li>
         <li><s>⌘K search and jump on the web</s> (done).</li>
         <li>Server storage and sync for all of the above.</li>
       </ol></div></div>
@@ -738,10 +740,11 @@ flowchart LR
     <li>Web first, mobile in phase 3</li>
     <li>One Expo app for iPhone and Android</li>
     <li>On iPhone Duo, split only while partly folded</li>
+    <li>Plan reminders are local notifications, an hour before</li>
   </ol>
 </section>
 
-<footer>Roadmap v5.3, September 2026. iPhone Duo support in the phone app: one full screen when open and two panes either side of the fold when partly folded (animated), side safe areas on the outer display, any orientation. v5.2: Lynk starts in India: sign-in by phone number and SMS code with +91 by default, replacing passkeys and Apple and Google; a registration-lock PIN and PIN-based backups planned for the server. Every chat gets a pinned Up next bar with its plans, to-dos and lists. New risks: SIM swaps and SMS fraud. v5.1: The iPhone and Android app: one Expo app in <code>apps/mobile</code> with every web feature on mock data, encrypted storage on the phone, the app icon and splash screen, and a Maestro UI test. Adds "The problem Lynk solves" and resolves the Expo-or-native decision. v5.0: An encryption audit: MLS via OpenMLS on every client (libsignal has no supported web build), signed membership changes, key transparency, security codes from phase 1, encrypted profiles and group details, invite keys in the link fragment, sender-side link previews, padding, no IP logs, and on-device storage encryption. v4.9: Every chat end-to-end encrypted by default, with smart features moved onto the device; the server only relays and stores ciphertext. v4.8: Phases 5–6 as sample interactions on the web: Ask Lynk with cited answers, suggestion cards and rule-based plan spotting, editable memories, recorded voice notes with transcripts, and in-place translation. Supersedes v3 (workplace direction).</footer>
+<footer>Roadmap v5.4, October 2026. Closing the plan loop: to-dos made by hand, pinned messages in Up next, asking the people who haven't answered a plan, and reminders an hour before plans you're going to (local notifications on phones, in-tab on the web); a "Getting there" chapter on the landing page. v5.3: iPhone Duo support in the phone app: one full screen when open and two panes either side of the fold when partly folded (animated), side safe areas on the outer display, any orientation. v5.2: Lynk starts in India: sign-in by phone number and SMS code with +91 by default, replacing passkeys and Apple and Google; a registration-lock PIN and PIN-based backups planned for the server. Every chat gets a pinned Up next bar with its plans, to-dos and lists. New risks: SIM swaps and SMS fraud. v5.1: The iPhone and Android app: one Expo app in <code>apps/mobile</code> with every web feature on mock data, encrypted storage on the phone, the app icon and splash screen, and a Maestro UI test. Adds "The problem Lynk solves" and resolves the Expo-or-native decision. v5.0: An encryption audit: MLS via OpenMLS on every client (libsignal has no supported web build), signed membership changes, key transparency, security codes from phase 1, encrypted profiles and group details, invite keys in the link fragment, sender-side link previews, padding, no IP logs, and on-device storage encryption. v4.9: Every chat end-to-end encrypted by default, with smart features moved onto the device; the server only relays and stores ciphertext. v4.8: Phases 5–6 as sample interactions on the web: Ask Lynk with cited answers, suggestion cards and rule-based plan spotting, editable memories, recorded voice notes with transcripts, and in-place translation. Supersedes v3 (workplace direction).</footer>
 </div>
 
 <script>

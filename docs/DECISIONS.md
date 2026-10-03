@@ -113,3 +113,15 @@ The roadmap keeps a short list of the same decisions as ADRs; this file holds th
 **Decision:** on the Duo's inner display, Lynk is one full-width screen while the device is fully open. Only while it's partly folded do Chats, Catch up, Calendar, Saved and You split into two panes, one on each side of the fold with a gap its width. The switch animates on the screen in view. Every screen stays clear of the side safe areas, and the app allows any orientation.
 **Why:** an earlier version split the inner display into two panes whenever it was wide, as Apple's Mail does. Tested on the Duo simulator, the fully open display read as the folded layout; the product choice is a big single screen when flat and a split only when the crease would otherwise run through content. The outer display moves the status bar, camera and tab bar to the side, and Lynk's screens ignored the side safe areas, so content ran under them.
 **Consequences:** the fold's position and state come from UIKit's reserved-regions API through a small native module (`modules/fold-regions`), which needs an iOS 27.1+ SDK; the Duo simulator needs the iOS 27.1 runtime. Only a vertical fold is handled. Phones on their side stay one screen. Lynk's own conversation header and composer are drawn in JavaScript, so iOS doesn't move them to the side the way it moves native bars; moving them to native bars is possible later.
+
+### 16. Close the plan loop: to-dos by hand, pins, nudges and reminders
+
+**Date:** 3 Oct 2026
+**Decision:** four additions to Up next, on the web and phones. You can make a to-do yourself (what, who it's for, and a rough due date picked from chips: Today, Tomorrow, This weekend, Next week, No date). Any message can be pinned to Up next. A plan card offers to ask the people who haven't answered, which posts a message in the chat. And you get a reminder an hour before a timed plan you said Going or Maybe to.
+**Why:** the problem Lynk solves is plans getting lost, and people not knowing who's coming. To-dos could only come from Lynk's suggestions, addresses and bookings scrolled away, chasing RSVPs was manual, and nothing reminded you a plan was close.
+**Consequences:**
+- Phone reminders are local notifications scheduled on the device (`expo-notifications`), rescheduled whenever the chats change, so they need no server. Permission is asked when you first say Going or Maybe, or make a plan, never on launch.
+- Web reminders only fire while Lynk is open in a tab; with the tab closed they need Web Push from the server.
+- The lead time is fixed at one hour, with no setting; iOS and Android let people turn the reminders off per app.
+- A nudge mentions the plan's day and time, so plan spotting now skips a suggestion at the same time as a plan the chat already has.
+- Due dates are words, not dates, matching the sample to-dos; real dates can come when the server does.

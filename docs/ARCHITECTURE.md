@@ -2,7 +2,7 @@
 
 How Lynk is built today, and where the planned server fits. For the product plan, phases and the full encryption design, see [`roadmap.html`](../roadmap.html). For why things are the way they are, see [`DECISIONS.md`](DECISIONS.md).
 
-_Last updated: 30 Sep 2026 (roadmap v5.3)._
+_Last updated: 3 Oct 2026 (roadmap v5.4)._
 
 ## Today at a glance
 
@@ -46,8 +46,8 @@ These modules in `apps/web/src/lib` are imported by both apps. The phone app rea
 
 | Module | What it owns |
 | --- | --- |
-| `chat.ts` | Types (`Chat`, `Message`, `Decision`, `Task`, `SharedList`, `Memory`, `SideChat`), the sample chats and people, formatting (`formatWhen`, `rsvpSummary`), `allPlans()`, and `upNext()` / `upNextSummary()` for the Up next bar |
-| `chat-ops.ts` | Pure changes to a chat: plans, RSVPs, lists, memories, side chats, saved messages |
+| `chat.ts` | Types (`Chat`, `Message`, `Decision`, `Task`, `SharedList`, `Memory`, `SideChat`), the sample chats and people, formatting (`formatWhen`, `rsvpSummary`), `allPlans()`, `upNext()` / `upNextSummary()` / `upNextTitle()` for the Up next bar, `nudgeText()` for asking who hasn't answered, and `remindable()` / `reminderText()` for plan reminders |
+| `chat-ops.ts` | Pure changes to a chat: plans, RSVPs, to-dos made by hand (`addTask`), pinned messages (`togglePinned`), lists, memories, side chats, saved messages |
 | `spot.ts` | Plan spotting by rules: a message needs a day and a time to become a suggestion |
 | `find.ts` | Ask Lynk: keyword search with synonyms, answers that cite their source messages |
 | `notify.ts` | The one rule for what deserves a notification, and grouping for the notifications list |
@@ -76,6 +76,8 @@ These modules in `apps/web/src/lib` are imported by both apps. The phone app rea
 - `lib/chat-store.ts` saves chats per username through `lib/secure-store.ts`: AES-256-GCM in IndexedDB, under a non-extractable WebCrypto key.
 - `lib/account.ts` keeps the account and settings in `localStorage` with `useSyncExternalStore`. Its shape mirrors what the API will return.
 
+**Web dialogs:** `PlanDialog` and `TaskDialog` (a to-do by hand) are owned by `ChatApp`, which also runs the in-tab plan reminder check every minute.
+
 **Web-only helpers:** `voice.ts` (recording, waveform, on-device speech recognition), `translate.ts` (Chrome's on-device translator or sample translations), `attachments.ts`, `connection.ts` (online state plus a simulated offline switch), `invites.ts`, `theme.ts`.
 
 ## Phone app (`apps/mobile`)
@@ -87,25 +89,26 @@ These modules in `apps/web/src/lib` are imported by both apps. The phone app rea
 | `welcome`, `sign-in`, `sign-up` | Signed-out flow (`Stack.Protected` in `_layout.tsx`) |
 | `(tabs)/` | Native tabs: `chats`, `catch-up`, `calendar`, `saved`, `you` |
 | `chat/[id]` | Conversation (`components/chat/ChatView.tsx`) with the Up next bar; side chats use the same route |
-| `chat-info/[id]`, `ask`, `notifications`, `new-chat`, `plan` | Modals and sheets |
+| `chat-info/[id]`, `ask`, `notifications`, `new-chat`, `plan`, `todo` | Modals and sheets (`todo` makes a to-do by hand) |
 | `person/[id]`, `settings/[pane]` | Contact profile, the seven settings panes |
 
 **State and storage:**
 - `lib/store.ts` is the global chat store (`useSyncExternalStore`). It covers sending with a delivery lifecycle, simulated replies, the offline outbox (`flushOutbox` on reconnect), plan spotting on send, and every chat action.
 - `lib/storage.ts` opens `lynk.db` with SQLCipher. The key is 32 random bytes kept in expo-secure-store (`WHEN_UNLOCKED_THIS_DEVICE_ONLY`). Data sits in one key-value table, written through a queue.
 - `lib/account.ts` has the same account shape as the web, plus `appearance`, stored in the encrypted database.
+- `lib/reminders.ts` schedules a local notification an hour before each timed plan you said Going or Maybe to. `_layout.tsx` reschedules them whenever the chats change and opens the chat when one is tapped. Permission is asked from `PlanCard` (on Going or Maybe) and the plan sheet, never on launch. Granting it reschedules at once (the chats changed while the prompt was up), and reschedules run one at a time so none are scheduled twice.
 
 **iPhone Duo** (HIG: `designing-for-iphone-duo`):
 - `components/FoldSplit.tsx`: one full-width screen, split into two panes only while the Duo is partly folded, one on each side of the fold with a gap its width. Used by Chats (list and conversation), Catch up, Calendar, Saved and You. The fold is shared by every mounted screen, so hidden tabs switch with it. Folding animates on the screen in view (Reanimated layout animations: the panes slide apart, the single screen fades); screens out of view or just coming into view switch without animating.
 - `modules/fold-regions`: a local Expo module whose native view reports UIKit's reserved regions (`UIView.reservedRegions(kind:)`, iOS 27.1+): the fold (`division`, with an `active` flag) and the cameras (`occlusion`). Elsewhere it's a plain View.
 - `lib/layout.ts`: `useTopMargin()` adds 28pt at the top when no status bar sits there (the Duo, whose status bar is on the side). `selectChat()` holds the chat open in the right pane, so it survives unfolding.
-- `components/SideSafe.tsx`: keeps content clear of the left and right safe areas, where the Duo puts its status bar, camera and tab bar. The root `Stack` applies it to every screen through `screenLayout`; the tab screens wrap themselves.
+- `components/SideSafe.tsx`: keeps content clear of the left and right safe areas, where the Duo puts its status bar, camera and tab bar. The root `Stack` applies it to every screen through `screenLayout`; the tab screens wrap themselves React Native `Modal`s sit outside both, so each one (Up next, the phone-number sheet, the message menu, the photo viewer) keeps clear of the side areas itself.
 - Tab screens use `contentInsetAdjustmentBehavior="automatic"`, so iOS adds bottom space only where the tab bar actually is. Unfolding or closing the Duo with a chat open in the right pane opens that chat full screen.
 
 **Native setup** (all in config, no hand-edited `ios/` or `android/`):
 - `plugins/with-scene-lifecycle.js`: adopts the scene lifecycle iOS 27 requires.
 - `plugins/with-quoted-bundle-script.js` and `patches/expo-constants+*.patch`: fix build scripts that break on a space in the project path.
-- `app.json`: bundle id `com.rahulgandhi.lynk`, icon, splash, any orientation (the Duo's poses need it), and plugin settings (SQLCipher on, microphone and photo permissions).
+- `app.json`: bundle id `com.rahulgandhi.lynk`, icon, splash, any orientation (the Duo's poses need it), and plugin settings (SQLCipher on, microphone and photo permissions, `expo-notifications` for plan reminders).
 - `modules/fold-regions`: autolinked local module (see above). It needs an iOS 27.1+ SDK to build.
 
 ## Key flows
@@ -116,7 +119,8 @@ These modules in `apps/web/src/lib` are imported by both apps. The phone app rea
 1. `spot.ts` finds a day and a time in a message you sent (sample chats come with suggestions already).
 2. It adds a `Decision` with `status: "proposed"`, which shows as a "Save this plan?" card under the source message and in Catch up's deck.
 3. Saving sets `status: "confirmed"`. Plans take RSVPs and appear in the calendar.
-4. `upNext()` picks confirmed plans that haven't happened, open to-dos and lists with unticked items, and the Up next bar shows them.
+4. `upNext()` picks confirmed plans that haven't happened, open to-dos, lists with unticked items and pinned messages, and the Up next bar shows them. From the bar you can make a to-do, unpin a message, or ask the people who haven't answered a plan (`nudgeText()` posts it as your message).
+5. An hour before a timed plan you're going to, a reminder goes off: a local notification on phones, a browser notification on the web while Lynk is open.
 
 **Signing in.**
 1. `phone.ts` normalises the number (`98765 43210` becomes `+919876543210`) and checks it.
@@ -144,5 +148,5 @@ When it lands, the client-side stores become caches of the server's event log, a
 
 - **Type-check and lint** in each app: `npx tsc --noEmit`, then `npm run lint` (web) or `npx expo lint` (mobile).
 - **Web production build:** `npm run build` in `apps/web`.
-- **UI test:** `apps/mobile/.maestro/smoke.yaml` drives the real app on a simulator: sign-in with +91, a group chat, plan spotting, Up next, chat info, Ask Lynk and every tab.
+- **UI test:** `apps/mobile/.maestro/smoke.yaml` drives the real app on a simulator: sign-in with +91, a group chat, plan spotting, saving the plan, nudging, pinning a message, a to-do by hand, Up next, chat info, Ask Lynk and every tab.
 - **iPhone Duo:** test on the iPhone Duo simulator (iOS 27.1 runtime) in Device Hub. Maestro only drives the outer display; capture the inner one with `xcrun simctl io <device> screenshot --display=internal`. Change poses in Device Hub.
