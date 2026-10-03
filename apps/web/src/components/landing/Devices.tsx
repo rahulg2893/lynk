@@ -1,21 +1,15 @@
 "use client";
 
 import { useRef } from "react";
+import Image from "next/image";
 import { motion, useScroll, useSpring, useTransform } from "motion/react";
 import { AndroidLogo, AppleLogo, Globe } from "@phosphor-icons/react";
-import { Avatar } from "@/components/chat/primitives";
 import { FadeIn } from "@/components/motion/FadeIn";
 
-const ROWS = [
-  { id: "amara", name: "Amara Okafor", text: "That ramen place Mei mentioned?", badge: 1 },
-  { id: "mei", name: "Mei Lin", text: "I'm fully vegetarian now btw", badge: 0 },
-  { id: "tomas", name: "Tomás Rivera", text: "Wait until the last 20 minutes", badge: 0 },
-  { id: "jonas", name: "Jonas Weber", text: "I'll leave them at the front desk", badge: 0 },
-];
-
 /**
- * Where Lynk runs: a laptop that settles into place as you scroll and a phone
- * that slides in beside it. Honest about what exists today.
+ * Where Lynk runs: a MacBook that settles into place as you scroll and an
+ * iPhone that slides in beside it, each showing a real screenshot of the app.
+ * Honest about what exists today.
  */
 export function Devices() {
   const ref = useRef<HTMLElement>(null);
@@ -38,52 +32,46 @@ export function Devices() {
 
         <div className="relative mx-auto mt-16 max-w-5xl [perspective:1600px] md:mt-24">
           <motion.div style={{ scale: laptopScale, rotateX: laptopRotate }} className="origin-bottom">
-            {/* Laptop */}
-            <div className="rounded-t-[1.4rem] border-[10px] border-b-0 border-[#1d1d1f] bg-[#1d1d1f] shadow-[0_50px_120px_-40px_rgb(0_40_120/0.5)]">
-              <div className="flex aspect-[16/10] overflow-hidden rounded-t-md bg-bg">
-                <div className="hidden w-14 flex-col items-center gap-3 border-r border-line py-4 sm:flex">
-                  <span className="size-6 rounded-lg bg-accent-soft" />
-                  <span className="size-6 rounded-lg bg-surface-2" />
-                  <span className="size-6 rounded-lg bg-surface-2" />
-                </div>
-                <div className="w-full border-r border-line p-4 sm:w-2/5">
-                  <p className="text-lg font-semibold tracking-tight">Chats</p>
-                  <ul className="mt-3 grid gap-1.5">
-                    {ROWS.map((r, i) => (
-                      <li key={r.id} className={`flex items-center gap-2.5 rounded-xl px-2 py-2 ${i === 0 ? "bg-surface shadow-soft" : ""}`}>
-                        <Avatar id={r.id} name={r.name} size={30} />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[12px] font-semibold">{r.name}</span>
-                          <span className="block truncate text-[11px] text-muted">{r.text}</span>
-                        </span>
-                        {r.badge ? <span className="inline-flex size-4 items-center justify-center rounded-full bg-accent text-[9px] font-semibold text-on-accent">1</span> : null}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="hidden flex-1 flex-col justify-end gap-2 p-5 sm:flex">
-                  <p className="w-fit rounded-2xl rounded-bl-md bg-surface px-3 py-2 text-[12px] shadow-soft">That ramen place Mei mentioned, want to try it?</p>
-                  <p className="w-fit self-end rounded-2xl rounded-br-md bg-accent-soft px-3 py-2 text-[12px]">Yes! Thursday?</p>
-                  <div className="mt-2 h-8 rounded-full border border-line bg-surface" />
-                </div>
+            {/* MacBook: black bezel with the camera notch, then the aluminium base with its opening notch. */}
+            <div className="relative rounded-t-[1.6rem] bg-[#0b0b0d] p-[1.1%] pb-[1.4%] shadow-[0_50px_120px_-40px_rgb(0_40_120/0.5)] ring-1 ring-[#3a3a3e]">
+              <div className="relative overflow-hidden rounded-t-[0.9rem] rounded-b-[0.2rem]">
+                <Image
+                  src="/devices/web-chat.webp"
+                  alt="Lynk on the web: the chat list, and a group chat with its Up next bar and a to-do suggestion"
+                  width={2000}
+                  height={1250}
+                  sizes="(min-width: 1024px) 1024px, 100vw"
+                  className="block h-auto w-full"
+                />
               </div>
+              <span aria-hidden className="absolute top-[1.1%] left-1/2 h-[3%] w-[10%] -translate-x-1/2 rounded-b-[0.6rem] bg-[#0b0b0d]" />
             </div>
-            <div className="mx-[-4%] h-4 rounded-b-2xl bg-linear-to-b from-[#c7c7cc] to-[#8e8e93] dark:from-[#3a3a3c] dark:to-[#1c1c1e]" />
+            <div aria-hidden className="relative mx-[-6%] h-[clamp(0.6rem,1.6vw,1.1rem)] rounded-t-[0.15rem] rounded-b-[45%_100%] bg-linear-to-b from-[#e2e3e6] via-[#c4c6ca] to-[#8e9095] dark:from-[#4a4b4f] dark:via-[#2c2d30] dark:to-[#141416]">
+              <span className="absolute top-0 left-1/2 h-1/2 w-[14%] -translate-x-1/2 rounded-b-lg bg-black/15 dark:bg-black/40" />
+            </div>
           </motion.div>
 
-          {/* Phone */}
+          {/* iPhone 17 Pro: titanium edge, black bezel, Dynamic Island. */}
           <motion.div
             style={{ x: phoneX, opacity: phoneOpacity }}
-            className="absolute -right-2 -bottom-8 w-[26%] min-w-[7.5rem] md:-right-10"
+            className="absolute -right-2 -bottom-10 w-[24%] min-w-[8.5rem] md:-right-10"
           >
-            <div className="aspect-[9/19.5] rounded-[2rem] bg-[#0b0c10] p-[6px] shadow-[0_30px_80px_-20px_rgb(0_0_0/0.5)]">
-              <div className="flex h-full flex-col gap-1.5 overflow-hidden rounded-[1.6rem] bg-bg p-2.5 pt-6">
-                {ROWS.slice(0, 3).map((r) => (
-                  <div key={r.id} className="flex items-center gap-1.5 rounded-lg bg-surface p-1.5">
-                    <Avatar id={r.id} name={r.name} size={18} />
-                    <span className="h-1.5 flex-1 rounded-full bg-surface-2" />
-                  </div>
-                ))}
+            <div className="relative rounded-[18%/8.3%] bg-linear-to-br from-[#9a9ca1] via-[#45464a] to-[#8b8d92] p-[1.6%] shadow-[0_30px_80px_-20px_rgb(0_0_0/0.55)]">
+              <span aria-hidden className="absolute top-[20%] -left-[1.2%] h-[6%] w-[1.4%] rounded-l-sm bg-[#6b6d71]" />
+              <span aria-hidden className="absolute top-[29%] -left-[1.2%] h-[9%] w-[1.4%] rounded-l-sm bg-[#6b6d71]" />
+              <span aria-hidden className="absolute top-[26%] -right-[1.2%] h-[13%] w-[1.4%] rounded-r-sm bg-[#6b6d71]" />
+              <div className="rounded-[17%/7.8%] bg-black p-[3.2%]">
+                <div className="relative overflow-hidden rounded-[14%/6.5%]">
+                  <Image
+                    src="/devices/iphone-up-next.webp"
+                    alt="Lynk on iPhone: the Up next sheet with a plan, who is going, a to-do and a packing list"
+                    width={600}
+                    height={1304}
+                    sizes="(min-width: 768px) 260px, 34vw"
+                    className="block h-auto w-full"
+                  />
+                  <span aria-hidden className="absolute top-[1.4%] left-1/2 h-[2.9%] w-[30%] -translate-x-1/2 rounded-full bg-black" />
+                </div>
               </div>
             </div>
           </motion.div>
