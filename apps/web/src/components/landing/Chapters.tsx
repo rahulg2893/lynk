@@ -7,6 +7,7 @@ import { ArrowRight, At, GitBranch, MagnifyingGlass, Sparkle } from "@phosphor-i
 import { Avatar } from "@/components/chat/primitives";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { DecisionPreview } from "./DecisionPreview";
+import { UpNextPreview } from "./UpNextPreview";
 
 /**
  * Feature chapters in alternating rows: words on one side, a working piece
@@ -33,19 +34,25 @@ export function Chapters() {
           />
           <Chapter
             flip
+            label="Getting there"
+            title="Everyone knows. Everyone shows up."
+            body="Every chat pins what's next: the plan, who's coming, the address and who's bringing what. One tap asks whoever hasn't answered, and you get a reminder an hour before."
+            visual={<UpNextPreview />}
+          />
+          <Chapter
             label="Groups"
             title="Big groups, without the noise."
             body="Mention someone and they'll see it first. Split off a side chat for the surprise party, and the main chat stays calm."
             visual={<GroupsVisual />}
           />
           <Chapter
+            flip
             label="Find it again"
             title="Ask it like you'd ask a friend."
             body="Where did Mei say that ramen place was? Ask in plain words and jump straight to the message it came from."
             visual={<SearchVisual />}
           />
           <Chapter
-            flip
             label="Memories"
             title="The little things, remembered."
             body="Birthdays, allergies, favourite places. Kept inside the chat they came from, and the person they're about can always remove them."

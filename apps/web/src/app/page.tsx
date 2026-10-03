@@ -8,7 +8,7 @@ import { LinkUp } from "@/components/landing/LinkUp";
 import { Closing } from "@/components/landing/Closing";
 
 /*
- * The story: a dark launch stage, the words moving with your scroll, four
+ * The story: a dark launch stage, the words moving with your scroll, five
  * chapters of what Lynk does, privacy, where it runs, and the logo's rings
  * linking up as the invitation. z-index: the fixed nav (z-50) is the only
  * layered element.

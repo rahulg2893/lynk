@@ -92,7 +92,7 @@ export function Devices() {
         <ul className="mx-auto mt-20 grid max-w-3xl gap-3 sm:grid-cols-3">
           {[
             { icon: Globe, name: "Web", status: "Available now", live: true },
-            { icon: AppleLogo, name: "iPhone", status: "Coming next", live: false },
+            { icon: AppleLogo, name: "iPhone", status: "In testing, iPhone Duo too", live: false },
             { icon: AndroidLogo, name: "Android", status: "Coming next", live: false },
           ].map(({ icon: Icon, name, status, live }) => (
             <li key={name} className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3.5">
