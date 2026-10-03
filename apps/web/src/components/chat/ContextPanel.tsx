@@ -10,6 +10,7 @@ import {
   CheckCircle,
   ListChecks,
   PencilSimple,
+  Plus,
   PushPin,
   SignOut,
   Sparkle,
@@ -63,6 +64,7 @@ export function ContextPanel({
   onTask,
   onRsvp,
   onNewPlan,
+  onNewTask,
   onEditPlan,
   onList,
   onMemory,
@@ -81,6 +83,7 @@ export function ContextPanel({
   onTask: (id: string, status: Task["status"]) => void;
   onRsvp: (planId: string, answer: Rsvp | null) => void;
   onNewPlan: () => void;
+  onNewTask: () => void;
   onEditPlan: (plan: Decision) => void;
   onList: (op: ListOp) => void;
   /** Save a new value for a memory, or remove it (null). */
@@ -178,6 +181,14 @@ export function ContextPanel({
         {tab === "lists" ? <Lists lists={chat.lists ?? []} onChange={onList} /> : null}
 
         {tab === "tasks" ? (
+          <div className="grid gap-2.5">
+          <button
+            type="button"
+            onClick={onNewTask}
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-accent text-[14px] font-medium text-on-accent active:scale-[0.98]"
+          >
+            <Plus size={17} weight="bold" /> New to-do
+          </button>
           <List empty="Nothing to do. Asks like “can you bring the snacks?” show up here to confirm.">
             {chat.tasks.map((t) => (
               <Item
@@ -204,6 +215,7 @@ export function ContextPanel({
               />
             ))}
           </List>
+          </div>
         ) : null}
 
         {tab === "memory" ? (

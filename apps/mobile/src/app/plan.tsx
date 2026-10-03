@@ -5,6 +5,7 @@ import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/d
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check } from "phosphor-react-native";
 import { removePlan, setRsvp, upsertPlan } from "@shared/chat-ops";
+import { askForReminders } from "@/lib/reminders";
 import { confirm } from "@/lib/sheet";
 import { change, setDecision, simulateRsvp, useChatStore } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
@@ -62,6 +63,7 @@ export default function PlanScreen() {
         const p = ch.decisions[before];
         return p ? setRsvp(ch, p.id, who, "going") : ch;
       });
+    if (!existing) void askForReminders();
     router.back();
   };
 

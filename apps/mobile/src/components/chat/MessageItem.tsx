@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from "react";
 import { Animated, Pressable, View } from "react-native";
 import { Image } from "expo-image";
-import { ArrowClockwise, BookmarkSimple, FileText, GitBranch, Prohibit, Translate } from "phosphor-react-native";
+import { ArrowClockwise, BookmarkSimple, FileText, GitBranch, Prohibit, PushPin, Translate } from "phosphor-react-native";
 import { firstName, formatBytes, formatDayLabel, formatTime, messagePreview, personName, type Attachment, type Chat, type Message, type SideChat } from "@shared/chat";
 import { radius, useColors } from "@/lib/theme";
 import { Avatar, RichText, StatusNode, Text, tap } from "../ui";
@@ -114,6 +114,7 @@ function MessageItemBase(p: Props) {
                 {formatTime(message.at)}
               </Text>
               {message.saved ? <BookmarkSimple size={12} color={c.accentInk} weight="fill" /> : null}
+              {message.pinned ? <PushPin size={12} color={c.accentInk} weight="fill" /> : null}
             </View>
           ) : null}
 

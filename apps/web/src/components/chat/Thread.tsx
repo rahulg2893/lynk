@@ -11,6 +11,7 @@ import {
   Microphone,
   Translate,
   CalendarPlus,
+  CheckSquareOffset,
   FileText,
   GitBranch,
   Info,
@@ -18,6 +19,7 @@ import {
   Paperclip,
   PencilSimple,
   Phone,
+  PushPin,
   Trash,
   UploadSimple,
   VideoCamera,
@@ -80,6 +82,8 @@ export function Thread({
   onSideChat,
   onSave,
   onMakePlan,
+  onMakeTask,
+  onPin,
   smart,
   onDecision,
   onTask,
@@ -109,6 +113,9 @@ export function Thread({
   onSideChat: (messageId: string) => void;
   onSave: (messageId: string) => void;
   onMakePlan: (message: Message) => void;
+  onMakeTask: (message: Message) => void;
+  /** Pin or unpin a message in Up next. */
+  onPin: (messageId: string) => void;
   /** Pinned under the header, e.g. the chat's Up next bar. */
   banner?: React.ReactNode;
   /** Smart-feature settings; null before the account loads. */
@@ -472,6 +479,7 @@ export function Thread({
                         <span className="font-semibold">{mine ? "You" : personName(message.from)}</span>
                         <span className="text-[12px] text-muted tabular-nums">{formatTime(message.at)}</span>
                         {message.saved ? <BookmarkSimple size={12} weight="fill" className="self-center text-accent-ink" aria-label="Saved" /> : null}
+                        {message.pinned ? <PushPin size={12} weight="fill" className="self-center text-accent-ink" aria-label="Pinned" /> : null}
                       </p>
                     ) : null}
                     <MessageBody
@@ -668,6 +676,33 @@ export function Thread({
                       >
                         <CalendarPlus size={16} />
                       </button>
+                      {chat.side ? null : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveId(null);
+                              onMakeTask(message);
+                            }}
+                            className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
+                            aria-label="Make a to-do from this"
+                          >
+                            <CheckSquareOffset size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveId(null);
+                              onPin(message.id);
+                            }}
+                            className={`inline-flex size-8 items-center justify-center rounded-full hover:bg-surface-2 ${message.pinned ? "text-accent-ink" : "text-muted hover:text-ink"}`}
+                            aria-label={message.pinned ? "Unpin" : "Pin to Up next"}
+                            aria-pressed={Boolean(message.pinned)}
+                          >
+                            <PushPin size={16} weight={message.pinned ? "fill" : "regular"} />
+                          </button>
+                        </>
+                      )}
                       {mine ? (
                         <>
                           <button

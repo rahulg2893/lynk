@@ -19,13 +19,18 @@ import { ContextPanel, type PanelTab } from "./ContextPanel";
 import { UpNext } from "./UpNext";
 import { CommandPalette, type PaletteAction } from "./CommandPalette";
 import { PlanDialog, type PlanDraft } from "./PlanDialog";
+import { TaskDialog, type TaskDraft } from "./TaskDialog";
 import { AskLynk } from "./AskLynk";
 import { spotPlan } from "@/lib/spot";
 import {
   PEOPLE,
+  REMINDER_LEAD_MS,
   REPLIES,
   SIDE_REPLIES,
   newId,
+  nudgeText,
+  remindable,
+  reminderText,
   resolveChat,
   sideChatId,
   splitChatId,
@@ -38,7 +43,7 @@ import {
   type Status,
   type Task,
 } from "@/lib/chat";
-import { addSideChat, applyListOp, editMemory, removeMemory, suggestPlan, removePlan, setRsvp, toggleSaved, updateThread, upsertPlan, type ListOp, type PlanInput } from "@/lib/chat-ops";
+import { addSideChat, addTask, applyListOp, editMemory, togglePinned, removeMemory, suggestPlan, removePlan, setRsvp, toggleSaved, updateThread, upsertPlan, type ListOp, type PlanInput } from "@/lib/chat-ops";
 
 type State = { chats: Chat[]; activeId: string | null; loaded: boolean; now: number };
 
@@ -195,6 +200,9 @@ export function ChatApp() {
   const online = useOnline();
   const [asking, setAsking] = useState(false);
   const [planDraft, setPlanDraft] = useState<PlanDraft | null>(null);
+  const [taskDraft, setTaskDraft] = useState<TaskDraft | null>(null);
+  // Plans already reminded about this session, so each goes off once.
+  const reminded = useRef(new Set<string>());
   const [askOpen, setAskOpen] = useState(false);
   const messageParam = useSearchParams().get("m");
 
@@ -459,6 +467,34 @@ export function ChatApp() {
     dispatch({ type: "tick", now: Date.now() });
   };
 
+  // A browser reminder an hour before plans you're going to, while Lynk is open.
+  // ponytail: tab must be open; reminders with Lynk closed need Web Push from the server.
+  useEffect(() => {
+    if (!state.loaded) return;
+    const check = () => {
+      const now = Date.now();
+      for (const { chat, plan } of remindable(chatsRef.current, now)) {
+        if (plan.when! - now > REMINDER_LEAD_MS || reminded.current.has(plan.id)) continue;
+        reminded.current.add(plan.id);
+        if (permission() !== "granted") continue;
+        const { title, body } = reminderText(chat, plan, now);
+        try {
+          const n = new Notification(title, { body, tag: `plan-${plan.id}`, icon: "/apple-icon.png" });
+          n.onclick = () => {
+            window.focus();
+            open(chat.id);
+            n.close();
+          };
+        } catch {
+          // Some browsers only allow notifications from a service worker.
+        }
+      }
+    };
+    check();
+    const t = window.setInterval(check, 60_000);
+    return () => window.clearInterval(t);
+  }, [state.loaded, open]);
+
   const groups = useMemo(
     () => (account ? notificationGroups(state.chats, account.notifications, (account.profile.name || "You").split(" ")[0], state.now) : []),
     [state.chats, state.now, account],
@@ -627,6 +663,8 @@ export function ChatApp() {
               onDecision={(itemId, status) => parent && dispatch({ type: "decision", id: parent.id, itemId, status })}
               onTask={(itemId, status) => parent && dispatch({ type: "task", id: parent.id, itemId, status })}
               onEditPlan={(plan) => parent && setPlanDraft({ ...plan, chatId: parent.id })}
+              onMakeTask={(message) => parent && setTaskDraft({ chatId: parent.id, title: message.text.slice(0, 80), sources: active.side ? [] : [message.id] })}
+              onPin={(messageId) => change(active.id, (c) => togglePinned(c, messageId))}
               onMakePlan={(message) =>
                 parent && setPlanDraft({ chatId: parent.id, title: message.text.slice(0, 80), sources: active.side ? [] : [message.id] })
               }
@@ -644,6 +682,9 @@ export function ChatApp() {
                     onDone={(taskId) => dispatch({ type: "task", id: active.id, itemId: taskId, status: "done" })}
                     onList={(op) => change(active.id, (c) => applyListOp(c, op))}
                     onMore={() => setPanel("decisions")}
+                    onNewTask={() => setTaskDraft({ chatId: active.id, title: "" })}
+                    onUnpin={(messageId) => change(active.id, (c) => togglePinned(c, messageId))}
+                    onNudge={(plan) => send(active, nudgeText(active, plan))}
                   />
                 )
               }
@@ -676,6 +717,7 @@ export function ChatApp() {
             onTask={(itemId, status) => dispatch({ type: "task", id: parent.id, itemId, status })}
             onRsvp={(planId, answer: Rsvp | null) => change(parent.id, (c) => setRsvp(c, planId, "me", answer))}
             onNewPlan={() => setPlanDraft({ chatId: parent.id, title: "" })}
+            onNewTask={() => setTaskDraft({ chatId: parent.id, title: "" })}
             onEditPlan={(plan) => setPlanDraft({ ...plan, chatId: parent.id })}
             onList={(op: ListOp) => change(parent.id, (c) => applyListOp(c, op))}
             onMemory={(memoryId, value) => change(parent.id, (c) => (value === null ? removeMemory(c, memoryId) : editMemory(c, memoryId, value)))}
@@ -713,6 +755,16 @@ export function ChatApp() {
           change(chatId, (c) => removePlan(c, planId));
         }}
         onClose={() => setPlanDraft(null)}
+      />
+
+      <TaskDialog
+        draft={taskDraft}
+        chats={state.chats}
+        onSave={(chatId, input) => {
+          setTaskDraft(null);
+          change(chatId, (c) => addTask(c, input));
+        }}
+        onClose={() => setTaskDraft(null)}
       />
 
       <NewChatDialog

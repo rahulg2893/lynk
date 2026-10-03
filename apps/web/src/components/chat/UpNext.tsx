@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { CalendarBlank, CaretDown, Check, ListChecks } from "@phosphor-icons/react";
+import { CalendarBlank, CaretDown, Check, ListChecks, Plus, PushPin } from "@phosphor-icons/react";
 import { PlanCard } from "./PlanCard";
 import { Lists } from "./Lists";
-import { firstName, formatWhen, upNext, upNextSummary, type Chat, type Decision, type Rsvp } from "@/lib/chat";
+import { firstName, formatWhen, messagePreview, personName, upNext, upNextSummary, upNextTitle, type Chat, type Decision, type Rsvp } from "@/lib/chat";
 import type { ListOp } from "@/lib/chat-ops";
 import { MOTION } from "@/lib/motion";
 
@@ -23,6 +23,9 @@ export function UpNext({
   onDone,
   onList,
   onMore,
+  onNewTask,
+  onUnpin,
+  onNudge,
 }: {
   chat: Chat;
   now: number;
@@ -33,6 +36,9 @@ export function UpNext({
   onList: (op: ListOp) => void;
   /** Everything else (past plans, memories) in chat info. */
   onMore: () => void;
+  onNewTask: () => void;
+  onUnpin: (messageId: string) => void;
+  onNudge: (plan: Decision) => void;
 }) {
   // What was open when the drop-down opened, so ticking something off doesn't make it vanish mid-click.
   const [shown, setShown] = useState<Set<string> | null>(null);
@@ -56,12 +62,13 @@ export function UpNext({
   if (!u && !open) return null;
 
   const plan = u?.plans[0];
-  const title = !u ? "Up next" : plan ? plan.title : (u.todos[0]?.title ?? `${u.lists[0].title} list`);
+  const title = u ? upNextTitle(u) : "Up next";
   const summary = u ? [plan?.when ? formatWhen(plan) : "", upNextSummary(u)].filter(Boolean).join(" · ") : "";
   const sheet = {
     plans: chat.decisions.filter((d) => shown?.has(d.id)),
     todos: chat.tasks.filter((t) => shown?.has(t.id)),
     lists: (chat.lists ?? []).filter((l) => shown?.has(l.id) || (open && !known.has(l.id))),
+    pins: chat.messages.filter((m) => m.pinned && !m.deleted),
   };
   const jump = (id: string) => {
     setShown(null);
@@ -81,7 +88,13 @@ export function UpNext({
         className="flex w-full items-center gap-3 bg-surface/70 px-3 py-2.5 text-left hover:bg-surface-2/70 md:px-6"
       >
         <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-accent-soft text-accent-ink">
-          {plan ? <CalendarBlank size={18} weight="bold" aria-hidden /> : <ListChecks size={18} weight="bold" aria-hidden />}
+          {plan ? (
+            <CalendarBlank size={18} weight="bold" aria-hidden />
+          ) : u && !u.todos.length && !u.lists.length ? (
+            <PushPin size={18} weight="bold" aria-hidden />
+          ) : (
+            <ListChecks size={18} weight="bold" aria-hidden />
+          )}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14px] font-semibold">{title}</span>
@@ -114,9 +127,32 @@ export function UpNext({
                     onEditPlan(d);
                   }}
                   onJump={jump}
+                  onNudge={() => (setShown(null), onNudge(d))}
                 />
               ))}
-              {sheet.todos.length ? <Heading>To-dos</Heading> : null}
+              {sheet.pins.length ? <Heading>Pinned</Heading> : null}
+              {sheet.pins.length ? (
+                <ul className="grid gap-2">
+                  {sheet.pins.map((m) => (
+                    <li key={m.id} className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-3.5 py-3">
+                      <PushPin size={16} weight="fill" className="shrink-0 text-accent-ink" aria-hidden />
+                      <button type="button" onClick={() => jump(m.id)} className="min-w-0 flex-1 text-left" aria-label={`Show pinned message from ${personName(m.from)} in chat`}>
+                        <span className="block text-[13px] text-muted">{m.from === "me" ? "You" : firstName(m.from)}</span>
+                        <span className="line-clamp-2 block">{messagePreview(m)}</span>
+                      </button>
+                      <button type="button" onClick={() => onUnpin(m.id)} className="text-[13px] font-medium text-accent-ink hover:underline">
+                        Unpin
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="mt-1 flex items-center justify-between px-1">
+                <p className="text-[12px] font-semibold tracking-wide text-muted uppercase">To-dos</p>
+                <button type="button" onClick={() => (setShown(null), onNewTask())} className="inline-flex items-center gap-1 text-[13px] font-medium text-accent-ink hover:underline">
+                  <Plus size={13} weight="bold" aria-hidden /> New to-do
+                </button>
+              </div>
               {sheet.todos.length ? (
                 <ul className="grid gap-2">
                   {sheet.todos.map((t) => {

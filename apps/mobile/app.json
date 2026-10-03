@@ -65,7 +65,8 @@
       "@react-native-community/datetimepicker",
       "expo-asset",
       "./plugins/with-quoted-bundle-script",
-      "./plugins/with-scene-lifecycle"
+      "./plugins/with-scene-lifecycle",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

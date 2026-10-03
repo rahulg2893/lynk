@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BellSlash, CalendarPlus, LockSimple, PencilSimple, PushPin, SignOut, UserMinus, UserPlus, X } from "phosphor-react-native";
+import { BellSlash, CalendarPlus, LockSimple, PencilSimple, Plus, PushPin, SignOut, UserMinus, UserPlus, X } from "phosphor-react-native";
 import { PEOPLE, personName, type Memory } from "@shared/chat";
 import { applyListOp, editMemory, removeMemory, setRsvp } from "@shared/chat-ops";
 import { useAccount } from "@/lib/account";
@@ -89,13 +89,16 @@ export default function ChatInfo() {
         ) : null}
 
         {tab === "tasks" ? (
-          chat.tasks.length === 0 ? (
-            <Text variant="subhead" tone="muted" style={{ textAlign: "center", paddingVertical: 24 }}>
-              Nothing to do. Asks like “can you bring the snacks?” show up here to confirm.
-            </Text>
-          ) : (
-            chat.tasks.map((t) => <TaskCard key={t.id} task={t} onStatus={(s) => setTask(chat.id, t.id, s)} onJump={jump} />)
-          )
+          <>
+            <Button title="New to-do" variant="primary" icon={<Plus size={18} color={c.onAccent} weight="bold" />} onPress={() => router.push({ pathname: "/todo", params: { chatId: chat.id } })} />
+            {chat.tasks.length === 0 ? (
+              <Text variant="subhead" tone="muted" style={{ textAlign: "center", paddingVertical: 24 }}>
+                Nothing to do. Make one, or asks like “can you bring the snacks?” show up here to confirm.
+              </Text>
+            ) : (
+              chat.tasks.map((t) => <TaskCard key={t.id} task={t} onStatus={(s) => setTask(chat.id, t.id, s)} onJump={jump} />)
+            )}
+          </>
         ) : null}
 
         {tab === "lists" ? <Lists lists={chat.lists ?? []} onChange={(op) => change(chat.id, (ch) => applyListOp(ch, op))} /> : null}

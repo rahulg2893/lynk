@@ -16,7 +16,7 @@ import {
   type Status,
   type Task,
 } from "@shared/chat";
-import { addSideChat, suggestPlan, updateThread } from "@shared/chat-ops";
+import { addSideChat, suggestPlan, togglePinned, updateThread } from "@shared/chat-ops";
 import { spotPlan } from "@shared/spot";
 import { getAccount } from "./account";
 import { isOnline, onConnectionChange } from "./connection";
@@ -237,6 +237,8 @@ export function react(threadId: string, messageId: string, emoji: string) {
     }),
   }));
 }
+
+export const togglePinnedMessage = (threadId: string, messageId: string) => change(threadId, (c) => togglePinned(c, messageId));
 
 export const toggleSave = (threadId: string, messageId: string) =>
   change(threadId, (c) => ({ ...c, messages: c.messages.map((m) => (m.id === messageId ? { ...m, saved: !m.saved } : m)) }));

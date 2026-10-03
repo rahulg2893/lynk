@@ -22,6 +22,7 @@ import {
   setTask,
   sideChatFor,
   toggleSave,
+  togglePinnedMessage,
   useChatStore,
   useThread,
 } from "@/lib/store";
@@ -135,6 +136,8 @@ export function ChatView({ id, jumpTo, embedded = false }: { id: string; jumpTo?
     if (!m) return;
     if (a === "reply") setReplyTo(m);
     if (a === "save") toggleSave(chat.id, m.id);
+    if (a === "pin") togglePinnedMessage(chat.id, m.id);
+    if (a === "todo") router.push({ pathname: "/todo", params: { chatId: chat.id, title: m.text.slice(0, 80), sources: m.id } });
     if (a === "side") openSide(m);
     if (a === "plan" && parent) router.push({ pathname: "/plan", params: { chatId: parent.id, title: m.text.slice(0, 80), sources: chat.side ? "" : m.id } });
     if (a === "translate") toggleTranslation(m);

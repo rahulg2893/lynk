@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
-import { CalendarPlus, Check, Clock, MapPin, PencilSimple, Sparkle, X } from "@phosphor-icons/react";
+import { BellRinging, CalendarPlus, Check, Clock, MapPin, PencilSimple, Sparkle, X } from "@phosphor-icons/react";
 import { Avatar } from "./primitives";
-import { formatWhen, personName, rsvpSummary, RSVP_LABEL, type Chat, type Decision, type Rsvp } from "@/lib/chat";
+import { formatWhen, notAnswered, personName, rsvpSummary, RSVP_LABEL, type Chat, type Decision, type Rsvp } from "@/lib/chat";
 import { downloadIcs } from "@/lib/ics";
 
 const ANSWERS: Rsvp[] = ["going", "maybe", "no"];
@@ -21,6 +21,7 @@ export function PlanCard({
   onConfirm,
   onReject,
   onJump,
+  onNudge,
 }: {
   chat: Chat;
   plan: Decision;
@@ -31,7 +32,10 @@ export function PlanCard({
   onConfirm?: () => void;
   onReject?: () => void;
   onJump?: (messageId: string) => void;
+  /** Post a message asking the people who haven't answered. */
+  onNudge?: () => void;
 }) {
+  const waiting = notAnswered(chat, plan);
   const proposed = plan.status === "proposed";
   const mine = plan.rsvp?.me;
   const people = Object.entries(plan.rsvp ?? {}).filter(([, a]) => a !== "no");
@@ -142,6 +146,16 @@ export function PlanCard({
           >
             <CalendarPlus size={15} /> Add to calendar
           </button>
+          {onNudge && waiting.length ? (
+            <button
+              type="button"
+              onClick={onNudge}
+              title="Post a message in the chat asking them"
+              className="mt-3 ml-2 inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2"
+            >
+              <BellRinging size={15} /> Ask {waiting.length === 1 ? personName(waiting[0]).split(" ")[0] : `the ${waiting.length} who haven't answered`}
+            </button>
+          ) : null}
         </>
       ) : null}
 

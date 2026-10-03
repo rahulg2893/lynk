@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
+import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from "expo-router";
+import * as Notifications from "expo-notifications";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { addNetworkStateListener, getNetworkStateAsync } from "expo-network";
@@ -7,6 +8,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { hydrateAccount, useAccount } from "@/lib/account";
 import { setNetworkOnline } from "@/lib/connection";
+import { syncReminders } from "@/lib/reminders";
 import { loadChats, resetStore, useChatStore } from "@/lib/store";
 import { palette, useScheme } from "@/lib/theme";
 import { SideSafe } from "@/components/SideSafe";
@@ -44,6 +46,22 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
+  // Keep plan reminders in step with the chats (none when signed out).
+  useEffect(() => {
+    if (!store.loaded) return;
+    const t = setTimeout(() => void syncReminders(signedIn ? store.chats : []).catch(() => undefined), 1000);
+    return () => clearTimeout(t);
+  }, [store.loaded, store.chats, signedIn]);
+
+  // Tapping a reminder opens its chat.
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((r) => {
+      const chatId = r.notification.request.content.data?.chatId;
+      if (typeof chatId === "string") router.push({ pathname: "/chat/[id]", params: { id: chatId } });
+    });
+    return () => sub.remove();
+  }, []);
+
   const ready = hydrated && (!signedIn || store.loaded);
   const base = scheme === "dark" ? DarkTheme : DefaultTheme;
   const navTheme = { ...base, colors: { ...base.colors, background: c.bg, card: c.bg, text: c.ink, border: c.line, primary: c.accent } };
@@ -67,6 +85,7 @@ export default function RootLayout() {
                 <Stack.Screen name="ask" options={{ presentation: "modal" }} />
                 <Stack.Screen name="notifications" options={{ presentation: "modal" }} />
                 <Stack.Screen name="plan" options={{ presentation: "formSheet", sheetAllowedDetents: [0.75, 1], sheetGrabberVisible: true }} />
+                <Stack.Screen name="todo" options={{ presentation: "formSheet", sheetAllowedDetents: [0.6, 1], sheetGrabberVisible: true }} />
                 <Stack.Screen name="person/[id]" />
                 <Stack.Screen name="settings/[pane]" />
               </Stack.Protected>

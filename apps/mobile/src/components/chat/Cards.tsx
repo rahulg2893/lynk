@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Animated, Pressable, TextInput, View } from "react-native";
-import { CalendarPlus, Check, CheckCircle, CheckSquare, Clock, DotsThree, ListChecks, MapPin, PencilSimple, Plus, Sparkle, Square, X } from "phosphor-react-native";
-import { firstName, formatWhen, newId, personName, rsvpSummary, RSVP_LABEL, type Chat, type Decision, type Rsvp, type SharedList, type Task } from "@shared/chat";
+import { BellRinging, CalendarPlus, Check, CheckCircle, CheckSquare, Clock, DotsThree, ListChecks, MapPin, PencilSimple, Plus, Sparkle, Square, X } from "phosphor-react-native";
+import { firstName, formatWhen, newId, notAnswered, personName, rsvpSummary, RSVP_LABEL, type Chat, type Decision, type Rsvp, type SharedList, type Task } from "@shared/chat";
 import type { ListOp } from "@shared/chat-ops";
 import { shareIcs } from "@/lib/calendar-export";
+import { askForReminders } from "@/lib/reminders";
 import { actionSheet } from "@/lib/sheet";
 import { radius, useColors } from "@/lib/theme";
 import { Avatar, Text, tap } from "../ui";
@@ -20,6 +21,7 @@ export function PlanCard({
   onConfirm,
   onReject,
   onJump,
+  onNudge,
 }: {
   chat: Chat;
   plan: Decision;
@@ -29,8 +31,11 @@ export function PlanCard({
   onConfirm?: () => void;
   onReject?: () => void;
   onJump?: (messageId: string) => void;
+  /** Post a message asking the people who haven't answered. */
+  onNudge?: () => void;
 }) {
   const c = useColors();
+  const waiting = notAnswered(chat, plan);
   const proposed = plan.status === "proposed";
   const mine = plan.rsvp?.me;
   const people = Object.entries(plan.rsvp ?? {}).filter(([, a]) => a !== "no");
@@ -84,6 +89,7 @@ export function PlanCard({
                   onPress={() => {
                     tap();
                     onRsvp(on ? null : a);
+                    if (!on && a !== "no") void askForReminders();
                   }}
                   style={{ flex: 1, height: 32, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: on ? (a === "going" ? c.accent : c.surface) : "transparent" }}
                 >
@@ -106,8 +112,15 @@ export function PlanCard({
               {rsvpSummary(plan)}
             </Text>
           </View>
-          <View style={{ flexDirection: "row", marginTop: 12 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
             <SmallButton label="Add to calendar" icon={<CalendarPlus size={15} color={c.ink} />} disabled={!plan.when} onPress={() => void shareIcs([{ chat, plan }])} />
+            {onNudge && waiting.length ? (
+              <SmallButton
+                label={waiting.length === 1 ? `Ask ${firstName(waiting[0])}` : `Ask the ${waiting.length} who haven't answered`}
+                icon={<BellRinging size={15} color={c.ink} />}
+                onPress={onNudge}
+              />
+            ) : null}
           </View>
         </>
       ) : null}

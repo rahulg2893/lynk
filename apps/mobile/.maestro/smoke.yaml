@@ -1,5 +1,5 @@
 # End-to-end walk through the app on a simulator: sign in with a phone number and code, chats, a conversation
-# (with plan spotting), Ask Lynk, and every tab. Screenshots land in
+# (with plan spotting, nudges, pins and to-dos), Ask Lynk, and every tab. Screenshots land in
 # .maestro/screenshots. Run: maestro test .maestro/smoke.yaml
 appId: com.rahulgandhi.lynk
 ---
@@ -44,6 +44,44 @@ appId: com.rahulgandhi.lynk
     visible: "Dinner Friday at Nando's"
     timeout: 8000
 - takeScreenshot: .maestro/screenshots/05-plan-spotted
+
+# Group 1: save the plan, nudge the people who haven't answered, pin a message, add a to-do
+# (wait for the simulated reply first, so the list doesn't jump under the tap)
+- hideKeyboard
+- extendedWaitUntil:
+    visible: ".*Sounds good.*"
+    timeout: 8000
+- waitForAnimationToEnd
+- tapOn:
+    text: "Save"
+    below: "Dinner Friday at Nando's"
+- tapOn: "Up next:.*"
+- scrollUntilVisible:
+    element: "Ask the .* who haven't answered"
+    direction: DOWN
+- takeScreenshot: .maestro/screenshots/05b-nudge
+- tapOn: "Ask the .* who haven't answered"
+- extendedWaitUntil:
+    visible: ".*Still need to hear from.*"
+    timeout: 5000
+- longPressOn: ".*Still need to hear from.*"
+- tapOn: "Pin to Up next"
+- tapOn: "Up next:.*"
+- scrollUntilVisible:
+    element: "Pinned"
+    direction: DOWN
+- tapOn: "New to-do"
+- extendedWaitUntil:
+    visible: "New to-do"
+    timeout: 5000
+- inputText: "Book the table"
+- tapOn: "Add"
+- tapOn: "Up next:.*"
+- scrollUntilVisible:
+    element: "Book the table"
+    direction: DOWN
+- takeScreenshot: .maestro/screenshots/05c-up-next-group-1
+- tapOn: "Done"
 - tapOn: "Chat info"
 - extendedWaitUntil:
     visible: "New plan"

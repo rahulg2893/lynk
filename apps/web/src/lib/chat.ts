@@ -55,6 +55,8 @@ export type Message = {
   deleted?: boolean;
   /** Group members who have read this message. */
   readBy?: string[];
+  /** Pinned to the chat's Up next bar for everyone. */
+  pinned?: boolean;
 };
 
 export type KnowledgeStatus = "proposed" | "confirmed" | "rejected";
@@ -553,7 +555,7 @@ export function allPlans(chats: Chat[]) {
 /**
  * What a chat has saved that still matters, for the pinned "Up next" bar:
  * plans that haven't happened yet (soonest first, undated last), open to-dos,
- * and lists with something left to tick. Null when there's nothing.
+ * lists with something left to tick, and pinned messages. Null when there's nothing.
  */
 export function upNext(chat: Chat, now: number) {
   const plans = chat.decisions
@@ -561,7 +563,8 @@ export function upNext(chat: Chat, now: number) {
     .sort((a, b) => (a.when ?? Infinity) - (b.when ?? Infinity));
   const todos = chat.tasks.filter((t) => t.status === "confirmed");
   const lists = (chat.lists ?? []).filter((l) => l.items.some((i) => !i.done));
-  return plans.length || todos.length || lists.length ? { plans, todos, lists } : null;
+  const pins = chat.messages.filter((m) => m.pinned && !m.deleted);
+  return plans.length || todos.length || lists.length || pins.length ? { plans, todos, lists, pins } : null;
 }
 
 /** "3 going · 2 to-dos · Shopping, 4 left": the bar's second line. */
@@ -573,10 +576,49 @@ export function upNextSummary(u: NonNullable<ReturnType<typeof upNext>>) {
     u.plans.length > 1 ? `${u.plans.length - 1} more ${u.plans.length === 2 ? "plan" : "plans"}` : "",
     u.todos.length ? `${u.todos.length} ${u.todos.length === 1 ? "to-do" : "to-dos"}` : "",
     u.lists.length === 1 ? `${u.lists[0].title}, ${left(u.lists[0])} left` : u.lists.length ? `${u.lists.length} lists` : "",
+    u.pins.length ? `${u.pins.length} pinned` : "",
   ]
     .filter(Boolean)
     .join(" · ");
 }
+
+/** The bar's first line: the next plan, else the first to-do, list or pinned message. */
+export function upNextTitle(u: NonNullable<ReturnType<typeof upNext>>) {
+  if (u.plans[0]) return u.plans[0].title;
+  if (u.todos[0]) return u.todos[0].title;
+  if (u.lists[0]) return `${u.lists[0].title} list`;
+  return `Pinned: ${messagePreview(u.pins[0])}`;
+}
+
+/** Members who haven't answered a plan yet. */
+export const notAnswered = (chat: Chat, plan: Decision) => chat.members.filter((id) => !plan.rsvp?.[id]);
+
+/** "Still need to hear from Arjun and Mei: are you in for Climbing, Sat 10:00?" */
+export function nudgeText(chat: Chat, plan: Decision) {
+  const names = notAnswered(chat, plan).map(firstName);
+  const who = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+  return `Still need to hear from ${who}: are you in for ${plan.title}${plan.when ? `, ${formatWhen(plan)}` : ""}?`;
+}
+
+/** Plan reminders go off this long before the start. */
+export const REMINDER_LEAD_MS = 3_600_000;
+
+/** Timed plans you said Going or Maybe to that haven't started: the ones worth a reminder. */
+export const remindable = (chats: Chat[], now: number) =>
+  allPlans(chats).filter(({ plan }) => plan.status === "confirmed" && !plan.allDay && plan.when! > now && (plan.rsvp?.me === "going" || plan.rsvp?.me === "maybe"));
+
+/** "Climbing at Boulder Barn in 1 hour · 4 going · Weekend climbers" */
+export function reminderText(chat: Chat, plan: Decision, now: number) {
+  const min = Math.max(1, Math.round((plan.when! - now) / 60_000));
+  const going = Object.values(plan.rsvp ?? {}).filter((a) => a === "going").length;
+  return {
+    title: `${plan.title} ${min >= 60 ? `in ${Math.round(min / 60)} hour${min >= 90 ? "s" : ""}` : `in ${min} min`}`,
+    body: [plan.where, `${going} going`, chat.name].filter(Boolean).join(" · "),
+  };
+}
+
+/** Due dates offered when making a to-do, as people say them. */
+export const DUE_CHOICES = ["Today", "Tomorrow", "This weekend", "Next week", "No date"];
 
 /* ---------- Translation samples ---------- */
 

@@ -1,4 +1,4 @@
-import { newId, sideAsChat, splitChatId, type Chat, type Decision, type ListItem, type Rsvp, type SideChat } from "./chat";
+import { newId, sideAsChat, splitChatId, type Chat, type Decision, type ListItem, type Rsvp, type SideChat, type Task } from "./chat";
 
 /**
  * Pure changes to a chat's plans, lists, side chats and saved messages,
@@ -100,6 +100,20 @@ export function toggleSaved(chat: Chat, messageId: string): Chat {
   return { ...chat, messages: chat.messages.map((m) => (m.id === messageId ? { ...m, saved: !m.saved } : m)) };
 }
 
+export type TaskInput = Pick<Task, "title" | "assignee" | "due"> & { sources?: string[] };
+
+/** A to-do made by hand: already confirmed, so it goes straight into Up next. */
+export const addTask = (chat: Chat, input: TaskInput): Chat => ({
+  ...chat,
+  tasks: [...chat.tasks, { id: newId("td"), title: input.title, assignee: input.assignee, due: input.due, status: "confirmed", sources: input.sources ?? [] }],
+});
+
+/** Pin or unpin a message in the chat's Up next bar. */
+export const togglePinned = (chat: Chat, messageId: string): Chat => ({
+  ...chat,
+  messages: chat.messages.map((m) => (m.id === messageId ? { ...m, pinned: !m.pinned } : m)),
+});
+
 export const editMemory = (chat: Chat, memoryId: string, value: string): Chat => ({
   ...chat,
   memory: chat.memory.map((m) => (m.id === memoryId ? { ...m, value } : m)),
@@ -107,8 +121,12 @@ export const editMemory = (chat: Chat, memoryId: string, value: string): Chat =>
 
 export const removeMemory = (chat: Chat, memoryId: string): Chat => ({ ...chat, memory: chat.memory.filter((m) => m.id !== memoryId) });
 
-/** Add a suggestion Lynk spotted, unless one already comes from the same message. */
+/**
+ * Add a suggestion Lynk spotted, unless one already comes from the same
+ * message or the chat already has a plan at that time (a nudge or reminder
+ * about it mentions the same day and time).
+ */
 export function suggestPlan(chat: Chat, plan: Decision): Chat {
-  if (chat.decisions.some((d) => d.sources.some((s) => plan.sources.includes(s)))) return chat;
+  if (chat.decisions.some((d) => d.sources.some((s) => plan.sources.includes(s)) || (d.status !== "rejected" && d.when === plan.when))) return chat;
   return { ...chat, decisions: [...chat.decisions, plan] };
 }

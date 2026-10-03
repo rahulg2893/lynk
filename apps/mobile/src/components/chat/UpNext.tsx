@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
-import { CalendarBlank, CaretUp, ListChecks } from "phosphor-react-native";
-import { formatWhen, upNext, upNextSummary, type Chat } from "@shared/chat";
+import { CalendarBlank, CaretUp, ListChecks, Plus, PushPin } from "phosphor-react-native";
+import { firstName, formatWhen, messagePreview, nudgeText, upNext, upNextSummary, upNextTitle, type Chat } from "@shared/chat";
 import { applyListOp, setRsvp } from "@shared/chat-ops";
-import { change, setTask } from "@/lib/store";
+import { change, send, setTask, togglePinnedMessage } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
 import { SideSafe } from "../SideSafe";
 import { Text, tap } from "../ui";
@@ -28,10 +28,11 @@ export function UpNext({ chat, now, onJump }: { chat: Chat; now: number; onJump:
     plans: chat.decisions.filter((d) => shown?.has(d.id)),
     todos: chat.tasks.filter((t) => shown?.has(t.id)),
     lists: (chat.lists ?? []).filter((l) => shown?.has(l.id) || (shown && !known.has(l.id))),
+    pins: chat.messages.filter((m) => m.pinned && !m.deleted),
   };
 
   const plan = u?.plans[0];
-  const title = !u ? "" : plan ? plan.title : u.todos[0]?.title ?? `${u.lists[0].title} list`;
+  const title = u ? upNextTitle(u) : "";
   const summary = u ? [plan?.when ? formatWhen(plan) : "", upNextSummary(u)].filter(Boolean).join(" · ") : "";
   const close = (then?: () => void) => {
     setShown(null);
@@ -52,7 +53,13 @@ export function UpNext({ chat, now, onJump }: { chat: Chat; now: number; onJump:
         style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: pressed ? c.surface2 : c.surface, borderBottomWidth: 0.5, borderBottomColor: c.line })}
       >
         <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: c.accentSoft, alignItems: "center", justifyContent: "center" }}>
-          {plan ? <CalendarBlank size={18} color={c.accentInk} weight="bold" /> : <ListChecks size={18} color={c.accentInk} weight="bold" />}
+          {plan ? (
+            <CalendarBlank size={18} color={c.accentInk} weight="bold" />
+          ) : !u.todos.length && !u.lists.length ? (
+            <PushPin size={18} color={c.accentInk} weight="bold" />
+          ) : (
+            <ListChecks size={18} color={c.accentInk} weight="bold" />
+          )}
         </View>
         <View style={{ flex: 1 }}>
           <Text variant="subhead" weight="600" numberOfLines={1}>
@@ -92,9 +99,38 @@ export function UpNext({ chat, now, onJump }: { chat: Chat; now: number; onJump:
                 onRsvp={(a) => change(chat.id, (ch) => setRsvp(ch, d.id, "me", a))}
                 onEdit={() => close(() => router.push({ pathname: "/plan", params: { chatId: chat.id, planId: d.id } }))}
                 onJump={(m) => close(() => onJump(m))}
+                onNudge={() => close(() => send(chat.id, nudgeText(chat, d)))}
               />
             ))}
-            {sheet.todos.length ? <Heading>To-dos</Heading> : null}
+            {sheet.pins.length ? <Heading>Pinned</Heading> : null}
+            {sheet.pins.map((m) => (
+              <View key={m.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: c.surface }}>
+                <PushPin size={16} color={c.accentInk} weight="fill" />
+                <Pressable style={{ flex: 1 }} onPress={() => close(() => onJump(m.id))} accessibilityRole="button" accessibilityHint="Shows the message in the chat">
+                  <Text variant="caption" tone="muted" weight="600">
+                    {m.from === "me" ? "You" : firstName(m.from)}
+                  </Text>
+                  <Text numberOfLines={2}>{messagePreview(m)}</Text>
+                </Pressable>
+                <Text tone="accent" weight="600" onPress={() => togglePinnedMessage(chat.id, m.id)} accessibilityRole="button" accessibilityLabel="Unpin">
+                  Unpin
+                </Text>
+              </View>
+            ))}
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Heading>To-dos</Heading>
+              <Pressable
+                onPress={() => close(() => router.push({ pathname: "/todo", params: { chatId: chat.id } }))}
+                accessibilityRole="button"
+                hitSlop={8}
+                style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}
+              >
+                <Plus size={14} color={c.accentInk} weight="bold" />
+                <Text variant="subhead" tone="accent" weight="600">
+                  New to-do
+                </Text>
+              </Pressable>
+            </View>
             {sheet.todos.map((t) => (
               <TaskCard key={t.id} task={t} onStatus={(s) => setTask(chat.id, t.id, s)} onJump={(m) => close(() => onJump(m))} />
             ))}

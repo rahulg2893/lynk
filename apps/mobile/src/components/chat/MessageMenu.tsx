@@ -3,14 +3,14 @@ import { Animated, Modal, Pressable, View } from "react-native";
 import { BlurView } from "expo-blur";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { ArrowUUpLeft, BookmarkSimple, CalendarPlus, Copy, GitBranch, PencilSimple, Translate, Trash } from "phosphor-react-native";
+import { ArrowUUpLeft, BookmarkSimple, CalendarPlus, CheckSquareOffset, Copy, GitBranch, PencilSimple, PushPin, Translate, Trash } from "phosphor-react-native";
 import { messagePreview, personName, type Message } from "@shared/chat";
 import { radius, useColors, useScheme } from "@/lib/theme";
 import { Text } from "../ui";
 
 export const QUICK = ["👍", "❤️", "😂", "🙌", "😮", "🙏"];
 
-export type MenuAction = "reply" | "save" | "side" | "plan" | "translate" | "copy" | "edit" | "delete";
+export type MenuAction = "reply" | "save" | "pin" | "side" | "plan" | "todo" | "translate" | "copy" | "edit" | "delete";
 
 /**
  * Long-press on a message: the page blurs, the message lifts, reactions spring
@@ -55,7 +55,9 @@ export function MessageMenu({
     { key: "reply", label: "Reply", icon: <ArrowUUpLeft size={20} color={c.ink} /> },
     { key: "save", label: message.saved ? "Remove from Saved" : "Save", icon: <BookmarkSimple size={20} color={c.ink} weight={message.saved ? "fill" : "regular"} /> },
     ...(canSide ? [{ key: "side" as const, label: sideExists ? "Open side chat" : "Start a side chat", icon: <GitBranch size={20} color={c.ink} /> }] : []),
+    ...(canSide ? [{ key: "pin" as const, label: message.pinned ? "Unpin" : "Pin to Up next", icon: <PushPin size={20} color={c.ink} weight={message.pinned ? "fill" : "regular"} /> }] : []),
     { key: "plan", label: "Make a plan from this", icon: <CalendarPlus size={20} color={c.ink} /> },
+    ...(canSide ? [{ key: "todo" as const, label: "Make a to-do from this", icon: <CheckSquareOffset size={20} color={c.ink} /> }] : []),
     ...(!mine && message.text ? [{ key: "translate" as const, label: translated ? "View original" : "Translate", icon: <Translate size={20} color={c.ink} /> }] : []),
     ...(message.text ? [{ key: "copy" as const, label: "Copy", icon: <Copy size={20} color={c.ink} /> }] : []),
     ...(mine ? [{ key: "edit" as const, label: "Edit", icon: <PencilSimple size={20} color={c.ink} /> }] : []),
