@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode, useState } from "react";
 import { Animated, Modal, Pressable, View } from "react-native";
 import { BlurView } from "expo-blur";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { ArrowUUpLeft, BookmarkSimple, CalendarPlus, Copy, GitBranch, PencilSimple, Translate, Trash } from "phosphor-react-native";
 import { messagePreview, personName, type Message } from "@shared/chat";
@@ -63,8 +64,10 @@ export function MessageMenu({
 
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityLabel="Close menu">
-        <BlurView intensity={40} tint={dark ? "dark" : "light"} style={{ flex: 1, justifyContent: "center", paddingHorizontal: 20, backgroundColor: c.scrim }}>
+      {/* The backdrop closes on tap; it isn't one accessible element, so VoiceOver can reach the actions (and its escape gesture closes the menu). */}
+      <Pressable style={{ flex: 1 }} onPress={onClose} accessible={false} onAccessibilityEscape={onClose}>
+        <BlurView intensity={40} tint={dark ? "dark" : "light"} style={{ flex: 1, backgroundColor: c.scrim }}>
+          <SafeAreaView edges={["left", "right"]} style={{ flex: 1, justifyContent: "center", paddingHorizontal: 20 }}>
           <Animated.View style={{ opacity: lift, transform: [{ scale: lift.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] }}>
             <View style={{ flexDirection: "row", alignSelf: mine ? "flex-end" : "flex-start", gap: 4, padding: 6, borderRadius: radius.pill, backgroundColor: c.surface, marginBottom: 10 }}>
               {QUICK.map((e, i) => (
@@ -103,6 +106,7 @@ export function MessageMenu({
               ))}
             </View>
           </Animated.View>
+          </SafeAreaView>
         </BlurView>
       </Pressable>
     </Modal>

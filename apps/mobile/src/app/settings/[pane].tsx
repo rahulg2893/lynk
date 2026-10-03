@@ -23,6 +23,7 @@ import { actionSheet, confirm } from "@/lib/sheet";
 import { radius, useColors } from "@/lib/theme";
 import { PhoneVerify } from "@/components/PhoneVerify";
 import { Avatar, Button, Row, Section, Segmented, SwitchRow, Text } from "@/components/ui";
+import { SideSafe } from "@/components/SideSafe";
 import { useTopMargin } from "@/lib/layout";
 
 const TITLES: Record<string, string> = {
@@ -114,6 +115,7 @@ function SecurityPane({ account }: { account: Account }) {
         <Row label={account.profile.phone} detail="Used to sign in" icon={<DeviceMobile size={22} color={c.accentInk} />} right={<Text tone="accent">Change</Text>} onPress={() => setChanging(true)} last />
       </Section>
       <Modal visible={changing} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setChanging(false)}>
+        <SideSafe>
         <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: c.bg, padding: 24, gap: 16 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <Text variant="title">Change your number</Text>
@@ -132,6 +134,7 @@ function SecurityPane({ account }: { account: Account }) {
             }}
           />
         </KeyboardAvoidingView>
+        </SideSafe>
       </Modal>
       <Section title="Where you're signed in">
         {account.sessions.map((s, i) => (

@@ -6,6 +6,7 @@ import { formatWhen, upNext, upNextSummary, type Chat } from "@shared/chat";
 import { applyListOp, setRsvp } from "@shared/chat-ops";
 import { change, setTask } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
+import { SideSafe } from "../SideSafe";
 import { Text, tap } from "../ui";
 import { Lists, PlanCard, TaskCard } from "./Cards";
 
@@ -68,7 +69,8 @@ export function UpNext({ chat, now, onJump }: { chat: Chat; now: number; onJump:
       ) : null}
 
       <Modal visible={open} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => close()}>
-        <View style={{ flex: 1, backgroundColor: c.bg }}>
+        {/* A native modal sits outside the app's side insets, so it keeps clear of the Duo's side bars itself. */}
+        <SideSafe>
           <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8 }}>
             <View style={{ flex: 1 }}>
               <Text variant="title2">Up next</Text>
@@ -107,7 +109,7 @@ export function UpNext({ chat, now, onJump }: { chat: Chat; now: number; onJump:
               </Text>
             </Pressable>
           </ScrollView>
-        </View>
+        </SideSafe>
       </Modal>
     </>
   );

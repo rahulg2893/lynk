@@ -189,6 +189,7 @@ export function ChatView({ id, jumpTo, embedded = false }: { id: string; jumpTo?
         keyExtractor={(x) => (x.type === "message" ? x.m.id : x.type === "plan" ? `p-${x.plan.id}` : `t-${x.task.id}`)}
         contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 12, paddingBottom: 16 }}
         keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => !highlight && list.current?.scrollToEnd({ animated: false })}
         onScrollToIndexFailed={() => undefined}
         ListHeaderComponent={

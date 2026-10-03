@@ -30,7 +30,7 @@ export function PhotoViewer({ photos, index, onClose }: { photos: Attachment[]; 
             </View>
           )}
         />
-        <View style={{ position: "absolute", top: insets.top + 8, left: 16, right: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={{ position: "absolute", top: insets.top + 8, left: insets.left + 16, right: insets.right + 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Text variant="subhead" style={{ color: "#fff" }}>
             {photos.length > 1 ? `${at + 1} of ${photos.length}` : ""}
           </Text>
