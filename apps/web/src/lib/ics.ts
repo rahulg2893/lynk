@@ -45,6 +45,7 @@ function event(plan: Decision, chat: Chat, now: number) {
   } else {
     lines.push(`DTSTART:${utc(plan.when)}`, `DTEND:${utc(plan.when + 2 * HOUR)}`);
   }
+  if (plan.repeat === "weekly") lines.push("RRULE:FREQ=WEEKLY");
   lines.push(`SUMMARY:${escape(plan.title)}`);
   if (plan.where) lines.push(`LOCATION:${escape(plan.where)}`);
   lines.push(`DESCRIPTION:${escape(`Planned in ${chat.name} on Lynk.`)}`, "END:VEVENT");

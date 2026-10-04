@@ -23,7 +23,7 @@ export function updateThread(chats: Chat[], id: string, fn: (chat: Chat) => Chat
   });
 }
 
-export type PlanInput = Pick<Decision, "title" | "when" | "allDay" | "where"> & { id?: string; sources?: string[] };
+export type PlanInput = Pick<Decision, "title" | "when" | "allDay" | "where" | "repeat"> & { id?: string; sources?: string[] };
 
 /** Create a plan by hand (confirmed, you're going) or save edits to an existing one. */
 export function upsertPlan(chat: Chat, input: PlanInput): Chat {
@@ -32,7 +32,7 @@ export function upsertPlan(chat: Chat, input: PlanInput): Chat {
     return {
       ...chat,
       decisions: chat.decisions.map((d) =>
-        d.id === input.id ? { ...d, title: input.title, when: input.when, allDay: input.allDay, where: input.where, detail } : d,
+        d.id === input.id ? { ...d, title: input.title, when: input.when, allDay: input.allDay, where: input.where, repeat: input.repeat, detail } : d,
       ),
     };
   }
@@ -45,6 +45,7 @@ export function upsertPlan(chat: Chat, input: PlanInput): Chat {
     when: input.when,
     allDay: input.allDay,
     where: input.where,
+    repeat: input.repeat,
     rsvp: { me: "going" },
     by: "me",
   };
@@ -107,6 +108,31 @@ export const addTask = (chat: Chat, input: TaskInput): Chat => ({
   ...chat,
   tasks: [...chat.tasks, { id: newId("td"), title: input.title, assignee: input.assignee, due: input.due, status: "confirmed", sources: input.sources ?? [] }],
 });
+
+/** Vote for one option of a poll, or take your vote back. One vote each. */
+export const vote = (chat: Chat, messageId: string, optionId: string, who: string): Chat => ({
+  ...chat,
+  messages: chat.messages.map((m) => {
+    if (m.id !== messageId || !m.poll || m.poll.decided) return m;
+    const had = m.poll.options.find((o) => o.id === optionId)?.votes.includes(who);
+    return {
+      ...m,
+      poll: {
+        ...m.poll,
+        options: m.poll.options.map((o) => ({ ...o, votes: [...o.votes.filter((v) => v !== who), ...(o.id === optionId && !had ? [who] : [])] })),
+      },
+    };
+  }),
+});
+
+/** Close a poll once it became a plan, remembering which option won. */
+export const decidePoll = (chat: Chat, messageId: string, optionId: string): Chat => ({
+  ...chat,
+  messages: chat.messages.map((m) => (m.id === messageId && m.poll ? { ...m, poll: { ...m.poll, decided: optionId } } : m)),
+});
+
+/** Turn Lynk's suggestions off (or back on) for one chat. */
+export const setChatSmart = (chat: Chat, key: "plans" | "todos", on: boolean): Chat => ({ ...chat, smart: { ...chat.smart, [key]: on } });
 
 /** Pin or unpin a message in the chat's Up next bar. */
 export const togglePinned = (chat: Chat, messageId: string): Chat => ({

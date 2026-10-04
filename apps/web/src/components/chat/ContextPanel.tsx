@@ -65,6 +65,7 @@ export function ContextPanel({
   onRsvp,
   onNewPlan,
   onNewTask,
+  onChatSmart,
   onEditPlan,
   onList,
   onMemory,
@@ -84,6 +85,8 @@ export function ContextPanel({
   onRsvp: (planId: string, answer: Rsvp | null) => void;
   onNewPlan: () => void;
   onNewTask: () => void;
+  /** Turn plan or to-do suggestions on or off for this chat only. */
+  onChatSmart: (key: "plans" | "todos", on: boolean) => void;
   onEditPlan: (plan: Decision) => void;
   onList: (op: ListOp) => void;
   /** Save a new value for a memory, or remove it (null). */
@@ -227,7 +230,33 @@ export function ContextPanel({
         ) : null}
 
         {tab === "about" ? (
-          <About chat={chat} onMute={onMute} onPin={onPin} onRename={onRename} onMembers={onMembers} onLeave={onLeave} />
+          <div className="grid gap-5">
+            <section aria-labelledby="chat-smart">
+              <h3 id="chat-smart" className="mb-2 px-1 text-[12px] font-semibold tracking-wide text-muted uppercase">
+                Lynk in this chat
+              </h3>
+              <div className="divide-y divide-line rounded-2xl border border-line bg-surface">
+                {(
+                  [
+                    ["plans", "Suggest plans", "When a day and time come up"],
+                    ["todos", "Suggest to-dos", "When someone asks you to do something"],
+                  ] as const
+                ).map(([key, label, hint]) => (
+                  <div key={key} className="flex items-center gap-3 px-3.5 py-3">
+                    <span className="min-w-0 flex-1">
+                      <span id={`chat-smart-${key}`} className="block text-[14px] font-medium">
+                        {label}
+                      </span>
+                      <span className="block text-[12px] text-muted">{hint}</span>
+                    </span>
+                    <Switch checked={chat.smart?.[key] !== false} onChange={(on) => onChatSmart(key, on)} labelledBy={`chat-smart-${key}`} />
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 px-1 text-[12px] text-muted">Only for this chat. Settings › Smart features still applies everywhere.</p>
+            </section>
+            <About chat={chat} onMute={onMute} onPin={onPin} onRename={onRename} onMembers={onMembers} onLeave={onLeave} />
+          </div>
         ) : null}
       </div>
     </aside>

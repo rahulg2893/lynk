@@ -31,6 +31,7 @@ export function CatchUp({
   name,
   onOpen,
   onNewChat,
+  onDemo,
   onDecision,
   onTask,
 }: {
@@ -39,6 +40,8 @@ export function CatchUp({
   name: string;
   onOpen: (chatId: string, messageId?: string) => void;
   onNewChat: (tab: NewChatTab) => void;
+  /** Start the demo group that shows Lynk spotting a plan. */
+  onDemo: () => void;
   onDecision: (chatId: string, itemId: string, status: KnowledgeStatus) => void;
   onTask: (chatId: string, itemId: string, status: Task["status"]) => void;
 }) {
@@ -80,10 +83,13 @@ export function CatchUp({
             Bring your people over.
           </h2>
           <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-white/70">
-            Start a chat with someone on Lynk, make a group for the people you plan things with, or share your QR code.
+            Watch a 30-second demo chat, start a chat with someone on Lynk, make a group for the people you plan things with, or share your QR code.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <button type="button" onClick={() => onNewChat("chat")} className="inline-flex h-12 items-center rounded-full bg-white px-6 font-medium text-[#0b0c10] active:scale-95">
+            <button type="button" onClick={onDemo} className="inline-flex h-12 items-center rounded-full bg-white px-6 font-medium text-[#0b0c10] active:scale-95">
+              See how Lynk works
+            </button>
+            <button type="button" onClick={() => onNewChat("chat")} className="inline-flex h-12 items-center rounded-full border border-white/20 px-6 font-medium hover:bg-white/10">
               Start a chat
             </button>
             <button type="button" onClick={() => onNewChat("group")} className="inline-flex h-12 items-center rounded-full border border-white/20 px-6 font-medium hover:bg-white/10">

@@ -66,3 +66,16 @@ export function spotPlan(text: string, messageId: string, now: number): Decision
     where,
   };
 }
+
+/**
+ * A plan from a poll's winning option. The option usually holds the day and
+ * time ("Friday 8pm") and the question the what and where ("Dinner at Toit?"),
+ * so each is read from its own part. Without a date in the option, the title
+ * keeps the option ("Where for dinner: Nando's").
+ */
+export function planFromPoll(question: string, option: string, now: number) {
+  const q = question.replace(/[?!.\s]+$/, "");
+  const when = spotPlan(option, "", now)?.when ?? spotPlan(`${q} ${option}`, "", now)?.when;
+  const where = option.match(PLACE_RE)?.[1] ?? q.match(PLACE_RE)?.[1];
+  return { title: when ? q : `${q}: ${option}`, when, where };
+}

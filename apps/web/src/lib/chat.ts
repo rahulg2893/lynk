@@ -1,3 +1,4 @@
+import { joinNames, locale, t } from "./i18n";
 /**
  * Chat types and mock data for the frontend-only build. Nothing here talks to
  * a server. Lynk is a personal chat app: DMs and group chats with friends and
@@ -57,6 +58,15 @@ export type Message = {
   readBy?: string[];
   /** Pinned to the chat's Up next bar for everyone. */
   pinned?: boolean;
+  /** A poll asked in this message; votes are keyed by "me" or a person id. */
+  poll?: Poll;
+};
+
+export type Poll = {
+  question: string;
+  options: { id: string; text: string; votes: string[] }[];
+  /** Turned into a plan from this option. */
+  decided?: string;
 };
 
 export type KnowledgeStatus = "proposed" | "confirmed" | "rejected";
@@ -80,6 +90,8 @@ export type Decision = {
   rsvp?: Record<string, Rsvp>;
   /** Who made it by hand; absent when Lynk suggested it. */
   by?: string;
+  /** Happens every week; `when` is always the next date, and RSVPs are for that date. */
+  repeat?: "weekly";
 };
 
 export type ListItem = { id: string; text: string; done: boolean; by: string };
@@ -133,6 +145,8 @@ export type Chat = {
   memory: Memory[];
   lists?: SharedList[];
   sideChats?: SideChat[];
+  /** Smart features switched off for this chat only (they follow your settings otherwise). */
+  smart?: { plans?: boolean; todos?: boolean };
   /** Set only on the stand-in chat a side chat is shown as (see `resolveChat`). */
   side?: { parentId: string; parentName: string; rootId: string };
 };
@@ -149,8 +163,8 @@ export const PEOPLE: Record<string, Person> = {
   sofia: { id: "sofia", name: "Sofia Lindqvist", handle: "sofial", photo: "/people/sofia.jpg" },
 };
 
-export const personName = (id: string) => (id === "me" ? "You" : PEOPLE[id]?.name ?? "Unknown");
-export const firstName = (id: string) => (id === "me" ? "You" : personName(id).split(" ")[0]);
+export const personName = (id: string) => (id === "me" ? t("You") : PEOPLE[id]?.name ?? "Unknown");
+export const firstName = (id: string) => (id === "me" ? t("You") : personName(id).split(" ")[0]);
 
 export const initials = (name: string) =>
   name
@@ -432,34 +446,34 @@ export const REPLIES: Record<string, string[]> = {
 };
 
 export const formatTime = (at: number) =>
-  new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(at);
+  new Intl.DateTimeFormat(locale(), { hour: "numeric", minute: "2-digit" }).format(at);
 
 export function formatListTime(at: number, now: number) {
   const day = 86_400_000;
   const startOfToday = new Date(now).setHours(0, 0, 0, 0);
   if (at >= startOfToday) return formatTime(at);
-  if (at >= startOfToday - day) return "Yesterday";
+  if (at >= startOfToday - day) return t("Yesterday");
   if (at >= startOfToday - 6 * day) {
-    return new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(at);
+    return new Intl.DateTimeFormat(locale(), { weekday: "short" }).format(at);
   }
-  return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" }).format(at);
+  return new Intl.DateTimeFormat(locale(), { day: "numeric", month: "short" }).format(at);
 }
 
 export function formatDayLabel(at: number, now: number) {
   const startOfToday = new Date(now).setHours(0, 0, 0, 0);
-  if (at >= startOfToday) return "Today";
-  if (at >= startOfToday - 86_400_000) return "Yesterday";
-  return new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "long" }).format(at);
+  if (at >= startOfToday) return t("Today");
+  if (at >= startOfToday - 86_400_000) return t("Yesterday");
+  return new Intl.DateTimeFormat(locale(), { weekday: "long", day: "numeric", month: "long" }).format(at);
 }
 
 export function presence(chat: Chat) {
-  if (chat.typing) return `${firstName(chat.typing)} is typing`;
-  if (chat.kind === "group") return `${chat.members.length + 1} members`;
-  if (chat.online) return "online";
+  if (chat.typing) return t("{name} is typing", { name: firstName(chat.typing) });
+  if (chat.kind === "group") return t("{n} members", { n: chat.members.length + 1 });
+  if (chat.online) return t("online");
   const mins = chat.lastSeenMin ?? 0;
-  if (mins < 60) return `last seen ${mins} min ago`;
-  if (mins < 1440) return `last seen ${Math.round(mins / 60)} h ago`;
-  return "last seen yesterday";
+  if (mins < 60) return t("last seen {n} min ago", { n: mins });
+  if (mins < 1440) return t("last seen {n} h ago", { n: Math.round(mins / 60) });
+  return t("last seen yesterday");
 }
 
 /* ---------- Side chats ---------- */
@@ -521,11 +535,43 @@ export function nextWeekday(now: number, weekday: number, hours: number, minutes
   return d.getTime() + ahead * DAY_MS;
 }
 
-export function formatWhen(plan: Pick<Decision, "when" | "allDay">) {
-  if (!plan.when) return "No date yet";
-  const day = new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric", month: "short" }).format(plan.when);
-  return plan.allDay ? day : `${day} · ${formatTime(plan.when)}`;
+export function formatWhen(plan: Pick<Decision, "when" | "allDay" | "repeat">) {
+  if (!plan.when) return t("No date yet");
+  const day = new Intl.DateTimeFormat(locale(), { weekday: "short", day: "numeric", month: "short" }).format(plan.when);
+  const text = plan.allDay ? day : `${day} · ${formatTime(plan.when)}`;
+  return plan.repeat ? `${text} · ${t("every week")}` : text;
 }
+
+const WEEK_MS = 7 * 86_400_000;
+/** How long after its start a plan still counts as happening. */
+const UNDERWAY_MS = 3 * 3_600_000;
+
+/**
+ * Move weekly plans whose date has passed on to their next date, with fresh
+ * RSVPs. Run on load and on the clock tick, so every reader sees the next date.
+ */
+export function rollRepeats(chats: Chat[], now: number): Chat[] {
+  let changed = false;
+  const next = chats.map((chat) => {
+    if (!chat.decisions.some((d) => d.repeat && d.when && d.when < now - UNDERWAY_MS)) return chat;
+    changed = true;
+    return {
+      ...chat,
+      decisions: chat.decisions.map((d) => {
+        if (!d.repeat || !d.when || d.when >= now - UNDERWAY_MS) return d;
+        const weeks = Math.ceil((now - UNDERWAY_MS - d.when) / WEEK_MS);
+        return { ...d, when: d.when + weeks * WEEK_MS, rsvp: {} as Record<string, Rsvp> };
+      }),
+    };
+  });
+  return changed ? next : chats;
+}
+
+/** Whether Lynk may suggest plans or to-dos in this chat: your setting, unless the chat turns it off. */
+export const smartIn = (chat: Pick<Chat, "smart"> | undefined, smart: { enabled: boolean; plans: boolean; todos: boolean } | null) => ({
+  plans: Boolean(smart?.enabled && smart.plans && chat?.smart?.plans !== false),
+  todos: Boolean(smart?.enabled && smart.todos && chat?.smart?.todos !== false),
+});
 
 export const RSVP_LABEL: Record<Rsvp, string> = { going: "Going", maybe: "Maybe", no: "Can't go" };
 
@@ -534,21 +580,31 @@ export function rsvpSummary(plan: Decision) {
   const by = (answer: Rsvp) =>
     Object.entries(plan.rsvp ?? {})
       .filter(([, a]) => a === answer)
-      .map(([id]) => (id === "me" ? "you" : firstName(id)));
-  const join = (names: string[]) => (names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]);
+      .map(([id]) => (id === "me" ? t("you") : firstName(id)));
   const going = by("going");
   const maybe = by("maybe");
   const parts = [];
-  if (going.length) parts.push(`${join(going)} ${going.length === 1 && going[0] !== "you" ? "is" : "are"} going`);
-  if (maybe.length) parts.push(`${join(maybe)} maybe`);
+  if (going.length) parts.push(t(going.length === 1 && going[0] !== t("you") ? "{names} is going" : "{names} are going", { names: joinNames(going) }));
+  if (maybe.length) parts.push(t("{names} maybe", { names: joinNames(maybe) }));
   const text = parts.join(" · ");
-  return text ? text[0].toUpperCase() + text.slice(1) : "No answers yet";
+  return text ? text[0].toUpperCase() + text.slice(1) : t("No answers yet");
 }
 
-/** Every dated plan across chats, soonest first, with the chat it belongs to. */
+/**
+ * Every dated plan across chats, soonest first, with the chat it belongs to.
+ * Weekly plans also appear on their next eight dates (`later` copies share the
+ * plan's id, with no RSVPs yet).
+ */
 export function allPlans(chats: Chat[]) {
   return chats
-    .flatMap((chat) => chat.decisions.filter((d) => d.when && d.status !== "rejected").map((plan) => ({ chat, plan })))
+    .flatMap((chat) =>
+      chat.decisions
+        .filter((d) => d.when && d.status !== "rejected")
+        .flatMap((plan) => [
+          { chat, plan, later: false },
+          ...(plan.repeat ? Array.from({ length: 8 }, (_, i) => ({ chat, plan: { ...plan, when: plan.when! + (i + 1) * WEEK_MS, rsvp: {} as Record<string, Rsvp> }, later: true })) : []),
+        ]),
+    )
     .sort((a, b) => (a.plan.when ?? 0) - (b.plan.when ?? 0));
 }
 
@@ -572,11 +628,11 @@ export function upNextSummary(u: NonNullable<ReturnType<typeof upNext>>) {
   const going = u.plans[0] ? Object.values(u.plans[0].rsvp ?? {}).filter((a) => a === "going").length : 0;
   const left = (l: SharedList) => l.items.filter((i) => !i.done).length;
   return [
-    going ? `${going} going` : "",
-    u.plans.length > 1 ? `${u.plans.length - 1} more ${u.plans.length === 2 ? "plan" : "plans"}` : "",
-    u.todos.length ? `${u.todos.length} ${u.todos.length === 1 ? "to-do" : "to-dos"}` : "",
-    u.lists.length === 1 ? `${u.lists[0].title}, ${left(u.lists[0])} left` : u.lists.length ? `${u.lists.length} lists` : "",
-    u.pins.length ? `${u.pins.length} pinned` : "",
+    going ? t("{n} going", { n: going }) : "",
+    u.plans.length > 1 ? t(u.plans.length === 2 ? "{n} more plan" : "{n} more plans", { n: u.plans.length - 1 }) : "",
+    u.todos.length ? t(u.todos.length === 1 ? "{n} to-do" : "{n} to-dos", { n: u.todos.length }) : "",
+    u.lists.length === 1 ? t("{list}, {n} left", { list: u.lists[0].title, n: left(u.lists[0]) }) : u.lists.length ? t("{n} lists", { n: u.lists.length }) : "",
+    u.pins.length ? t("{n} pinned", { n: u.pins.length }) : "",
   ]
     .filter(Boolean)
     .join(" · ");
@@ -586,8 +642,8 @@ export function upNextSummary(u: NonNullable<ReturnType<typeof upNext>>) {
 export function upNextTitle(u: NonNullable<ReturnType<typeof upNext>>) {
   if (u.plans[0]) return u.plans[0].title;
   if (u.todos[0]) return u.todos[0].title;
-  if (u.lists[0]) return `${u.lists[0].title} list`;
-  return `Pinned: ${messagePreview(u.pins[0])}`;
+  if (u.lists[0]) return t("{list} list", { list: u.lists[0].title });
+  return t("Pinned: {text}", { text: messagePreview(u.pins[0]) });
 }
 
 /** Members who haven't answered a plan yet. */
@@ -595,9 +651,8 @@ export const notAnswered = (chat: Chat, plan: Decision) => chat.members.filter((
 
 /** "Still need to hear from Arjun and Mei: are you in for Climbing, Sat 10:00?" */
 export function nudgeText(chat: Chat, plan: Decision) {
-  const names = notAnswered(chat, plan).map(firstName);
-  const who = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
-  return `Still need to hear from ${who}: are you in for ${plan.title}${plan.when ? `, ${formatWhen(plan)}` : ""}?`;
+  const who = joinNames(notAnswered(chat, plan).map(firstName));
+  return t("Still need to hear from {who}: are you in for {plan}?", { who, plan: `${plan.title}${plan.when ? `, ${formatWhen(plan)}` : ""}` });
 }
 
 /** Plan reminders go off this long before the start. */
@@ -605,7 +660,7 @@ export const REMINDER_LEAD_MS = 3_600_000;
 
 /** Timed plans you said Going or Maybe to that haven't started: the ones worth a reminder. */
 export const remindable = (chats: Chat[], now: number) =>
-  allPlans(chats).filter(({ plan }) => plan.status === "confirmed" && !plan.allDay && plan.when! > now && (plan.rsvp?.me === "going" || plan.rsvp?.me === "maybe"));
+  allPlans(chats).filter(({ plan, later }) => !later && plan.status === "confirmed" && !plan.allDay && plan.when! > now && (plan.rsvp?.me === "going" || plan.rsvp?.me === "maybe"));
 
 /** "Climbing at Boulder Barn in 1 hour · 4 going · Weekend climbers" */
 export function reminderText(chat: Chat, plan: Decision, now: number) {
@@ -619,6 +674,21 @@ export function reminderText(chat: Chat, plan: Decision, now: number) {
 
 /** Due dates offered when making a to-do, as people say them. */
 export const DUE_CHOICES = ["Today", "Tomorrow", "This weekend", "Next week", "No date"];
+
+/* ---------- First-run demo ---------- */
+
+/**
+ * The demo group a new account can start from its empty inbox: friends agree
+ * on dinner, and Lynk spots the plan on the last line. Delays in ms.
+ */
+export const DEMO_SCRIPT: { from: string; text: string; after: number }[] = [
+  { from: "amara", text: "Hi! This is a demo group, so you can see what Lynk does 👋", after: 600 },
+  { from: "tomas", text: "We haven't had dinner together in ages", after: 1800 },
+  { from: "jonas", text: "Friday? I'm free after 7", after: 1800 },
+  { from: "amara", text: "Friday works. Nando's?", after: 1800 },
+  { from: "tomas", text: "Dinner Friday 8pm at Nando's?", after: 1800 },
+];
+export const DEMO_MEMBERS = ["amara", "tomas", "jonas"];
 
 /* ---------- Translation samples ---------- */
 
@@ -652,12 +722,13 @@ export const formatDuration = (ms: number) => {
 };
 
 /** A one-line stand-in for a message: its text, or what it carries. */
-export function messagePreview(m: Pick<Message, "text" | "attachments">) {
+export function messagePreview(m: Pick<Message, "text" | "attachments" | "poll">) {
+  if (m.poll) return t("Poll: {question}", { question: m.poll.question });
   if (m.text) return m.text;
   const items = m.attachments ?? [];
   const voice = items.find((a) => a.kind === "voice");
-  if (voice) return `Voice note ${formatDuration(voice.duration ?? 0)}`;
+  if (voice) return t("Voice note {time}", { time: formatDuration(voice.duration ?? 0) });
   const photos = items.filter((a) => a.kind === "image").length;
-  if (photos) return photos === 1 ? "Photo" : `${photos} photos`;
-  return items[0]?.name ?? "Message";
+  if (photos) return photos === 1 ? t("Photo") : t("{n} photos", { n: photos });
+  return items[0]?.name ?? t("Message");
 }

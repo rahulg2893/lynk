@@ -11,6 +11,7 @@ import {
   Microphone,
   Translate,
   CalendarPlus,
+  ChartBar,
   CheckSquareOffset,
   FileText,
   GitBranch,
@@ -26,6 +27,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { Avatar, ChatAvatar, MessageBody, StatusNode, TypingDots } from "./primitives";
+import { PollCard } from "./Poll";
 import { AttachmentList, Lightbox } from "./Attachments";
 import { SuggestionCard } from "./Suggestion";
 import { VoiceNote, VoiceRecorder } from "./VoiceNote";
@@ -44,6 +46,7 @@ import {
   messagePreview,
   personName,
   presence,
+  smartIn,
   type Attachment,
   type Chat,
   type Decision,
@@ -84,6 +87,9 @@ export function Thread({
   onMakePlan,
   onMakeTask,
   onPin,
+  onPoll,
+  onVote,
+  onDecidePoll,
   smart,
   onDecision,
   onTask,
@@ -116,6 +122,11 @@ export function Thread({
   onMakeTask: (message: Message) => void;
   /** Pin or unpin a message in Up next. */
   onPin: (messageId: string) => void;
+  /** Start a poll in this chat. */
+  onPoll: () => void;
+  onVote: (messageId: string, optionId: string) => void;
+  /** Turn a poll's option into a plan. */
+  onDecidePoll: (message: Message, optionId: string) => void;
   /** Pinned under the header, e.g. the chat's Up next bar. */
   banner?: React.ReactNode;
   /** Smart-feature settings; null before the account loads. */
@@ -163,11 +174,10 @@ export function Thread({
 
   // Suggestions sit under the last message they came from.
   const smartOn = Boolean(smart?.enabled);
+  const allowed = smartIn(chat, smart);
   const suggestions = new Map<string, { plan?: Decision; task?: Task }[]>();
-  if (smartOn) {
-    for (const d of chat.decisions) if (d.status === "proposed" && d.sources.length && smart?.plans) suggestions.set(d.sources.at(-1)!, [...(suggestions.get(d.sources.at(-1)!) ?? []), { plan: d }]);
-    for (const t of chat.tasks) if (t.status === "proposed" && t.sources.length && smart?.todos) suggestions.set(t.sources.at(-1)!, [...(suggestions.get(t.sources.at(-1)!) ?? []), { task: t }]);
-  }
+  for (const d of chat.decisions) if (d.status === "proposed" && d.sources.length && allowed.plans) suggestions.set(d.sources.at(-1)!, [...(suggestions.get(d.sources.at(-1)!) ?? []), { plan: d }]);
+  for (const t of chat.tasks) if (t.status === "proposed" && t.sources.length && allowed.todos) suggestions.set(t.sources.at(-1)!, [...(suggestions.get(t.sources.at(-1)!) ?? []), { task: t }]);
   // Messages present when the chat opened settle in quietly; new ones get their own entrance.
   const [initialIds] = useState(() => new Set(chat.messages.map((m) => m.id)));
   const [plane, animatePlane] = useAnimate();
@@ -510,6 +520,14 @@ export function Thread({
                           {(translated[message.id] as Translation & { original: boolean }).original ? "Show translation" : "View original"}
                         </button>
                       </p>
+                    ) : null}
+                    {message.poll && !message.deleted ? (
+                      <PollCard
+                        poll={message.poll}
+                        mine={mine}
+                        onVote={(optionId) => onVote(message.id, optionId)}
+                        onDecide={(optionId) => onDecidePoll(message, optionId)}
+                      />
                     ) : null}
                     {message.attachments?.length && !message.deleted ? (
                       <>
@@ -912,6 +930,18 @@ export function Thread({
               >
                 <Paperclip size={20} />
               </button>
+              {chat.side ? null : (
+                <button
+                  type="button"
+                  onClick={onPoll}
+                  disabled={Boolean(editing)}
+                  className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"
+                  aria-label="Ask a poll"
+                  title="Ask a poll"
+                >
+                  <ChartBar size={20} />
+                </button>
+              )}
               <input
                 ref={fileRef}
                 type="file"

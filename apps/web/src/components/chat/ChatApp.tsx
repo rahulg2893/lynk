@@ -21,8 +21,11 @@ import { CommandPalette, type PaletteAction } from "./CommandPalette";
 import { PlanDialog, type PlanDraft } from "./PlanDialog";
 import { TaskDialog, type TaskDraft } from "./TaskDialog";
 import { AskLynk } from "./AskLynk";
-import { spotPlan } from "@/lib/spot";
+import { planFromPoll, spotPlan } from "@/lib/spot";
+import { PollDialog } from "./Poll";
 import {
+  DEMO_MEMBERS,
+  DEMO_SCRIPT,
   PEOPLE,
   REMINDER_LEAD_MS,
   REPLIES,
@@ -30,6 +33,8 @@ import {
   newId,
   nudgeText,
   remindable,
+  rollRepeats,
+  smartIn,
   reminderText,
   resolveChat,
   sideChatId,
@@ -43,7 +48,7 @@ import {
   type Status,
   type Task,
 } from "@/lib/chat";
-import { addSideChat, addTask, applyListOp, editMemory, togglePinned, removeMemory, suggestPlan, removePlan, setRsvp, toggleSaved, updateThread, upsertPlan, type ListOp, type PlanInput } from "@/lib/chat-ops";
+import { addSideChat, addTask, applyListOp, decidePoll, editMemory, setChatSmart, togglePinned, vote, removeMemory, suggestPlan, removePlan, setRsvp, toggleSaved, updateThread, upsertPlan, type ListOp, type PlanInput } from "@/lib/chat-ops";
 
 type State = { chats: Chat[]; activeId: string | null; loaded: boolean; now: number };
 
@@ -85,11 +90,14 @@ function reducer(state: State, action: Action): State {
         ...state,
         loaded: true,
         now: action.now,
-        chats: action.chats.map((c) => ({
-          ...c,
-          messages: requeue(c.messages),
-          sideChats: c.sideChats?.map((sc) => ({ ...sc, typing: null, messages: requeue(sc.messages) })),
-        })),
+        chats: rollRepeats(
+          action.chats.map((c) => ({
+            ...c,
+            messages: requeue(c.messages),
+            sideChats: c.sideChats?.map((sc) => ({ ...sc, typing: null, messages: requeue(sc.messages) })),
+          })),
+          action.now,
+        ),
       };
     case "select":
       return action.id
@@ -144,7 +152,8 @@ function reducer(state: State, action: Action): State {
     case "typing":
       return update(state, action.id, (c) => ({ ...c, typing: action.who }));
     case "tick":
-      return { ...state, now: action.now };
+      // Weekly plans move on to their next date once this one is over.
+      return { ...state, now: action.now, chats: rollRepeats(state.chats, action.now) };
     case "react":
       return update(state, action.id, (c) => ({
         ...c,
@@ -201,6 +210,9 @@ export function ChatApp() {
   const [asking, setAsking] = useState(false);
   const [planDraft, setPlanDraft] = useState<PlanDraft | null>(null);
   const [taskDraft, setTaskDraft] = useState<TaskDraft | null>(null);
+  const [pollOpen, setPollOpen] = useState(false);
+  // The poll a plan is being made from, closed once that plan is saved.
+  const pendingPoll = useRef<{ chatId: string; messageId: string; optionId: string } | null>(null);
   // Plans already reminded about this session, so each goes off once.
   const reminded = useRef(new Set<string>());
   const [askOpen, setAskOpen] = useState(false);
@@ -358,6 +370,31 @@ export function ChatApp() {
     [open],
   );
 
+  /**
+   * The first-run demo: a group where friends agree on dinner, one message at
+   * a time with typing in between, and Lynk spots the plan on the last line.
+   */
+  const startDemo = useCallback(() => {
+    const id = newId("c");
+    dispatch({
+      type: "create",
+      chat: { id, kind: "group", name: "Lynk demo", topic: "A demo group to show what Lynk does", members: DEMO_MEMBERS, admins: ["me"], unread: 0, mentions: 0, muted: false, typing: null, draft: "", messages: [], decisions: [], tasks: [], memory: [] },
+    });
+    open(id);
+    let at = 0;
+    DEMO_SCRIPT.forEach((line, i) => {
+      at += line.after;
+      later(at - 900, () => dispatch({ type: "typing", id, who: line.from }));
+      later(at, () => {
+        const message: Message = { id: newId(), from: line.from, text: line.text, at: Date.now() };
+        dispatch({ type: "typing", id, who: null });
+        dispatch({ type: "append", id, message });
+        const plan = i === DEMO_SCRIPT.length - 1 && smartIn(undefined, smartRef.current ?? null).plans ? spotPlan(line.text, message.id, Date.now()) : null;
+        if (plan) later(900, () => dispatch({ type: "change", id, fn: (c) => suggestPlan(c, plan) }));
+      });
+    });
+  }, [later, open]);
+
   /** A message that arrived while you weren't looking becomes a browser notification. */
   const alert = useCallback(
     (chatId: string, message: Message) => {
@@ -420,11 +457,25 @@ export function ChatApp() {
 
       // Spot a plan in what you just wrote ("dinner Friday 8pm?"), as a suggestion to save.
       const smart = smartRef.current;
-      const plan = !chat.side && smart?.enabled && smart.plans ? spotPlan(text, id, Date.now()) : null;
+      const plan = !chat.side && smartIn(chat, smart ?? null).plans ? spotPlan(text, id, Date.now()) : null;
       if (plan) later(900, () => dispatch({ type: "change", id: chat.id, fn: (c) => suggestPlan(c, plan) }));
     },
     [deliver, later],
   );
+
+  /** Post a poll; the others in the chat vote over the next few seconds. */
+  const sendPoll = useCallback((chat: Chat, question: string, options: string[]) => {
+    setPollOpen(false);
+    const id = newId();
+    const poll = { question, options: options.map((text) => ({ id: newId("o"), text, votes: [] as string[] })) };
+    const status: Status = isOnline() ? "sending" : "waiting";
+    dispatch({ type: "append", id: chat.id, message: { id, from: "me", text: "", at: Date.now(), status, poll } });
+    if (status === "sending") window.setTimeout(() => deliver(chat.id, id), 0);
+    chat.members.forEach((who, i) => {
+      const pick = poll.options[Math.random() < 0.6 ? 0 : Math.floor(Math.random() * poll.options.length)];
+      later(1600 + i * 1300, () => dispatch({ type: "change", id: chat.id, fn: (c) => vote(c, id, pick.id, who) }));
+    });
+  }, [deliver, later]);
 
   const retry = useCallback((chatId: string, messageId: string) => isOnline() && deliver(chatId, messageId), [deliver]);
 
@@ -473,6 +524,7 @@ export function ChatApp() {
     if (!state.loaded) return;
     const check = () => {
       const now = Date.now();
+      dispatch({ type: "tick", now });
       for (const { chat, plan } of remindable(chatsRef.current, now)) {
         if (plan.when! - now > REMINDER_LEAD_MS || reminded.current.has(plan.id)) continue;
         reminded.current.add(plan.id);
@@ -533,6 +585,9 @@ export function ChatApp() {
   const savePlan = (chatId: string, input: PlanInput) => {
     setPlanDraft(null);
     change(chatId, (c) => upsertPlan(c, input));
+    const poll = pendingPoll.current;
+    pendingPoll.current = null;
+    if (poll?.chatId === chatId) change(chatId, (c) => decidePoll(c, poll.messageId, poll.optionId));
     // Editing a suggestion and saving it counts as saving the plan.
     if (input.id) dispatch({ type: "decision", id: chatId, itemId: input.id, status: "confirmed" });
     // Someone in the chat answers shortly after a new plan appears.
@@ -615,6 +670,7 @@ export function ChatApp() {
             onOpenPalette={() => setPaletteOpen(true)}
             onAsk={() => setAskOpen(true)}
             onNewChat={(tab) => setNewChat(tab)}
+            onDemo={startDemo}
             online={online}
             notifications={
               account
@@ -665,6 +721,14 @@ export function ChatApp() {
               onEditPlan={(plan) => parent && setPlanDraft({ ...plan, chatId: parent.id })}
               onMakeTask={(message) => parent && setTaskDraft({ chatId: parent.id, title: message.text.slice(0, 80), sources: active.side ? [] : [message.id] })}
               onPin={(messageId) => change(active.id, (c) => togglePinned(c, messageId))}
+              onPoll={() => setPollOpen(true)}
+              onVote={(messageId, optionId) => change(active.id, (c) => vote(c, messageId, optionId, "me"))}
+              onDecidePoll={(message, optionId) => {
+                const option = message.poll?.options.find((o) => o.id === optionId);
+                if (!message.poll || !option || !parent) return;
+                pendingPoll.current = { chatId: parent.id, messageId: message.id, optionId };
+                setPlanDraft({ chatId: parent.id, ...planFromPoll(message.poll.question, option.text, Date.now()), sources: [message.id] });
+              }}
               onMakePlan={(message) =>
                 parent && setPlanDraft({ chatId: parent.id, title: message.text.slice(0, 80), sources: active.side ? [] : [message.id] })
               }
@@ -697,6 +761,7 @@ export function ChatApp() {
             name={(account?.profile.name ?? "there").split(" ")[0]}
             onOpen={open}
             onNewChat={setNewChat}
+            onDemo={startDemo}
             onDecision={(chatId, itemId, status) => dispatch({ type: "decision", id: chatId, itemId, status })}
             onTask={(chatId, itemId, status) => dispatch({ type: "task", id: chatId, itemId, status })}
           />
@@ -718,6 +783,7 @@ export function ChatApp() {
             onRsvp={(planId, answer: Rsvp | null) => change(parent.id, (c) => setRsvp(c, planId, "me", answer))}
             onNewPlan={() => setPlanDraft({ chatId: parent.id, title: "" })}
             onNewTask={() => setTaskDraft({ chatId: parent.id, title: "" })}
+            onChatSmart={(key, on) => change(parent.id, (c) => setChatSmart(c, key, on))}
             onEditPlan={(plan) => setPlanDraft({ ...plan, chatId: parent.id })}
             onList={(op: ListOp) => change(parent.id, (c) => applyListOp(c, op))}
             onMemory={(memoryId, value) => change(parent.id, (c) => (value === null ? removeMemory(c, memoryId) : editMemory(c, memoryId, value)))}
@@ -754,8 +820,13 @@ export function ChatApp() {
           setPlanDraft(null);
           change(chatId, (c) => removePlan(c, planId));
         }}
-        onClose={() => setPlanDraft(null)}
+        onClose={() => {
+          pendingPoll.current = null;
+          setPlanDraft(null);
+        }}
       />
+
+      <PollDialog open={pollOpen && Boolean(active)} onSend={(question, options) => active && sendPoll(active, question, options)} onClose={() => setPollOpen(false)} />
 
       <TaskDialog
         draft={taskDraft}

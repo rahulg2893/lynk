@@ -25,6 +25,7 @@ export function ChatList({
   onOpenPalette,
   onAsk,
   onNewChat,
+  onDemo,
   online,
   notifications,
 }: {
@@ -36,6 +37,7 @@ export function ChatList({
   onOpenPalette: () => void;
   onAsk: () => void;
   onNewChat: (tab: "chat" | "group" | "invite") => void;
+  onDemo: () => void;
   online: boolean;
   notifications: Omit<ComponentProps<typeof NotificationsButton>, "now"> | null;
 }) {
@@ -156,6 +158,9 @@ export function ChatList({
               className="mt-4 inline-flex h-10 items-center rounded-full bg-accent px-4 text-[14px] font-medium text-on-accent"
             >
               Start a chat
+            </button>
+            <button type="button" onClick={onDemo} className="mt-2 block w-full text-[14px] font-medium text-accent-ink hover:underline">
+              See how Lynk works
             </button>
           </div>
         ) : total === 0 ? (

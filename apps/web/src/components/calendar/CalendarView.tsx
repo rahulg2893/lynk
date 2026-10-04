@@ -26,7 +26,7 @@ function monthDays(year: number, month: number) {
   return Array.from({ length: 42 }, (_, i) => new Date(year, month, 1 - offset + i).getTime());
 }
 
-type Entry = { chat: Chat; plan: Decision };
+type Entry = { chat: Chat; plan: Decision; later: boolean };
 
 /**
  * Every plan from every chat in one place. Pick a day to see what's on,
@@ -233,12 +233,13 @@ export function CalendarView() {
               {onDay.length ? (
                 <ul className="mt-3 grid gap-2.5">
                   <AnimatePresence initial={false}>
-                    {onDay.map(({ chat, plan }) => (
-                      <motion.li key={`${chat.id}-${plan.id}`} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={MOTION.item}>
+                    {onDay.map(({ chat, plan, later }) => (
+                      <motion.li key={`${chat.id}-${plan.id}-${plan.when}`} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={MOTION.item}>
                         <PlanCard
                           chat={chat}
                           plan={plan}
                           showChat
+                          answersLater={later}
                           onRsvp={(answer) => edit(chat.id, (c) => setRsvp(c, plan.id, "me", answer))}
                           onEdit={() => setDraft({ ...plan, chatId: chat.id })}
                           onConfirm={() => edit(chat.id, (c) => ({ ...c, decisions: c.decisions.map((d) => (d.id === plan.id ? { ...d, status: "confirmed" } : d)) }))}
@@ -269,7 +270,7 @@ export function CalendarView() {
                 <h2 className="text-[13px] font-semibold text-muted">Coming up</h2>
                 <ul className="mt-2 grid gap-1">
                   {upcoming.map(({ chat, plan }) => (
-                    <li key={`${chat.id}-${plan.id}`}>
+                    <li key={`${chat.id}-${plan.id}-${plan.when}`}>
                       <button type="button" onClick={() => goTo(plan.when!)} className="flex w-full items-center gap-3 rounded-2xl p-2 text-left hover:bg-surface-2/70">
                         <span className="flex w-11 shrink-0 flex-col items-center rounded-xl bg-surface py-1 shadow-soft">
                           <span className="text-[10px] font-semibold text-accent-ink uppercase">

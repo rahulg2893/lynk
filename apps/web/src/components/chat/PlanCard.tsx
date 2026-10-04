@@ -1,10 +1,13 @@
 "use client";
 
 import { motion } from "motion/react";
-import { BellRinging, CalendarPlus, Check, Clock, MapPin, PencilSimple, Sparkle, X } from "@phosphor-icons/react";
+import { useState } from "react";
+import { BellRinging, CalendarPlus, Check, Clock, MapPin, PencilSimple, ShareNetwork, Sparkle, WhatsappLogo, X } from "@phosphor-icons/react";
 import { Avatar } from "./primitives";
 import { formatWhen, notAnswered, personName, rsvpSummary, RSVP_LABEL, type Chat, type Decision, type Rsvp } from "@/lib/chat";
 import { downloadIcs } from "@/lib/ics";
+import { useAccount } from "@/lib/account";
+import { planInviteText } from "@/lib/plan-link";
 
 const ANSWERS: Rsvp[] = ["going", "maybe", "no"];
 
@@ -22,6 +25,7 @@ export function PlanCard({
   onReject,
   onJump,
   onNudge,
+  answersLater = false,
 }: {
   chat: Chat;
   plan: Decision;
@@ -34,6 +38,8 @@ export function PlanCard({
   onJump?: (messageId: string) => void;
   /** Post a message asking the people who haven't answered. */
   onNudge?: () => void;
+  /** A later week of a weekly plan: people answer once the week before is over. */
+  answersLater?: boolean;
 }) {
   const waiting = notAnswered(chat, plan);
   const proposed = plan.status === "proposed";
@@ -101,6 +107,8 @@ export function PlanCard({
             <X size={14} /> Not this
           </button>
         </div>
+      ) : plan.status === "confirmed" && answersLater ? (
+        <p className="mt-3 text-[13px] text-muted">Every week. Answers open once the week before is over.</p>
       ) : plan.status === "confirmed" ? (
         <>
           <div role="group" aria-label="Are you going?" className="mt-3 flex gap-1 rounded-full bg-surface-2 p-1">
@@ -146,6 +154,7 @@ export function PlanCard({
           >
             <CalendarPlus size={15} /> Add to calendar
           </button>
+          <InviteButton chat={chat} plan={plan} />
           {onNudge && waiting.length ? (
             <button
               type="button"
@@ -176,5 +185,52 @@ export function PlanCard({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Invite people who aren't on Lynk: the plan as a message with a link where
+ * they can answer. Uses the share sheet when the browser has one; otherwise
+ * copies it and offers WhatsApp.
+ */
+function InviteButton({ chat, plan }: { chat: Chat; plan: Decision }) {
+  const account = useAccount();
+  const [copied, setCopied] = useState<string | null>(null);
+  const invite = async () => {
+    const text = planInviteText(chat, plan, (account?.profile.name ?? "A friend").split(" ")[0], window.location.origin);
+    if (navigator.share) {
+      try {
+        await navigator.share({ text });
+        return;
+      } catch (e) {
+        if ((e as Error).name === "AbortError") return;
+      }
+    }
+    await navigator.clipboard?.writeText(text).catch(() => undefined);
+    setCopied(text);
+  };
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => void invite()}
+        className="mt-3 ml-2 inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2"
+      >
+        <ShareNetwork size={15} /> Invite friends
+      </button>
+      {copied ? (
+        <p role="status" className="mt-2 flex flex-wrap items-center gap-x-2 text-[12px] text-muted">
+          Invite copied.
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(copied)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 font-medium text-accent-ink hover:underline"
+          >
+            <WhatsappLogo size={14} weight="fill" aria-hidden /> Send on WhatsApp
+          </a>
+        </p>
+      ) : null}
+    </>
   );
 }

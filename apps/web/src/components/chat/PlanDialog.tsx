@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/controls";
+import { Button, Switch } from "@/components/ui/controls";
 import { Dialog } from "@/components/ui/Dialog";
 import { TextField } from "@/components/ui/Field";
 import type { Chat } from "@/lib/chat";
@@ -69,6 +69,7 @@ function PlanForm({
   const [date, setDate] = useState(draft.when ? dateValue(draft.when) : "");
   const [time, setTime] = useState(draft.when && !draft.allDay ? timeValue(draft.when) : "");
   const [where, setWhere] = useState(draft.where ?? "");
+  const [weekly, setWeekly] = useState(draft.repeat === "weekly");
   const [chatId, setChatId] = useState(draft.chatId ?? chats[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
 
@@ -82,7 +83,8 @@ function PlanForm({
       const [h, min] = time ? time.split(":").map(Number) : [9, 0];
       when = new Date(y, m - 1, d, h, min).getTime();
     }
-    onSave(chatId, { id: draft.id, title: what, when, allDay: Boolean(date && !time), where: where.trim() || undefined, sources: draft.sources });
+    if (weekly && !when) return setError("Pick a date for the first week.");
+    onSave(chatId, { id: draft.id, title: what, when, allDay: Boolean(date && !time), where: where.trim() || undefined, repeat: weekly ? "weekly" : undefined, sources: draft.sources });
   };
 
   return (
@@ -109,6 +111,15 @@ function PlanForm({
       <div className="grid grid-cols-2 gap-3">
         <TextField id="plan-date" label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <TextField id="plan-time" label="Time" type="time" value={time} onChange={(e) => setTime(e.target.value)} optional />
+      </div>
+      <div className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3">
+        <span className="min-w-0 flex-1">
+          <span id="plan-weekly" className="block text-[14px] font-medium">
+            Every week
+          </span>
+          <span className="block text-[12px] text-muted">Same day and time; people answer for each week</span>
+        </span>
+        <Switch checked={weekly} onChange={setWeekly} labelledBy="plan-weekly" />
       </div>
       <TextField id="plan-where" label="Where" value={where} onChange={(e) => setWhere(e.target.value)} placeholder="Add a place" optional maxLength={80} />
       {!draft.chatId ? (
