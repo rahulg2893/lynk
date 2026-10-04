@@ -125,3 +125,24 @@ The roadmap keeps a short list of the same decisions as ADRs; this file holds th
 - The lead time is fixed at one hour, with no setting; iOS and Android let people turn the reminders off per app.
 - A nudge mentions the plan's day and time, so plan spotting now skips a suggestion at the same time as a plan the chat already has.
 - Due dates are words, not dates, matching the sample to-dos; real dates can come when the server does.
+
+### 17. Spreading, polls, repeats, Hindi and the widget
+
+**Date:** 4 Oct 2026
+**Decision:** a batch of frontend work on sample data.
+- **Plan invites for people not on Lynk.** "Invite friends" on a plan shares a message with the plan and a link to `/p`, where anyone can answer Going, Maybe or Can't go with just a name.
+- **A first-run demo.** A new account's empty inbox offers "See how Lynk works": a demo group agrees on dinner and Lynk spots the plan.
+- **Polls**, whose winning option becomes a plan in one tap.
+- **Weekly plans**, with RSVPs for each date.
+- **Per-chat suggestion switches** in chat info.
+- **Hindi in the phone app**, chosen in Settings › Appearance.
+- **An iPhone home-screen widget** with the next plan.
+
+**Why:** people switch chat apps only when their group does, so the invite and the demo are how Lynk spreads. Polls come before plans in real group chats. Many groups meet weekly. Lynk starts in India.
+
+**Consequences:**
+- **Invite links carry the plan in the fragment (after `#`).** Browsers never send that part to a server, matching how group invite keys will travel (roadmap: Encryption). The cost is that link previews stay generic. A rich preview would need the server to read the plan, or a sender-side preview, which the roadmap already plans.
+- **Answers on the invite page aren't sent anywhere until the server exists,** and the page says so.
+- **Weekly plans keep one record whose date rolls forward** once a week is over (`rollRepeats()`), clearing RSVPs. The calendar shows the next eight weeks; those later weeks can't be answered yet.
+- **Hindi is phone-first.** Strings are keyed by their English wording in one shared dictionary, so anything untranslated stays readable, and the web can adopt it later. Messages themselves are never translated by this. The Ask Lynk sample questions stay English because they search English sample chats.
+- **The widget is built with `expo-widgets`,** which adds an app extension and needed a patch for the space in the project path. Data reaches it as a timeline, so it advances while Lynk is closed.
