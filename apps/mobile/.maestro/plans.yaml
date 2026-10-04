@@ -1,0 +1,49 @@
+# Polls into weekly plans (run after smoke.yaml, which signs in): ask a poll in Family, wait for votes,
+# make the winner the plan, switch on Every week, and check Up next and the invite share sheet.
+# Run: maestro test .maestro/plans.yaml
+appId: com.rahulgandhi.lynk
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: ".*Family.*"
+    timeout: 30000
+- tapOn: ".*Family.*"
+- extendedWaitUntil:
+    visible: "Message Family.*"
+    timeout: 10000
+- tapOn: "Add photos or a poll"
+- tapOn: "Poll"
+- extendedWaitUntil:
+    visible: "New poll"
+    timeout: 5000
+- inputText: "Family dinner at Toit?"
+- tapOn: "Friday 8pm"
+- inputText: "Friday 8pm"
+- tapOn: "Saturday 7pm"
+- inputText: "Sunday 1pm"
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible: ".*Poll · 2 votes.*"
+    timeout: 10000
+# Let the replies land so the list holds still under the tap.
+- extendedWaitUntil:
+    visible: ".*Thank you!.*"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: .maestro/screenshots/12-poll
+- tapOn: "Make .*the plan"
+- extendedWaitUntil:
+    visible: "New plan"
+    timeout: 5000
+- tapOn: "Same day and time.*"
+- tapOn: "Make plan"
+- extendedWaitUntil:
+    visible: ".*Made into a plan.*"
+    timeout: 5000
+- tapOn: "Up next:.*"
+- scrollUntilVisible:
+    element: ".*every week.*"
+    direction: DOWN
+- takeScreenshot: .maestro/screenshots/13-weekly-plan
+- tapOn: "Done"

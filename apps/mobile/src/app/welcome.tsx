@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LockSimple } from "phosphor-react-native";
 import { Button, LogoMark, Text } from "@/components/ui";
 import { useTopMargin } from "@/lib/layout";
+import { t } from "@shared/i18n";
 
 const LINES = ["Chat with the people", "who matter.", "Lynk remembers the plan."];
 
@@ -28,30 +29,30 @@ export default function Welcome() {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <LogoMark height={30} />
         <Text variant="title2" style={{ color: "#f5f5f7" }}>
-          Lynk
+          {t("Lynk")}
         </Text>
       </View>
 
       <View style={{ flex: 1, justifyContent: "center" }}>
         {LINES.map((line, i) => (
           <Animated.View key={line} style={{ opacity: anims[i], transform: [{ translateY: anims[i].interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }] }}>
-            <Text style={{ fontSize: 42, lineHeight: 46, fontWeight: "700", letterSpacing: -1, color: i === 2 ? "#5aa0ff" : "#f5f5f7" }}>{line}</Text>
+            <Text style={{ fontSize: 42, lineHeight: 46, fontWeight: "700", letterSpacing: -1, color: i === 2 ? "#5aa0ff" : "#f5f5f7" }}>{t(line)}</Text>
           </Animated.View>
         ))}
         <Animated.View style={{ opacity: cta, marginTop: 20 }}>
           <Text variant="callout" style={{ color: "#a1a1a6", maxWidth: 320 }}>
-            Group chats, plans, lists and the little things worth remembering. Every chat is end-to-end encrypted.
+            {t("Group chats, plans, lists and the little things worth remembering. Every chat is end-to-end encrypted.")}
           </Text>
         </Animated.View>
       </View>
 
       <Animated.View style={{ opacity: cta, gap: 10 }}>
-        <Button title="Create an account" variant="primary" size="lg" onPress={() => router.push("/sign-up")} />
-        <Button title="I already have an account" variant="ghost" size="lg" onPress={() => router.push("/sign-in")} style={{ backgroundColor: "rgba(255,255,255,0.08)" }} />
+        <Button title={t("Create an account")} variant="primary" size="lg" onPress={() => router.push("/sign-up")} />
+        <Button title={t("I already have an account")} variant="ghost" size="lg" onPress={() => router.push("/sign-in")} style={{ backgroundColor: "rgba(255,255,255,0.08)" }} />
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 }}>
           <LockSimple size={13} color="#a1a1a6" weight="fill" />
           <Text variant="caption" style={{ color: "#a1a1a6" }}>
-            No passwords. Sign in with your phone number.
+            {t("No passwords. Sign in with your phone number.")}
           </Text>
         </View>
       </Animated.View>

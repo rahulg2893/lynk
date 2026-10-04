@@ -14,6 +14,7 @@ import { formatDuration, newId, type Attachment } from "@shared/chat";
 import { keepRecording } from "@/lib/media";
 import { radius, useColors } from "@/lib/theme";
 import { Text, tap } from "../ui";
+import { t } from "@shared/i18n";
 
 const RATES = [1, 1.5, 2];
 
@@ -91,7 +92,7 @@ export function VoiceNote({ note, mine, showTranscript }: { note: Attachment; mi
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={playing ? "Pause voice note" : "Play voice note"}
+          accessibilityLabel={playing ? t("Pause voice note") : t("Play voice note")}
           onPress={() => (playing ? pause() : play())}
           style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, backgroundColor: c.accent, alignItems: "center", justifyContent: "center", transform: [{ scale: pressed ? 0.92 : 1 }] })}
         >
@@ -99,8 +100,8 @@ export function VoiceNote({ note, mine, showTranscript }: { note: Attachment; mi
         </Pressable>
         <Pressable
           accessibilityRole="adjustable"
-          accessibilityLabel="Voice note position"
-          accessibilityValue={{ text: `${formatDuration(position)} of ${formatDuration(duration)}` }}
+          accessibilityLabel={t("Voice note position")}
+          accessibilityValue={{ text: t("{a} of {b}", { a: formatDuration(position), b: formatDuration(duration) }) }}
           onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
           onPress={(e) => play((e.nativeEvent.locationX / width) * duration)}
           style={{ flex: 1, height: 34, flexDirection: "row", alignItems: "center", gap: 2 }}
@@ -109,7 +110,7 @@ export function VoiceNote({ note, mine, showTranscript }: { note: Attachment; mi
             <View key={i} style={{ flex: 1, height: `${Math.round(p * 100)}%`, borderRadius: 2, backgroundColor: i / peaks.length < progress ? c.accent : c.muted, opacity: i / peaks.length < progress ? 1 : 0.4 }} />
           ))}
         </Pressable>
-        <Pressable onPress={changeRate} accessibilityLabel={`Playback speed ${rate} times`} style={{ height: 26, paddingHorizontal: 8, borderRadius: 13, backgroundColor: c.surface2, justifyContent: "center" }}>
+        <Pressable onPress={changeRate} accessibilityLabel={t("Playback speed {rate} times", { rate })} style={{ height: 26, paddingHorizontal: 8, borderRadius: 13, backgroundColor: c.surface2, justifyContent: "center" }}>
           <Text variant="caption" weight="700">
             {rate}×
           </Text>
@@ -122,7 +123,7 @@ export function VoiceNote({ note, mine, showTranscript }: { note: Attachment; mi
         {showTranscript && segments.length ? (
           <Pressable onPress={() => setOpen((o) => !o)} accessibilityState={{ expanded: open }} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
             <Text variant="caption" tone="accent" weight="600">
-              Transcript
+              {t("Transcript")}
             </Text>
             <CaretDown size={12} color={c.accentInk} weight="bold" style={{ transform: [{ rotate: open ? "180deg" : "0deg" }] }} />
           </Pressable>
@@ -141,7 +142,7 @@ export function VoiceNote({ note, mine, showTranscript }: { note: Attachment; mi
             </Pressable>
           ))}
           <Text variant="caption" tone="muted" style={{ paddingHorizontal: 6, marginTop: 4 }}>
-            {note.transcriptKind === "live" ? "Transcribed on this device." : "Sample transcript."}
+            {note.transcriptKind === "live" ? t("Transcribed on this device.") : t("Sample transcript.")}
           </Text>
         </View>
       ) : null}
@@ -217,7 +218,7 @@ export function VoiceRecorder({ onSend, onClose }: { onSend: (note: Attachment) 
       onSend({
         id: newId("vn"),
         kind: "voice",
-        name: "Voice note",
+        name: t("Voice note"),
         size: 0,
         mime: "audio/m4a",
         url: keepRecording(uri),
@@ -233,10 +234,10 @@ export function VoiceRecorder({ onSend, onClose }: { onSend: (note: Attachment) 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 8 }}>
         <Microphone size={20} color={c.dangerInk} />
         <Text variant="footnote" tone="muted" style={{ flex: 1 }}>
-          Lynk can&apos;t use the microphone. Allow it in Settings › Lynk to record voice notes.
+          {t("Lynk can't use the microphone. Allow it in Settings › Lynk to record voice notes.")}
         </Text>
         <Pressable onPress={onClose} style={{ paddingHorizontal: 12, height: 32, justifyContent: "center" }}>
-          <Text weight="600">OK</Text>
+          <Text weight="600">{t("OK")}</Text>
         </Pressable>
       </View>
     );
@@ -244,7 +245,7 @@ export function VoiceRecorder({ onSend, onClose }: { onSend: (note: Attachment) 
 
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 4 }}>
-      <Pressable accessibilityLabel="Discard recording" onPress={() => void stop(false)} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
+      <Pressable accessibilityLabel={t("Discard recording")} onPress={() => void stop(false)} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
         <Trash size={22} color={c.muted} />
       </Pressable>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -256,14 +257,14 @@ export function VoiceRecorder({ onSend, onClose }: { onSend: (note: Attachment) 
       <View style={{ flex: 1, height: 36, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 2, overflow: "hidden" }} accessibilityElementsHidden>
         {state === "starting" ? (
           <Text variant="footnote" tone="muted">
-            Starting…
+            {t("Starting…")}
           </Text>
         ) : (
           levels.map((l, i) => <View key={i} style={{ width: 3, height: `${Math.max(10, l * 100)}%`, borderRadius: 2, backgroundColor: c.accent }} />)
         )}
       </View>
       <Pressable
-        accessibilityLabel="Send voice note"
+        accessibilityLabel={t("Send voice note")}
         disabled={state !== "recording"}
         onPress={() => void stop(true)}
         style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 14, backgroundColor: c.accent, alignItems: "center", justifyContent: "center", opacity: state === "recording" ? 1 : 0.5, transform: [{ scale: pressed ? 0.9 : 1 }] })}

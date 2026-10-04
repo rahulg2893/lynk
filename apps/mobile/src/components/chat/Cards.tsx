@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
-import { Animated, Pressable, TextInput, View } from "react-native";
-import { BellRinging, CalendarPlus, Check, CheckCircle, CheckSquare, Clock, DotsThree, ListChecks, MapPin, PencilSimple, Plus, Sparkle, Square, X } from "phosphor-react-native";
-import { firstName, formatWhen, newId, notAnswered, personName, rsvpSummary, RSVP_LABEL, type Chat, type Decision, type Rsvp, type SharedList, type Task } from "@shared/chat";
+import { Animated, Pressable, Share, TextInput, View } from "react-native";
+import { BellRinging, CalendarPlus, ChartBar, Check, ShareNetwork, CheckCircle, CheckSquare, Clock, DotsThree, ListChecks, MapPin, PencilSimple, Plus, Sparkle, Square, X } from "phosphor-react-native";
+import { firstName, formatWhen, newId, notAnswered, personName, rsvpSummary, RSVP_LABEL, type Chat, type Decision, type Poll, type Rsvp, type SharedList, type Task } from "@shared/chat";
 import type { ListOp } from "@shared/chat-ops";
 import { shareIcs } from "@/lib/calendar-export";
+import { useAccount } from "@/lib/account";
+import { planInviteText } from "@shared/plan-link";
 import { askForReminders } from "@/lib/reminders";
 import { actionSheet } from "@/lib/sheet";
 import { radius, useColors } from "@/lib/theme";
 import { Avatar, Text, tap } from "../ui";
+import { t } from "@shared/i18n";
 
 const ANSWERS: Rsvp[] = ["going", "maybe", "no"];
 
@@ -22,6 +25,7 @@ export function PlanCard({
   onReject,
   onJump,
   onNudge,
+  answersLater = false,
 }: {
   chat: Chat;
   plan: Decision;
@@ -33,8 +37,11 @@ export function PlanCard({
   onJump?: (messageId: string) => void;
   /** Post a message asking the people who haven't answered. */
   onNudge?: () => void;
+  /** A later week of a weekly plan: people answer once the week before is over. */
+  answersLater?: boolean;
 }) {
   const c = useColors();
+  const me = useAccount()?.profile.name.split(" ")[0] || "A friend";
   const waiting = notAnswered(chat, plan);
   const proposed = plan.status === "proposed";
   const mine = plan.rsvp?.me;
@@ -44,11 +51,11 @@ export function PlanCard({
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         {proposed ? <Sparkle size={13} color={c.accentInk} weight="fill" /> : null}
         <Text variant="caption" tone="muted" weight="600" style={{ flex: 1 }} numberOfLines={1}>
-          {proposed ? "Suggested by Lynk" : plan.status === "rejected" ? "Rejected" : plan.by ? `Made by ${plan.by === "me" ? "you" : firstName(plan.by)}` : "Confirmed"}
+          {proposed ? t("Suggested by Lynk") : plan.status === "rejected" ? t("Rejected") : plan.by ? t("Made by {name}", { name: plan.by === "me" ? t("you") : firstName(plan.by) }) : t("Confirmed")}
           {showChat ? ` · ${chat.name}` : ""}
         </Text>
         {onEdit && !proposed ? (
-          <Pressable onPress={onEdit} accessibilityLabel={`Edit ${plan.title}`} hitSlop={8}>
+          <Pressable onPress={onEdit} accessibilityLabel={t("Edit {name}", { name: plan.title })} hitSlop={8}>
             <PencilSimple size={16} color={c.muted} />
           </Pressable>
         ) : null}
@@ -66,16 +73,20 @@ export function PlanCard({
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <MapPin size={14} color={c.muted} />
           <Text variant="footnote" tone="muted">
-            {plan.where ?? "Place still open"}
+            {plan.where ?? t("Place still open")}
           </Text>
         </View>
       </View>
 
       {proposed ? (
         <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-          <SmallButton label="Confirm" icon={<Check size={14} color={c.bg} weight="bold" />} dark onPress={onConfirm} />
-          <SmallButton label="Not this" icon={<X size={14} color={c.ink} />} onPress={onReject} />
+          <SmallButton label={t("Confirm")} icon={<Check size={14} color={c.bg} weight="bold" />} dark onPress={onConfirm} />
+          <SmallButton label={t("Not this")} icon={<X size={14} color={c.ink} />} onPress={onReject} />
         </View>
+      ) : plan.status === "confirmed" && answersLater ? (
+        <Text variant="footnote" tone="muted" style={{ marginTop: 12 }}>
+          {t("Every week. Answers open once the week before is over.")}
+        </Text>
       ) : plan.status === "confirmed" ? (
         <>
           <View accessibilityRole="radiogroup" style={{ flexDirection: "row", marginTop: 12, padding: 3, borderRadius: radius.pill, backgroundColor: c.surface2 }}>
@@ -113,10 +124,11 @@ export function PlanCard({
             </Text>
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-            <SmallButton label="Add to calendar" icon={<CalendarPlus size={15} color={c.ink} />} disabled={!plan.when} onPress={() => void shareIcs([{ chat, plan }])} />
+            <SmallButton label={t("Add to calendar")} icon={<CalendarPlus size={15} color={c.ink} />} disabled={!plan.when} onPress={() => void shareIcs([{ chat, plan }])} />
+            <SmallButton label={t("Invite friends")} icon={<ShareNetwork size={15} color={c.ink} />} onPress={() => void Share.share({ message: planInviteText(chat, plan, me) })} />
             {onNudge && waiting.length ? (
               <SmallButton
-                label={waiting.length === 1 ? `Ask ${firstName(waiting[0])}` : `Ask the ${waiting.length} who haven't answered`}
+                label={waiting.length === 1 ? t("Ask {name}", { name: firstName(waiting[0]) }) : t("Ask the {n} who haven't answered", { n: waiting.length })}
                 icon={<BellRinging size={15} color={c.ink} />}
                 onPress={onNudge}
               />
@@ -128,10 +140,10 @@ export function PlanCard({
       {plan.sources.length && onJump ? (
         <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 4, marginTop: 10 }}>
           <Text variant="caption" tone="muted">
-            From
+            {t("From")}
           </Text>
           {plan.sources.map((id, i) => (
-            <Pressable key={id} onPress={() => onJump(id)} accessibilityLabel={`Jump to source message ${i + 1}`} style={{ minWidth: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: c.line, alignItems: "center", justifyContent: "center" }}>
+            <Pressable key={id} onPress={() => onJump(id)} accessibilityLabel={t("Jump to source message {n}", { n: i + 1 })} style={{ minWidth: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: c.line, alignItems: "center", justifyContent: "center" }}>
               <Text variant="caption">{i + 1}</Text>
             </Pressable>
           ))}
@@ -208,7 +220,7 @@ export function SuggestionCard({ plan, task, onSave, onDismiss, onEdit }: { plan
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         <Sparkle size={13} color={c.accentInk} weight="fill" />
         <Text variant="caption" tone="accent" weight="700">
-          {plan ? "Save this plan?" : "Add to your to-dos?"}
+          {plan ? t("Save this plan?") : t("Add to your to-dos?")}
         </Text>
       </View>
       {plan ? (
@@ -217,7 +229,7 @@ export function SuggestionCard({ plan, task, onSave, onDismiss, onEdit }: { plan
             {plan.title}
           </Text>
           <Text variant="footnote" tone="muted" style={{ marginTop: 4 }}>
-            {formatWhen(plan)} · {plan.where ?? "Place still open"}
+            {formatWhen(plan)} · {plan.where ?? t("Place still open")}
           </Text>
         </>
       ) : task ? (
@@ -229,14 +241,14 @@ export function SuggestionCard({ plan, task, onSave, onDismiss, onEdit }: { plan
             </Text>
           </View>
           <Text variant="footnote" tone="muted" style={{ marginTop: 4 }}>
-            {task.assignee === "me" ? "For you" : `For ${firstName(task.assignee)}`}, {task.due}
+            {task.assignee === "me" ? t("For you") : t("For {name}", { name: firstName(task.assignee) })}, {t(task.due)}
           </Text>
         </>
       ) : null}
       <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-        <SmallButton label="Save" primary icon={<Check size={14} color={c.onAccent} weight="bold" />} onPress={onSave} />
-        {onEdit ? <SmallButton label="Edit" icon={<PencilSimple size={14} color={c.ink} />} onPress={onEdit} /> : null}
-        <SmallButton label="Dismiss" icon={<X size={14} color={c.ink} />} onPress={onDismiss} />
+        <SmallButton label={t("Save")} primary icon={<Check size={14} color={c.onAccent} weight="bold" />} onPress={onSave} />
+        {onEdit ? <SmallButton label={t("Edit")} icon={<PencilSimple size={14} color={c.ink} />} onPress={onEdit} /> : null}
+        <SmallButton label={t("Dismiss")} icon={<X size={14} color={c.ink} />} onPress={onDismiss} />
       </View>
     </Animated.View>
   );
@@ -257,7 +269,7 @@ export function Lists({ lists, onChange }: { lists: SharedList[]; onChange: (op:
     <View style={{ gap: 12 }}>
       {lists.length === 0 && !creating ? (
         <Text variant="subhead" tone="muted" style={{ textAlign: "center", paddingVertical: 24 }}>
-          Shopping, packing, ideas for the party: lists everyone here can tick off.
+          {t("Shopping, packing, ideas for the party: lists everyone here can tick off.")}
         </Text>
       ) : null}
       {lists.map((l) => (
@@ -266,15 +278,15 @@ export function Lists({ lists, onChange }: { lists: SharedList[]; onChange: (op:
       {creating ? (
         <View style={{ borderRadius: radius.lg, padding: 14, backgroundColor: c.surface, borderWidth: 1, borderColor: c.accent }}>
           <Text variant="caption" tone="muted" weight="600">
-            New list
+            {t("New list")}
           </Text>
-          <TextInput value={title} onChangeText={setTitle} autoFocus placeholder="What's it for?" placeholderTextColor={c.muted} onSubmitEditing={() => create(title)} returnKeyType="done" style={{ fontSize: 17, fontWeight: "600", color: c.ink, paddingVertical: 6 }} />
+          <TextInput value={title} onChangeText={setTitle} autoFocus placeholder={t("What's it for?")} placeholderTextColor={c.muted} onSubmitEditing={() => create(title)} returnKeyType="done" style={{ fontSize: 17, fontWeight: "600", color: c.ink, paddingVertical: 6 }} />
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-            {["Shopping", "Packing", "Ideas"].map((s) => (
+            {[t("Shopping"), t("Packing"), t("Ideas")].map((s) => (
               <SmallButton key={s} label={s} onPress={() => create(s)} />
             ))}
             <View style={{ flex: 1 }} />
-            <SmallButton label="Create" primary disabled={!title.trim()} onPress={() => create(title)} />
+            <SmallButton label={t("Create")} primary disabled={!title.trim()} onPress={() => create(title)} />
           </View>
         </View>
       ) : (
@@ -287,7 +299,7 @@ export function Lists({ lists, onChange }: { lists: SharedList[]; onChange: (op:
         >
           <Plus size={16} color={c.muted} weight="bold" />
           <Text weight="600" tone="muted">
-            New list
+            {t("New list")}
           </Text>
         </Pressable>
       )}
@@ -312,15 +324,15 @@ function ListCard({ list, onChange }: { list: SharedList; onChange: (op: ListOp)
           {list.title}
         </Text>
         <Text variant="caption" tone="muted">
-          {total ? `${done} of ${total}` : "Empty"}
+          {total ? t("{done} of {total}", { done, total }) : t("Empty")}
         </Text>
         <Pressable
-          accessibilityLabel={`More for ${list.title}`}
+          accessibilityLabel={t("More for {name}", { name: list.title })}
           hitSlop={8}
           onPress={() =>
             actionSheet(list.title, [
-              ...(done ? [{ label: "Clear ticked items", onPress: () => onChange({ op: "clear", listId: list.id }) }] : []),
-              { label: "Delete list", destructive: true, onPress: () => onChange({ op: "delete", listId: list.id }) },
+              ...(done ? [{ label: t("Clear ticked items"), onPress: () => onChange({ op: "clear", listId: list.id }) }] : []),
+              { label: t("Delete list"), destructive: true, onPress: () => onChange({ op: "delete", listId: list.id }) },
             ])
           }
         >
@@ -342,7 +354,7 @@ function ListCard({ list, onChange }: { list: SharedList; onChange: (op: ListOp)
               tap();
               onChange({ op: "toggle", listId: list.id, itemId: i.id });
             }}
-            onLongPress={() => actionSheet(i.text, [{ label: "Remove", destructive: true, onPress: () => onChange({ op: "remove", listId: list.id, itemId: i.id }) }])}
+            onLongPress={() => actionSheet(i.text, [{ label: t("Remove"), destructive: true, onPress: () => onChange({ op: "remove", listId: list.id, itemId: i.id }) }])}
             style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 }}
           >
             {i.done ? <CheckSquare size={22} color={c.accent} weight="fill" /> : <Square size={22} color={c.muted} />}
@@ -357,7 +369,7 @@ function ListCard({ list, onChange }: { list: SharedList; onChange: (op: ListOp)
       </View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 2 }}>
         <Plus size={18} color={c.muted} />
-        <TextInput value={text} onChangeText={setText} placeholder="Add an item" placeholderTextColor={c.muted} onSubmitEditing={add} returnKeyType="done" blurOnSubmit={false} style={{ flex: 1, fontSize: 17, color: c.ink, paddingVertical: 8 }} />
+        <TextInput value={text} onChangeText={setText} placeholder={t("Add an item")} placeholderTextColor={c.muted} onSubmitEditing={add} returnKeyType="done" blurOnSubmit={false} style={{ flex: 1, fontSize: 17, color: c.ink, paddingVertical: 8 }} />
       </View>
     </View>
   );
@@ -372,26 +384,90 @@ export function TaskCard({ task, onStatus, onJump }: { task: Task; onStatus: (s:
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         {proposed ? <Sparkle size={13} color={c.accentInk} weight="fill" /> : <CheckCircle size={14} color={c.positive} weight="fill" />}
         <Text variant="caption" tone="muted" weight="600">
-          {proposed ? "Suggested" : task.status === "done" ? "Done" : task.status === "rejected" ? "Rejected" : "Confirmed"}
+          {proposed ? t("Suggested") : task.status === "done" ? t("Done") : task.status === "rejected" ? t("Rejected") : t("Confirmed")}
         </Text>
       </View>
       <Text variant="headline" style={{ marginTop: 4, textDecorationLine: task.status === "done" ? "line-through" : "none" }}>
         {task.title}
       </Text>
       <Text variant="footnote" tone="muted" style={{ marginTop: 2 }}>
-        {task.assignee === "me" ? "You" : firstName(task.assignee)}, {task.due}
+        {task.assignee === "me" ? t("You") : firstName(task.assignee)}, {t(task.due)}
       </Text>
       <View style={{ flexDirection: "row", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
         {proposed ? (
           <>
-            <SmallButton label="Confirm" primary onPress={() => onStatus("confirmed")} />
-            <SmallButton label="Reject" onPress={() => onStatus("rejected")} />
+            <SmallButton label={t("Confirm")} primary onPress={() => onStatus("confirmed")} />
+            <SmallButton label={t("Reject")} onPress={() => onStatus("rejected")} />
           </>
         ) : task.status === "confirmed" && task.assignee === "me" ? (
-          <SmallButton label="Mark done" icon={<CheckCircle size={15} color={c.ink} />} onPress={() => onStatus("done")} />
+          <SmallButton label={t("Mark done")} icon={<CheckCircle size={15} color={c.ink} />} onPress={() => onStatus("done")} />
         ) : null}
-        {task.sources.length ? <SmallButton label="Source" onPress={() => onJump(task.sources[0])} /> : null}
+        {task.sources.length ? <SmallButton label={t("Source")} onPress={() => onJump(task.sources[0])} /> : null}
       </View>
+    </View>
+  );
+}
+
+/**
+ * A poll inside a message: one vote each, live counts, and for whoever asked,
+ * "Make it the plan" on the leading option once someone has voted.
+ */
+export function PollCard({ poll, mine, onVote, onDecide }: { poll: Poll; mine: boolean; onVote: (optionId: string) => void; onDecide: (optionId: string) => void }) {
+  const c = useColors();
+  const total = poll.options.reduce((n, o) => n + o.votes.length, 0);
+  const lead = [...poll.options].sort((a, b) => b.votes.length - a.votes.length)[0];
+  const decided = poll.options.find((o) => o.id === poll.decided);
+  return (
+    <View style={{ marginTop: 6, maxWidth: 320, borderRadius: radius.lg, padding: 14, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <ChartBar size={13} color={c.muted} weight="bold" />
+        <Text variant="caption" tone="muted" weight="600">
+          Poll · {total} {total === 1 ? "vote" : "votes"}
+        </Text>
+      </View>
+      <Text variant="headline" style={{ marginTop: 4 }}>
+        {poll.question}
+      </Text>
+      <View style={{ gap: 6, marginTop: 10 }}>
+        {poll.options.map((o) => {
+          const chosen = o.votes.includes("me");
+          const share = total ? o.votes.length / total : 0;
+          return (
+            <Pressable
+              key={o.id}
+              disabled={Boolean(poll.decided)}
+              onPress={() => {
+                tap();
+                onVote(o.id);
+              }}
+              accessibilityRole="button"
+              accessibilityState={{ selected: chosen, disabled: Boolean(poll.decided) }}
+              accessibilityLabel={`${o.text}, ${o.votes.length} ${o.votes.length === 1 ? "vote" : "votes"}`}
+              style={{ minHeight: 44, borderRadius: radius.md, borderWidth: 1, borderColor: chosen ? c.accent : c.line, overflow: "hidden", justifyContent: "center", paddingHorizontal: 12 }}
+            >
+              <View style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${share * 100}%`, backgroundColor: c.accentSoft }} />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                {chosen ? <Check size={14} color={c.accentInk} weight="bold" /> : null}
+                <Text weight="600" style={{ flex: 1 }} numberOfLines={1}>
+                  {o.text}
+                </Text>
+                <Text variant="caption" tone="muted" numberOfLines={1} style={{ maxWidth: 120 }}>
+                  {o.votes.length ? o.votes.map((v) => firstName(v)).join(", ") : "0"}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+      {decided ? (
+        <Text variant="footnote" tone="muted" style={{ marginTop: 10 }}>
+          Made into a plan: {decided.text}
+        </Text>
+      ) : mine && lead?.votes.length ? (
+        <View style={{ flexDirection: "row", marginTop: 10 }}>
+          <SmallButton label={t("Make “{option}” the plan", { option: lead.text })} icon={<CalendarPlus size={15} color={c.bg} />} dark onPress={() => onDecide(lead.id)} />
+        </View>
+      ) : null}
     </View>
   );
 }

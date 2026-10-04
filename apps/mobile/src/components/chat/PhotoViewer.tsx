@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "phosphor-react-native";
 import type { Attachment } from "@shared/chat";
 import { Text } from "../ui";
+import { t } from "@shared/i18n";
 
 /** Full-screen photos, swipe between them. */
 export function PhotoViewer({ photos, index, onClose }: { photos: Attachment[]; index: number | null; onClose: () => void }) {
@@ -26,7 +27,7 @@ export function PhotoViewer({ photos, index, onClose }: { photos: Attachment[]; 
           keyExtractor={(p) => p.id}
           renderItem={({ item }) => (
             <View style={{ width, height, alignItems: "center", justifyContent: "center" }}>
-              {item.url ? <Image source={{ uri: item.url }} style={{ width, height: height * 0.8 }} contentFit="contain" /> : <Text style={{ color: "#fff" }}>Photo not kept on this phone</Text>}
+              {item.url ? <Image source={{ uri: item.url }} style={{ width, height: height * 0.8 }} contentFit="contain" /> : <Text style={{ color: "#fff" }}>{t("Photo not kept on this phone")}</Text>}
             </View>
           )}
         />
@@ -34,7 +35,7 @@ export function PhotoViewer({ photos, index, onClose }: { photos: Attachment[]; 
           <Text variant="subhead" style={{ color: "#fff" }}>
             {photos.length > 1 ? `${at + 1} of ${photos.length}` : ""}
           </Text>
-          <Pressable onPress={onClose} accessibilityLabel="Close photo" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}>
+          <Pressable onPress={onClose} accessibilityLabel={t("Close photo")} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}>
             <X size={20} color="#fff" weight="bold" />
           </Pressable>
         </View>

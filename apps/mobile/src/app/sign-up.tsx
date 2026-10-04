@@ -9,6 +9,7 @@ import { useColors } from "@/lib/theme";
 import { PhoneVerify } from "@/components/PhoneVerify";
 import { Avatar, Button, Field, IconButton, Text } from "@/components/ui";
 import { useTopMargin } from "@/lib/layout";
+import { t } from "@shared/i18n";
 
 /** Three steps, like the web: who you are, your phone number, then a welcome with a photo and your invite link. */
 export default function SignUp() {
@@ -47,24 +48,24 @@ export default function SignUp() {
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + topMargin + 8, paddingBottom: insets.bottom + 24, paddingHorizontal: 24, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           {step < 2 ? (
-            <IconButton label="Back" onPress={() => (step ? setStep(step - 1) : router.back())} style={{ marginLeft: -8 }}>
+            <IconButton label={t("Back")} onPress={() => (step ? setStep(step - 1) : router.back())} style={{ marginLeft: -8 }}>
               <CaretLeft size={24} color={c.accentInk} weight="bold" />
             </IconButton>
           ) : (
             <View />
           )}
           <Text variant="footnote" tone="muted">
-            Step {step + 1} of 3
+            {t("Step {n} of 3", { n: step + 1 })}
           </Text>
         </View>
 
         {step === 0 ? (
           <View style={{ gap: 20, marginTop: 24 }}>
-            <Text variant="largeTitle">Who are you?</Text>
-            <Field label="Your name" value={name} onChangeText={setName} placeholder="Rahul" autoFocus textContentType="name" returnKeyType="next" />
+            <Text variant="largeTitle">{t("Who are you?")}</Text>
+            <Field label={t("Your name")} value={name} onChangeText={setName} placeholder={t("Rahul")} autoFocus textContentType="name" returnKeyType="next" />
             <View>
               <Field
-                label="Username"
+                label={t("Username")}
                 value={username}
                 onChangeText={(t) => {
                   setTouched(true);
@@ -81,18 +82,18 @@ export default function SignUp() {
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, marginTop: 6 }} accessibilityLiveRegion="polite">
                   {status === "free" ? <CheckCircle size={16} color={c.positive} weight="fill" /> : status === "taken" ? <WarningCircle size={16} color={c.dangerInk} weight="fill" /> : null}
                   <Text variant="footnote" tone={status === "taken" ? "danger" : "muted"}>
-                    {status === "checking" ? "Checking…" : status === "free" ? `@${username} is yours` : `@${username} is taken. Try ${suggestUsernames(username).join(" or ")}.`}
+                    {status === "checking" ? t("Checking…") : status === "free" ? t("@{username} is yours", { username }) : t("@{username} is taken. Try {options}.", { username, options: suggestUsernames(username).join(` ${t("or")} `) })}
                   </Text>
                 </View>
               ) : null}
             </View>
-            <Button title="Continue" variant="primary" size="lg" disabled={!canContinue} onPress={() => setStep(1)} />
+            <Button title={t("Continue")} variant="primary" size="lg" disabled={!canContinue} onPress={() => setStep(1)} />
           </View>
         ) : null}
 
         {step === 1 ? (
           <View style={{ gap: 20, marginTop: 24 }}>
-            <Text variant="largeTitle">What&apos;s your number?</Text>
+            <Text variant="largeTitle">{t("What's your number?")}</Text>
             <Text variant="callout" tone="muted">
               You&apos;ll sign in with your phone number and a code we text you. Friends find you by @{username} and never see your number.
             </Text>
@@ -104,7 +105,7 @@ export default function SignUp() {
           <View style={{ gap: 20, marginTop: 24, alignItems: "center" }}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Add a profile photo"
+              accessibilityLabel={t("Add a profile photo")}
               onPress={async () => {
                 const p = await pickProfilePhoto();
                 if (p) {
@@ -119,19 +120,19 @@ export default function SignUp() {
               </View>
             </Pressable>
             <Text variant="largeTitle" style={{ textAlign: "center" }}>
-              Welcome, {name.split(" ")[0]}
+              {t("Welcome, {name}", { name: name.split(" ")[0] })}
             </Text>
             <Text variant="callout" tone="muted" style={{ textAlign: "center" }}>
-              Your inbox starts empty. Share your invite link so friends can find you.
+              {t("Your inbox starts empty. Share your invite link so friends can find you.")}
             </Text>
             <Button
-              title="Share invite link"
+              title={t("Share invite link")}
               size="lg"
               icon={<ShareNetwork size={18} color={c.ink} weight="bold" />}
-              onPress={() => void Share.share({ message: `Chat with me on Lynk: https://lynk.app/invite/${username}` })}
+              onPress={() => void Share.share({ message: t("Chat with me on Lynk: {link}", { link: `https://lynk.app/invite/${username}` }) })}
               style={{ alignSelf: "stretch" }}
             />
-            <Button title="Open Lynk" variant="primary" size="lg" onPress={startSession} style={{ alignSelf: "stretch" }} />
+            <Button title={t("Open Lynk")} variant="primary" size="lg" onPress={startSession} style={{ alignSelf: "stretch" }} />
           </View>
         ) : null}
       </ScrollView>

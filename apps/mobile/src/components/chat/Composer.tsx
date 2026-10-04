@@ -5,10 +5,12 @@ import * as Haptics from "expo-haptics";
 import { ArrowUUpLeft, Camera, Images, Microphone, PaperPlaneTilt, PencilSimple, Plus, X } from "phosphor-react-native";
 import { mentionables, messagePreview, personName, type Attachment, type Chat, type Message } from "@shared/chat";
 import { pickPhotos, takePhoto } from "@/lib/media";
+import { router } from "expo-router";
 import { actionSheet } from "@/lib/sheet";
 import { radius, useColors } from "@/lib/theme";
 import { Avatar, Text } from "../ui";
 import { VoiceRecorder } from "./Voice";
+import { t } from "@shared/i18n";
 
 /**
  * The floating composer: attach, write (with @mention suggestions in groups),
@@ -60,8 +62,9 @@ export function Composer({
 
   const attach = () =>
     actionSheet(undefined, [
-      { label: "Photo library", onPress: () => void pickPhotos().then((a) => setPending((p) => [...p, ...a].slice(0, 10))) },
-      { label: "Take a photo", onPress: () => void takePhoto().then((a) => setPending((p) => [...p, ...a].slice(0, 10))) },
+      { label: t("Photo library"), onPress: () => void pickPhotos().then((a) => setPending((p) => [...p, ...a].slice(0, 10))) },
+      { label: t("Take a photo"), onPress: () => void takePhoto().then((a) => setPending((p) => [...p, ...a].slice(0, 10))) },
+      ...(chat.side ? [] : [{ label: t("Poll"), onPress: () => router.push({ pathname: "/poll", params: { chatId: chat.id } }) }]),
     ]);
 
   const pick = (name: string) => {
@@ -95,13 +98,13 @@ export function Composer({
             {editing ? <PencilSimple size={16} color={c.accentInk} /> : <ArrowUUpLeft size={16} color={c.accentInk} />}
             <View style={{ flex: 1 }}>
               <Text variant="footnote" weight="700">
-                {editing ? "Editing message" : `Replying to ${personName(replyTo!.from)}`}
+                {editing ? t("Editing message") : t("Replying to {name}", { name: personName(replyTo!.from) })}
               </Text>
               <Text variant="footnote" tone="muted" numberOfLines={1}>
                 {messagePreview((editing ?? replyTo)!)}
               </Text>
             </View>
-            <Pressable onPress={editing ? onCancelEdit : onCancelReply} accessibilityLabel={editing ? "Cancel editing" : "Cancel reply"} hitSlop={8}>
+            <Pressable onPress={editing ? onCancelEdit : onCancelReply} accessibilityLabel={editing ? t("Cancel editing") : t("Cancel reply")} hitSlop={8}>
               <X size={16} color={c.muted} weight="bold" />
             </Pressable>
           </View>
@@ -112,7 +115,7 @@ export function Composer({
             {pending.map((a) => (
               <View key={a.id}>
                 {a.url ? <Image source={{ uri: a.url }} style={{ width: 64, height: 64, borderRadius: 12 }} /> : null}
-                <Pressable onPress={() => setPending((p) => p.filter((x) => x.id !== a.id))} accessibilityLabel="Remove attachment" style={{ position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: 11, backgroundColor: c.ink, alignItems: "center", justifyContent: "center" }}>
+                <Pressable onPress={() => setPending((p) => p.filter((x) => x.id !== a.id))} accessibilityLabel={t("Remove attachment")} style={{ position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: 11, backgroundColor: c.ink, alignItems: "center", justifyContent: "center" }}>
                   <X size={11} color={c.bg} weight="bold" />
                 </Pressable>
               </View>
@@ -124,28 +127,28 @@ export function Composer({
           <VoiceRecorder onClose={() => setRecording(false)} onSend={(note) => onSend("", [note])} />
         ) : (
           <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 4 }}>
-            <Pressable onPress={attach} disabled={Boolean(editing)} accessibilityLabel="Add photos" style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center", opacity: editing ? 0.4 : 1 }}>
+            <Pressable onPress={attach} disabled={Boolean(editing)} accessibilityLabel={chat.side ? t("Add photos") : t("Add photos or a poll")} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center", opacity: editing ? 0.4 : 1 }}>
               {pending.length ? <Images size={23} color={c.accentInk} /> : <Plus size={23} color={c.muted} weight="bold" />}
             </Pressable>
             <TextInput
               value={value}
               onChangeText={onChange}
               onSelectionChange={(e) => setCaret(e.nativeEvent.selection.end)}
-              placeholder={editing ? "Edit your message" : `Message ${chat.kind === "dm" ? chat.name.split(" ")[0] : chat.name}`}
+              placeholder={editing ? t("Edit your message") : t("Message {name}", { name: chat.kind === "dm" ? chat.name.split(" ")[0] : chat.name })}
               placeholderTextColor={c.muted}
               multiline
               testID="composer"
-              accessibilityLabel={editing ? "Edit message" : `Message ${chat.name}`}
+              accessibilityLabel={editing ? t("Edit message") : t("Message {name}", { name: chat.name })}
               style={{ flex: 1, maxHeight: 140, minHeight: 40, paddingTop: 10, paddingBottom: 10, paddingHorizontal: 4, fontSize: 17, lineHeight: 22, color: c.ink }}
             />
             {!canSend && !editing ? (
               <View style={{ flexDirection: "row" }}>
-                <Pressable onPress={() => void takePhoto().then((a) => a.length && setPending(a))} accessibilityLabel="Take a photo" style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
+                <Pressable onPress={() => void takePhoto().then((a) => a.length && setPending(a))} accessibilityLabel={t("Take a photo")} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
                   <Camera size={22} color={c.muted} />
                 </Pressable>
                 <Pressable
                   onPress={() => setRecording(true)}
-                  accessibilityLabel="Record a voice note"
+                  accessibilityLabel={t("Record a voice note")}
                   style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? c.accent : c.surface2 })}
                 >
                   <Microphone size={20} color={c.ink} weight="fill" />
@@ -155,7 +158,7 @@ export function Composer({
               <Pressable
                 onPress={send}
                 testID="send-button"
-                accessibilityLabel={editing ? "Save edit" : "Send message"}
+                accessibilityLabel={editing ? t("Save edit") : t("Send message")}
                 style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 14, backgroundColor: c.accent, alignItems: "center", justifyContent: "center", transform: [{ scale: pressed ? 0.9 : 1 }] })}
               >
                 <Animated.View

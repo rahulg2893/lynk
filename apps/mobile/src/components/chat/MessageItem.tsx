@@ -5,7 +5,9 @@ import { ArrowClockwise, BookmarkSimple, FileText, GitBranch, Prohibit, PushPin,
 import { firstName, formatBytes, formatDayLabel, formatTime, messagePreview, personName, type Attachment, type Chat, type Message, type SideChat } from "@shared/chat";
 import { radius, useColors } from "@/lib/theme";
 import { Avatar, RichText, StatusNode, Text, tap } from "../ui";
+import { PollCard } from "./Cards";
 import { VoiceNote } from "./Voice";
+import { t } from "@shared/i18n";
 
 const GAP = 5 * 60_000;
 
@@ -34,6 +36,8 @@ type Props = {
   onSideChat: (m: Message) => void;
   onRetry: (m: Message) => void;
   onToggleTranslation: (m: Message) => void;
+  onVote: (m: Message, optionId: string) => void;
+  onDecidePoll: (m: Message, optionId: string) => void;
 };
 
 function MessageItemBase(p: Props) {
@@ -54,7 +58,7 @@ function MessageItemBase(p: Props) {
     Animated.sequence([Animated.timing(glow, { toValue: 1, duration: 200, useNativeDriver: true }), Animated.timing(glow, { toValue: 0, duration: 1800, delay: 600, useNativeDriver: true })]).start();
   }, [p.highlighted, glow]);
 
-  const t = p.translation && p.translation !== "none" && !p.translation.original ? p.translation.text : null;
+  const shown = p.translation && p.translation !== "none" && !p.translation.original ? p.translation.text : null;
   const photos = message.attachments?.filter((a) => a.kind === "image") ?? [];
   const files = message.attachments?.filter((a) => a.kind === "file") ?? [];
   const voices = message.attachments?.filter((a) => a.kind === "voice") ?? [];
@@ -103,12 +107,14 @@ function MessageItemBase(p: Props) {
           onLongPress={() => p.onLongPress(message)}
           delayLongPress={280}
           disabled={message.deleted}
-          accessibilityHint="Double tap and hold for actions"
+          // A poll's options are buttons of their own, so its message isn't read as one element.
+          accessible={!message.poll}
+          accessibilityHint={t("Double tap and hold for actions")}
         >
           {startsRun ? (
             <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, marginBottom: 3 }}>
               <Text variant="footnote" weight="700">
-                {mine ? "You" : personName(message.from)}
+                {mine ? t("You") : personName(message.from)}
               </Text>
               <Text variant="caption" tone="muted" style={{ fontVariant: ["tabular-nums"] }}>
                 {formatTime(message.at)}
@@ -122,7 +128,7 @@ function MessageItemBase(p: Props) {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 2 }}>
               <Prohibit size={14} color={c.muted} />
               <Text variant="subhead" tone="muted" style={{ fontStyle: "italic" }}>
-                {mine ? "You deleted this message" : "This message was deleted"}
+                {mine ? t("You deleted this message") : t("This message was deleted")}
               </Text>
             </View>
           ) : message.text || p.quoted ? (
@@ -133,12 +139,12 @@ function MessageItemBase(p: Props) {
                     {personName(p.quoted.from)}
                   </Text>
                   <Text variant="footnote" tone="muted" numberOfLines={2}>
-                    {p.quoted.deleted ? "Deleted message" : messagePreview(p.quoted)}
+                    {p.quoted.deleted ? t("Deleted message") : messagePreview(p.quoted)}
                   </Text>
                 </View>
               ) : null}
               {message.text ? (
-                <RichText text={t ?? message.text} names={p.names} me={p.me} style={{ fontSize: 17, lineHeight: 23 }} />
+                <RichText text={shown ?? message.text} names={p.names} me={p.me} style={{ fontSize: 17, lineHeight: 23 }} />
               ) : null}
               {message.editedAt ? (
                 <Text variant="caption" tone="muted">
@@ -150,18 +156,22 @@ function MessageItemBase(p: Props) {
 
           {p.translation === "none" ? (
             <Text variant="caption" tone="muted" style={{ marginTop: 4 }}>
-              Translation for this message arrives with on-device translation in a later build.
+              {t("Translation for this message arrives with on-device translation in a later build.")}
             </Text>
           ) : p.translation ? (
             <Pressable onPress={() => p.onToggleTranslation(message)} style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 }}>
               <Translate size={12} color={c.muted} />
               <Text variant="caption" tone="muted">
-                {p.translation.original ? `Original, in ${p.languageName(p.translation.from)} · ` : `Translated from ${p.languageName(p.translation.from)}${p.translation.sample ? " (sample)" : ""} · `}
+                {p.translation.original ? `${t("Original, in {language}", { language: p.languageName(p.translation.from) })} · ` : `${t("Translated from {language}", { language: p.languageName(p.translation.from) })}${p.translation.sample ? ` ${t("(sample)")}` : ""} · `}
                 <Text variant="caption" tone="accent" weight="600">
-                  {p.translation.original ? "Show translation" : "View original"}
+                  {p.translation.original ? t("Show translation") : t("View original")}
                 </Text>
               </Text>
             </Pressable>
+          ) : null}
+
+          {!message.deleted && message.poll ? (
+            <PollCard poll={message.poll} mine={mine} onVote={(o) => p.onVote(message, o)} onDecide={(o) => p.onDecidePoll(message, o)} />
           ) : null}
 
           {!message.deleted
@@ -171,13 +181,13 @@ function MessageItemBase(p: Props) {
           {!message.deleted && photos.length ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6, maxWidth: 300, borderRadius: radius.md, overflow: "hidden" }}>
               {photos.slice(0, 4).map((ph, i) => (
-                <Pressable key={ph.id} onPress={() => p.onOpenPhotos(photos, i)} accessibilityLabel={`Open photo ${i + 1}`} style={{ width: photos.length === 1 ? 300 : 148, height: photos.length === 1 ? 220 : 148 }}>
+                <Pressable key={ph.id} onPress={() => p.onOpenPhotos(photos, i)} accessibilityLabel={t("Open photo {n}", { n: i + 1 })} style={{ width: photos.length === 1 ? 300 : 148, height: photos.length === 1 ? 220 : 148 }}>
                   {ph.url ? (
                     <Image source={{ uri: ph.url }} style={{ width: "100%", height: "100%" }} contentFit="cover" transition={120} />
                   ) : (
                     <View style={{ flex: 1, backgroundColor: c.surface2, alignItems: "center", justifyContent: "center" }}>
                       <Text variant="caption" tone="muted">
-                        Photo not kept
+                        {t("Photo not kept")}
                       </Text>
                     </View>
                   )}
@@ -224,7 +234,7 @@ function MessageItemBase(p: Props) {
                 {p.side?.name ?? message.branch?.name}
               </Text>
               <Text variant="caption" tone="muted">
-                side chat · {p.side ? p.side.messages.length : (message.branch?.count ?? 0)}
+                {t("side chat")} · {p.side ? p.side.messages.length : (message.branch?.count ?? 0)}
               </Text>
             </Pressable>
           ) : null}
@@ -252,7 +262,7 @@ function MessageItemBase(p: Props) {
           {mine && message.status === "waiting" ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 }}>
               <Text variant="caption" tone="muted">
-                {p.online ? "Couldn't send yet" : "Waiting to send"}
+                {p.online ? t("Couldn't send yet") : t("Waiting to send")}
               </Text>
               <Pressable
                 disabled={!p.online}
@@ -261,7 +271,7 @@ function MessageItemBase(p: Props) {
               >
                 <ArrowClockwise size={12} color={c.ink} weight="bold" />
                 <Text variant="caption" weight="600">
-                  Retry
+                  {t("Retry")}
                 </Text>
               </Pressable>
             </View>
@@ -277,7 +287,7 @@ function MessageItemBase(p: Props) {
                 ))}
               </View>
               <Text variant="caption" tone="muted">
-                {p.seenBy.length === p.chat.members.length ? "Seen by everyone" : `Seen by ${p.seenBy.map(firstName).join(", ")}`}
+                {p.seenBy.length === p.chat.members.length ? t("Seen by everyone") : t("Seen by {names}", { names: p.seenBy.map(firstName).join(", ") })}
               </Text>
             </View>
           ) : null}

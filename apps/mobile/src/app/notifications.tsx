@@ -9,6 +9,7 @@ import { updateAccount, useAccount } from "@/lib/account";
 import { useChatStore } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
 import { ChatAvatar, Empty, Text } from "@/components/ui";
+import { t } from "@shared/i18n";
 
 /** One row per chat, so a busy group reads "and 6 more". Opening this marks everything as seen. */
 export default function Notifications() {
@@ -26,19 +27,19 @@ export default function Notifications() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16 }}>
-        <Text variant="title2">Notifications</Text>
+        <Text variant="title2">{t("Notifications")}</Text>
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable onPress={() => router.push({ pathname: "/settings/[pane]", params: { pane: "notifications" } })} accessibilityLabel="Notification settings" style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: c.surface2, alignItems: "center", justifyContent: "center" }}>
+          <Pressable onPress={() => router.push({ pathname: "/settings/[pane]", params: { pane: "notifications" } })} accessibilityLabel={t("Notification settings")} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: c.surface2, alignItems: "center", justifyContent: "center" }}>
             <GearSix size={16} color={c.muted} />
           </Pressable>
-          <Pressable onPress={() => router.back()} accessibilityLabel="Close" style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: c.surface2, alignItems: "center", justifyContent: "center" }}>
+          <Pressable onPress={() => router.back()} accessibilityLabel={t("Close")} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: c.surface2, alignItems: "center", justifyContent: "center" }}>
             <X size={15} color={c.muted} weight="bold" />
           </Pressable>
         </View>
       </View>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: insets.bottom + 24, gap: 4 }}>
         {groups.length === 0 ? (
-          <Empty title="Nothing new" body={`Messages from your chats land here${settings.groups === "mentions" ? ", and from groups when someone mentions you" : ""}.`} />
+          <Empty title={t("Nothing new")} body={t(settings.groups === "mentions" ? "Messages from your chats land here, and from groups when someone mentions you." : "Messages from your chats land here.")} />
         ) : (
           groups.map((g) => (
             <Pressable

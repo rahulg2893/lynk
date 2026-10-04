@@ -66,7 +66,26 @@
       "expo-asset",
       "./plugins/with-quoted-bundle-script",
       "./plugins/with-scene-lifecycle",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "NextPlan",
+              "displayName": "Up next",
+              "description": "Your next plan, who's going and where.",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "accessoryRectangular"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

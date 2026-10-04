@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { CODE_LENGTH, DEFAULT_DIAL, RESEND_SECONDS, checkCode, normalizePhone, phoneProblem, sendCode } from "@shared/phone";
 import { Button, Field, Text } from "./ui";
+import { t } from "@shared/i18n";
 
 /**
  * Phone number, then the code we text to it, like the web's PhoneVerify.
  * `check` can reject a valid-looking number (say, one with no account).
  */
-export function PhoneVerify({ onVerified, check, submitLabel = "Send code" }: { onVerified: (phone: string) => void; check?: (phone: string) => string | null; submitLabel?: string }) {
+export function PhoneVerify({ onVerified, check, submitLabel = t("Send code") }: { onVerified: (phone: string) => void; check?: (phone: string) => string | null; submitLabel?: string }) {
   const [stage, setStage] = useState<"number" | "code">("number");
   const [phone, setPhone] = useState(DEFAULT_DIAL);
   const [code, setCode] = useState("");
@@ -39,14 +40,14 @@ export function PhoneVerify({ onVerified, check, submitLabel = "Send code" }: { 
     const ok = await checkCode(value);
     setBusy(false);
     if (ok) onVerified(normalizePhone(phone));
-    else setError(`Enter the ${CODE_LENGTH}-digit code from the text.`);
+    else setError(t("Enter the {n}-digit code from the text.", { n: CODE_LENGTH }));
   };
 
   if (stage === "number") {
     return (
       <View style={{ gap: 16 }}>
         <Field
-          label="Phone number"
+          label={t("Phone number")}
           value={phone}
           onChangeText={(t) => {
             setPhone(t);
@@ -57,12 +58,12 @@ export function PhoneVerify({ onVerified, check, submitLabel = "Send code" }: { 
           textContentType="telephoneNumber"
           autoComplete="tel"
           autoFocus
-          hint="We'll text you a code. Outside India? Start with your country code."
+          hint={t("We'll text you a code. Outside India? Start with your country code.")}
           error={error}
           editable={!busy}
           onSubmitEditing={() => void send()}
         />
-        <Button title={busy ? "Sending code" : submitLabel} variant="primary" size="lg" loading={busy} onPress={() => void send()} />
+        <Button title={busy ? t("Sending code") : submitLabel} variant="primary" size="lg" loading={busy} onPress={() => void send()} />
       </View>
     );
   }
@@ -70,11 +71,7 @@ export function PhoneVerify({ onVerified, check, submitLabel = "Send code" }: { 
   return (
     <View style={{ gap: 16 }}>
       <Text variant="callout" tone="muted">
-        We texted a code to{" "}
-        <Text variant="callout" weight="600">
-          {normalizePhone(phone)}
-        </Text>
-        .
+        {t("We texted a code to {phone}.", { phone: normalizePhone(phone) })}
       </Text>
       <Field
         label={`${CODE_LENGTH}-digit code`}
@@ -90,17 +87,17 @@ export function PhoneVerify({ onVerified, check, submitLabel = "Send code" }: { 
         autoComplete="sms-otp"
         maxLength={CODE_LENGTH}
         autoFocus
-        hint="In this preview no text is sent: any 6 digits work."
+        hint={t("In this preview no text is sent: any 6 digits work.")}
         error={error}
         editable={!busy}
       />
-      <Button title={busy ? "Checking" : "Verify"} variant="primary" size="lg" loading={busy} disabled={code.length !== CODE_LENGTH} onPress={() => void verify(code)} />
+      <Button title={busy ? t("Checking") : t("Verify")} variant="primary" size="lg" loading={busy} disabled={code.length !== CODE_LENGTH} onPress={() => void verify(code)} />
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
         <Text variant="subhead" tone="accent" onPress={busy ? undefined : () => setStage("number")}>
-          Change number
+          {t("Change number")}
         </Text>
         <Text variant="subhead" tone={resendIn ? "muted" : "accent"} onPress={busy || resendIn ? undefined : () => void send()} style={{ fontVariant: ["tabular-nums"] }}>
-          {resendIn ? `Resend in ${resendIn}s` : "Resend code"}
+          {resendIn ? t("Resend in {n}s", { n: resendIn }) : t("Resend code")}
         </Text>
       </View>
     </View>

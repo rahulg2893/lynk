@@ -9,7 +9,9 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { hydrateAccount, useAccount } from "@/lib/account";
 import { setNetworkOnline } from "@/lib/connection";
 import { syncReminders } from "@/lib/reminders";
-import { loadChats, resetStore, useChatStore } from "@/lib/store";
+import { syncWidget } from "@/lib/widget";
+import { setLang } from "@shared/i18n";
+import { loadChats, resetStore, tick, useChatStore } from "@/lib/store";
 import { palette, useScheme } from "@/lib/theme";
 import { SideSafe } from "@/components/SideSafe";
 import { SplashOverlay } from "@/components/Splash";
@@ -46,12 +48,21 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
-  // Keep plan reminders in step with the chats (none when signed out).
+  // Keep plan reminders and the home-screen widget in step with the chats (none when signed out).
   useEffect(() => {
     if (!store.loaded) return;
-    const t = setTimeout(() => void syncReminders(signedIn ? store.chats : []).catch(() => undefined), 1000);
+    const t = setTimeout(() => {
+      void syncReminders(signedIn ? store.chats : []).catch(() => undefined);
+      void syncWidget(signedIn ? store.chats : []).catch(() => undefined);
+    }, 1000);
     return () => clearTimeout(t);
   }, [store.loaded, store.chats, signedIn]);
+
+  // Once a minute: weekly plans whose date has passed move on to the next one.
+  useEffect(() => {
+    const t = setInterval(tick, 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   // Tapping a reminder opens its chat.
   useEffect(() => {
@@ -61,6 +72,10 @@ export default function RootLayout() {
     });
     return () => sub.remove();
   }, []);
+
+  // Lynk's own words follow the language setting; remounting on a change redraws every screen in it.
+  const lang = account?.language ?? "en";
+  setLang(lang);
 
   const ready = hydrated && (!signedIn || store.loaded);
   const base = scheme === "dark" ? DarkTheme : DefaultTheme;
@@ -73,6 +88,7 @@ export default function RootLayout() {
           <StatusBar style={scheme === "dark" ? "light" : "dark"} />
           {hydrated ? (
             <Stack
+              key={lang}
               screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}
               // Every screen stays clear of side bars; the tab screens and the full-bleed welcome handle their own.
               screenLayout={({ route, children }) => (route.name === "(tabs)" || route.name === "welcome" ? children : <SideSafe>{children}</SideSafe>)}
@@ -85,6 +101,7 @@ export default function RootLayout() {
                 <Stack.Screen name="ask" options={{ presentation: "modal" }} />
                 <Stack.Screen name="notifications" options={{ presentation: "modal" }} />
                 <Stack.Screen name="plan" options={{ presentation: "formSheet", sheetAllowedDetents: [0.75, 1], sheetGrabberVisible: true }} />
+                <Stack.Screen name="poll" options={{ presentation: "formSheet", sheetAllowedDetents: [0.75, 1], sheetGrabberVisible: true }} />
                 <Stack.Screen name="todo" options={{ presentation: "formSheet", sheetAllowedDetents: [0.6, 1], sheetGrabberVisible: true }} />
                 <Stack.Screen name="person/[id]" />
                 <Stack.Screen name="settings/[pane]" />

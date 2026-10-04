@@ -9,6 +9,7 @@ import { radius, useColors } from "@/lib/theme";
 import { SideSafe } from "../SideSafe";
 import { Text, tap } from "../ui";
 import { Lists, PlanCard, TaskCard } from "./Cards";
+import { t } from "@shared/i18n";
 
 /**
  * A pinned bar under the chat header: the next plan and what's still open.
@@ -49,7 +50,7 @@ export function UpNext({ chat, now, onJump }: { chat: Chat; now: number; onJump:
           setKnown(new Set((chat.lists ?? []).map((l) => l.id)));
         }}
         accessibilityRole="button"
-        accessibilityLabel={`Up next: ${title}${summary ? `, ${summary}` : ""}. Show plans, to-dos and lists`}
+        accessibilityLabel={`${t("Up next")}: ${title}${summary ? `, ${summary}` : ""}. ${t("Show plans, to-dos and lists")}`}
         style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: pressed ? c.surface2 : c.surface, borderBottomWidth: 0.5, borderBottomColor: c.line })}
       >
         <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: c.accentSoft, alignItems: "center", justifyContent: "center" }}>
@@ -80,17 +81,17 @@ export function UpNext({ chat, now, onJump }: { chat: Chat; now: number; onJump:
         <SideSafe>
           <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8 }}>
             <View style={{ flex: 1 }}>
-              <Text variant="title2">Up next</Text>
+              <Text variant="title2">{t("Up next")}</Text>
               <Text variant="footnote" tone="muted" numberOfLines={1}>
-                Saved in {chat.name}
+                {t("Saved in {name}", { name: chat.name })}
               </Text>
             </View>
             <Text tone="accent" weight="600" onPress={() => close()}>
-              Done
+              {t("Done")}
             </Text>
           </View>
           <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40, gap: 12 }} keyboardShouldPersistTaps="handled">
-            {sheet.plans.length ? <Heading>Plans</Heading> : null}
+            {sheet.plans.length ? <Heading>{t("Plans")}</Heading> : null}
             {sheet.plans.map((d) => (
               <PlanCard
                 key={d.id}
@@ -102,23 +103,23 @@ export function UpNext({ chat, now, onJump }: { chat: Chat; now: number; onJump:
                 onNudge={() => close(() => send(chat.id, nudgeText(chat, d)))}
               />
             ))}
-            {sheet.pins.length ? <Heading>Pinned</Heading> : null}
+            {sheet.pins.length ? <Heading>{t("Pinned")}</Heading> : null}
             {sheet.pins.map((m) => (
               <View key={m.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: c.surface }}>
                 <PushPin size={16} color={c.accentInk} weight="fill" />
-                <Pressable style={{ flex: 1 }} onPress={() => close(() => onJump(m.id))} accessibilityRole="button" accessibilityHint="Shows the message in the chat">
+                <Pressable style={{ flex: 1 }} onPress={() => close(() => onJump(m.id))} accessibilityRole="button" accessibilityHint={t("Shows the message in the chat")}>
                   <Text variant="caption" tone="muted" weight="600">
-                    {m.from === "me" ? "You" : firstName(m.from)}
+                    {m.from === "me" ? t("You") : firstName(m.from)}
                   </Text>
                   <Text numberOfLines={2}>{messagePreview(m)}</Text>
                 </Pressable>
-                <Text tone="accent" weight="600" onPress={() => togglePinnedMessage(chat.id, m.id)} accessibilityRole="button" accessibilityLabel="Unpin">
-                  Unpin
+                <Text tone="accent" weight="600" onPress={() => togglePinnedMessage(chat.id, m.id)} accessibilityRole="button" accessibilityLabel={t("Unpin")}>
+                  {t("Unpin")}
                 </Text>
               </View>
             ))}
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Heading>To-dos</Heading>
+              <Heading>{t("To-dos")}</Heading>
               <Pressable
                 onPress={() => close(() => router.push({ pathname: "/todo", params: { chatId: chat.id } }))}
                 accessibilityRole="button"
@@ -127,21 +128,21 @@ export function UpNext({ chat, now, onJump }: { chat: Chat; now: number; onJump:
               >
                 <Plus size={14} color={c.accentInk} weight="bold" />
                 <Text variant="subhead" tone="accent" weight="600">
-                  New to-do
+                  {t("New to-do")}
                 </Text>
               </Pressable>
             </View>
             {sheet.todos.map((t) => (
               <TaskCard key={t.id} task={t} onStatus={(s) => setTask(chat.id, t.id, s)} onJump={(m) => close(() => onJump(m))} />
             ))}
-            <Heading>Lists</Heading>
+            <Heading>{t("Lists")}</Heading>
             <Lists lists={sheet.lists} onChange={(op) => change(chat.id, (ch) => applyListOp(ch, op))} />
             <Pressable
               onPress={() => close(() => router.push({ pathname: "/chat-info/[id]", params: { id: chat.id } }))}
               style={{ alignSelf: "center", marginTop: 8, paddingHorizontal: 16, height: 40, borderRadius: radius.pill, justifyContent: "center" }}
             >
               <Text variant="subhead" tone="accent" weight="600">
-                Past plans, done to-dos and memories
+                {t("Past plans, done to-dos and memories")}
               </Text>
             </Pressable>
           </ScrollView>

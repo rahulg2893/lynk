@@ -7,6 +7,7 @@ import { ArrowUUpLeft, BookmarkSimple, CalendarPlus, CheckSquareOffset, Copy, Gi
 import { messagePreview, personName, type Message } from "@shared/chat";
 import { radius, useColors, useScheme } from "@/lib/theme";
 import { Text } from "../ui";
+import { t } from "@shared/i18n";
 
 export const QUICK = ["👍", "❤️", "😂", "🙌", "😮", "🙏"];
 
@@ -52,16 +53,16 @@ export function MessageMenu({
   if (!message) return null;
   const mine = message.from === "me";
   const actions: { key: MenuAction; label: string; icon: ReactNode; danger?: boolean }[] = [
-    { key: "reply", label: "Reply", icon: <ArrowUUpLeft size={20} color={c.ink} /> },
-    { key: "save", label: message.saved ? "Remove from Saved" : "Save", icon: <BookmarkSimple size={20} color={c.ink} weight={message.saved ? "fill" : "regular"} /> },
-    ...(canSide ? [{ key: "side" as const, label: sideExists ? "Open side chat" : "Start a side chat", icon: <GitBranch size={20} color={c.ink} /> }] : []),
-    ...(canSide ? [{ key: "pin" as const, label: message.pinned ? "Unpin" : "Pin to Up next", icon: <PushPin size={20} color={c.ink} weight={message.pinned ? "fill" : "regular"} /> }] : []),
-    { key: "plan", label: "Make a plan from this", icon: <CalendarPlus size={20} color={c.ink} /> },
-    ...(canSide ? [{ key: "todo" as const, label: "Make a to-do from this", icon: <CheckSquareOffset size={20} color={c.ink} /> }] : []),
-    ...(!mine && message.text ? [{ key: "translate" as const, label: translated ? "View original" : "Translate", icon: <Translate size={20} color={c.ink} /> }] : []),
-    ...(message.text ? [{ key: "copy" as const, label: "Copy", icon: <Copy size={20} color={c.ink} /> }] : []),
-    ...(mine ? [{ key: "edit" as const, label: "Edit", icon: <PencilSimple size={20} color={c.ink} /> }] : []),
-    ...(mine ? [{ key: "delete" as const, label: "Delete for everyone", icon: <Trash size={20} color={c.dangerInk} />, danger: true }] : []),
+    { key: "reply", label: t("Reply"), icon: <ArrowUUpLeft size={20} color={c.ink} /> },
+    { key: "save", label: message.saved ? t("Remove from Saved") : t("Save"), icon: <BookmarkSimple size={20} color={c.ink} weight={message.saved ? "fill" : "regular"} /> },
+    ...(canSide ? [{ key: "side" as const, label: sideExists ? t("Open side chat") : t("Start a side chat"), icon: <GitBranch size={20} color={c.ink} /> }] : []),
+    ...(canSide ? [{ key: "pin" as const, label: message.pinned ? t("Unpin") : t("Pin to Up next"), icon: <PushPin size={20} color={c.ink} weight={message.pinned ? "fill" : "regular"} /> }] : []),
+    { key: "plan", label: t("Make a plan from this"), icon: <CalendarPlus size={20} color={c.ink} /> },
+    ...(canSide ? [{ key: "todo" as const, label: t("Make a to-do from this"), icon: <CheckSquareOffset size={20} color={c.ink} /> }] : []),
+    ...(!mine && message.text ? [{ key: "translate" as const, label: translated ? t("View original") : t("Translate"), icon: <Translate size={20} color={c.ink} /> }] : []),
+    ...(message.text ? [{ key: "copy" as const, label: t("Copy"), icon: <Copy size={20} color={c.ink} /> }] : []),
+    ...(mine ? [{ key: "edit" as const, label: t("Edit"), icon: <PencilSimple size={20} color={c.ink} /> }] : []),
+    ...(mine ? [{ key: "delete" as const, label: t("Delete for everyone"), icon: <Trash size={20} color={c.dangerInk} />, danger: true }] : []),
   ];
 
   return (
@@ -75,7 +76,7 @@ export function MessageMenu({
               {QUICK.map((e, i) => (
                 <Animated.View key={e} style={{ transform: [{ scale: pops[i] }] }}>
                   <Pressable
-                    accessibilityLabel={`React with ${e}`}
+                    accessibilityLabel={t("React with {emoji}", { emoji: e })}
                     onPress={() => {
                       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
                       onReact(e);
@@ -89,7 +90,7 @@ export function MessageMenu({
             </View>
             <View style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "88%", padding: 14, borderRadius: radius.lg, backgroundColor: mine ? c.accentSoft : c.surface, marginBottom: 10 }}>
               <Text variant="caption" tone="muted" weight="600">
-                {mine ? "You" : personName(message.from)}
+                {mine ? t("You") : personName(message.from)}
               </Text>
               <Text numberOfLines={6} style={{ marginTop: 2 }}>
                 {messagePreview(message)}

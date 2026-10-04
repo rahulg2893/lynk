@@ -7,6 +7,7 @@ import { useColors } from "@/lib/theme";
 import { PhoneVerify } from "@/components/PhoneVerify";
 import { IconButton, LogoMark, Text } from "@/components/ui";
 import { useTopMargin } from "@/lib/layout";
+import { t } from "@shared/i18n";
 
 export default function SignIn() {
   const insets = useSafeAreaInsets();
@@ -16,19 +17,19 @@ export default function SignIn() {
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingTop: insets.top + topMargin + 8, paddingBottom: insets.bottom + 24, paddingHorizontal: 24, flexGrow: 1 }}>
-      <IconButton label="Back" onPress={() => router.back()} style={{ marginLeft: -8 }}>
+      <IconButton label={t("Back")} onPress={() => router.back()} style={{ marginLeft: -8 }}>
         <CaretLeft size={24} color={c.accentInk} weight="bold" />
       </IconButton>
       <View style={{ flex: 1, justifyContent: "center", gap: 28 }}>
         <View style={{ gap: 12 }}>
           <LogoMark height={34} />
-          <Text variant="largeTitle">Welcome back</Text>
+          <Text variant="largeTitle">{t("Welcome back")}</Text>
           <Text variant="callout" tone="muted">
-            Sign in with your phone number. There&apos;s no Lynk password to remember.
+            {t("Sign in with your phone number. There's no Lynk password to remember.")}
           </Text>
         </View>
         <PhoneVerify
-          check={(phone) => (account && phone !== account.profile.phone ? "There's no Lynk account for this number. Check it, or create an account." : null)}
+          check={(phone) => (account && phone !== account.profile.phone ? t("There's no Lynk account for this number. Check it, or create an account.") : null)}
           onVerified={signIn}
         />
         {account?.seeded ? (
@@ -39,7 +40,7 @@ export default function SignIn() {
         <Text variant="footnote" tone="muted" style={{ textAlign: "center" }}>
           New here?{" "}
           <Text variant="footnote" tone="accent" weight="600" onPress={() => router.replace("/sign-up")}>
-            Create an account
+            {t("Create an account")}
           </Text>
         </Text>
       </View>

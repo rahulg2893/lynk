@@ -9,6 +9,7 @@ import { useAccount } from "@/lib/account";
 import { createGroup, startChat } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
 import { Avatar, Button, Field, Segmented, Text, tap } from "@/components/ui";
+import { t } from "@shared/i18n";
 
 type Tab = "chat" | "group" | "invite";
 
@@ -36,8 +37,8 @@ export default function NewChat() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <View style={{ padding: 16, gap: 14 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text variant="title2">New</Text>
-          <Pressable onPress={() => router.back()} accessibilityLabel="Close" style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: c.surface2, alignItems: "center", justifyContent: "center" }}>
+          <Text variant="title2">{t("New")}</Text>
+          <Pressable onPress={() => router.back()} accessibilityLabel={t("Close")} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: c.surface2, alignItems: "center", justifyContent: "center" }}>
             <X size={15} color={c.muted} weight="bold" />
           </Pressable>
         </View>
@@ -45,24 +46,24 @@ export default function NewChat() {
           value={tab}
           onChange={setTab}
           options={[
-            { value: "chat", label: "Chat" },
-            { value: "group", label: "Group" },
-            { value: "invite", label: "Invite" },
+            { value: "chat", label: t("Chat") },
+            { value: "group", label: t("Group") },
+            { value: "invite", label: t("Invite") },
           ]}
         />
         {tab !== "invite" ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 40, borderRadius: radius.pill, backgroundColor: c.surface2, paddingHorizontal: 12 }}>
             <MagnifyingGlass size={18} color={c.muted} />
-            <TextInput value={query} onChangeText={setQuery} placeholder="Search people" placeholderTextColor={c.muted} style={{ flex: 1, fontSize: 17, color: c.ink }} autoCapitalize="none" />
+            <TextInput value={query} onChangeText={setQuery} placeholder={t("Search people")} placeholderTextColor={c.muted} style={{ flex: 1, fontSize: 17, color: c.ink }} autoCapitalize="none" />
           </View>
         ) : null}
-        {tab === "group" ? <Field label="Group name" value={name} onChangeText={setName} placeholder="Weekend plans" maxLength={40} /> : null}
+        {tab === "group" ? <Field label={t("Group name")} value={name} onChangeText={setName} placeholder={t("Weekend plans")} maxLength={40} /> : null}
       </View>
 
       {tab === "invite" ? (
         <View style={{ padding: 20, gap: 16 }}>
           <Text variant="callout" tone="muted">
-            Anyone with your link can start a chat with you. It opens straight into Lynk.
+            {t("Anyone with your link can start a chat with you. It opens straight into Lynk.")}
           </Text>
           <View style={{ padding: 16, borderRadius: radius.lg, backgroundColor: c.surface }}>
             <Text variant="subhead" selectable>
@@ -70,7 +71,7 @@ export default function NewChat() {
             </Text>
           </View>
           <Button
-            title={copied ? "Copied" : "Copy link"}
+            title={copied ? t("Copied") : t("Copy link")}
             icon={copied ? <Check size={18} color={c.ink} weight="bold" /> : <Copy size={18} color={c.ink} />}
             onPress={() => {
               void Clipboard.setStringAsync(link);
@@ -78,7 +79,7 @@ export default function NewChat() {
               setTimeout(() => setCopied(false), 1600);
             }}
           />
-          <Button title="Share" variant="primary" icon={<ShareNetwork size={18} color={c.onAccent} weight="bold" />} onPress={() => void Share.share({ message: `Chat with me on Lynk: ${link}` })} />
+          <Button title={t("Share")} variant="primary" icon={<ShareNetwork size={18} color={c.onAccent} weight="bold" />} onPress={() => void Share.share({ message: t("Chat with me on Lynk: {link}", { link }) })} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 100 }} keyboardShouldPersistTaps="handled">
@@ -111,7 +112,7 @@ export default function NewChat() {
       {tab === "group" ? (
         <View style={{ position: "absolute", left: 16, right: 16, bottom: insets.bottom + 12 }}>
           <Button
-            title={picked.length ? `Create group with ${picked.length}` : "Pick people"}
+            title={picked.length ? t("Create group with {n}", { n: picked.length }) : t("Pick people")}
             variant="primary"
             size="lg"
             disabled={!picked.length || !name.trim()}

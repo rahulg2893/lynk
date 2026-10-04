@@ -11,6 +11,7 @@ import { isSimulatedOffline, setSimulatedOffline, useOnline } from "@/lib/connec
 import { getState, onIncoming, useChatStore, waitingCount } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
 import { Avatar, Text } from "./ui";
+import { t } from "@shared/i18n";
 
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
@@ -91,14 +92,14 @@ export function Banners() {
           {online ? <CloudCheck size={20} weight="fill" color={c.accentInk} /> : <CloudSlash size={20} weight="fill" color={c.bg} />}
           <Text variant="footnote" style={{ color: online ? c.ink : c.bg, flexShrink: 1 }}>
             <Text variant="footnote" weight="700" style={{ color: online ? c.ink : c.bg }}>
-              {online ? "Back online" : "You're offline"}
+              {online ? t("Back online") : t("You're offline")}
             </Text>
             {online ? (back ? ` · sending ${plural(back, "message")}` : "") : waiting ? ` · ${plural(waiting, "message")} will send when you reconnect` : " · messages will wait"}
           </Text>
           {!online && isSimulatedOffline() ? (
             <Pressable onPress={() => setSimulatedOffline(false)} style={{ height: 30, paddingHorizontal: 12, borderRadius: radius.pill, justifyContent: "center", backgroundColor: "rgba(255,255,255,0.18)" }}>
               <Text variant="footnote" weight="600" style={{ color: c.bg }}>
-                Reconnect
+                {t("Reconnect")}
               </Text>
             </Pressable>
           ) : null}
@@ -109,7 +110,7 @@ export function Banners() {
         {alert && chat ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`New message from ${personName(alert.message.from)}. Open`}
+            accessibilityLabel={t("New message from {name}. Open", { name: personName(alert.message.from) })}
             onPress={() => {
               setAlert(null);
               router.push({ pathname: "/chat/[id]", params: { id: alert.threadId } });
@@ -129,10 +130,10 @@ export function Banners() {
             <Avatar id={alert.message.from} name={personName(alert.message.from)} size={40} />
             <View style={{ flex: 1 }}>
               <Text variant="subhead" weight="600" numberOfLines={1}>
-                {chat.kind === "group" ? `${personName(alert.message.from)} in ${chat.name}` : personName(alert.message.from)}
+                {chat.kind === "group" ? t("{name} in {chat}", { name: personName(alert.message.from), chat: chat.name }) : personName(alert.message.from)}
               </Text>
               <Text variant="subhead" tone="muted" numberOfLines={2}>
-                {previews ? messagePreview(alert.message) : "New message"}
+                {previews ? messagePreview(alert.message) : t("New message")}
               </Text>
             </View>
           </Pressable>

@@ -8,12 +8,13 @@ import { useAccount } from "@/lib/account";
 import { useOnline } from "@/lib/connection";
 import { selectChat, useSelectedChat, useTopMargin } from "@/lib/layout";
 import { actionSheet } from "@/lib/sheet";
-import { toggleMute, togglePin, useChatStore } from "@/lib/store";
+import { startDemo, toggleMute, togglePin, useChatStore } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
 import { ChatView } from "@/components/chat/ChatView";
 import { FoldSplit, isFolded } from "@/components/FoldSplit";
 import { Badge, ChatAvatar, Empty, IconButton, Pill, StatusNode, Text, tap } from "@/components/ui";
 import { SideSafe } from "@/components/SideSafe";
+import { t } from "@shared/i18n";
 
 type Filter = "all" | "unread" | "groups";
 
@@ -54,26 +55,26 @@ function ChatsContent() {
   const open = (id: string) => (split ? selectChat({ id }) : router.push({ pathname: "/chat/[id]", params: { id } }));
   const menu = (ch: Chat) =>
     actionSheet(ch.name, [
-      { label: ch.pinned ? "Unpin" : "Pin", onPress: () => togglePin(ch.id) },
-      { label: ch.muted ? "Unmute" : "Mute", onPress: () => toggleMute(ch.id) },
-      { label: "Chat info", onPress: () => router.push({ pathname: "/chat-info/[id]", params: { id: ch.id } }) },
+      { label: ch.pinned ? t("Unpin") : t("Pin"), onPress: () => togglePin(ch.id) },
+      { label: ch.muted ? t("Unmute") : t("Mute"), onPress: () => toggleMute(ch.id) },
+      { label: t("Chat info"), onPress: () => router.push({ pathname: "/chat-info/[id]", params: { id: ch.id } }) },
     ]);
 
   const header = (
     <View>
       <View style={{ paddingHorizontal: 20, paddingTop: 16 + topMargin, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
         <View style={{ flexShrink: 1 }}>
-          <Text variant="largeTitle">Chats</Text>
+          <Text variant="largeTitle">{t("Chats")}</Text>
           <Text variant="footnote" tone="muted">
-            {!online ? "Offline" : !loaded ? "Syncing" : unreadTotal ? `${unreadTotal} unread` : "All caught up"}
+            {!online ? t("Offline") : !loaded ? t("Syncing") : unreadTotal ? t("{n} unread", { n: unreadTotal }) : t("All caught up")}
           </Text>
         </View>
         <View style={{ flexDirection: "row", gap: 6, paddingBottom: 4 }}>
-          <IconButton label="Ask Lynk" onPress={() => router.push("/ask")} style={{ backgroundColor: c.surface }}>
+          <IconButton label={t("Ask Lynk")} onPress={() => router.push("/ask")} style={{ backgroundColor: c.surface }}>
             <Sparkle size={20} color={c.accentInk} weight="fill" />
           </IconButton>
           <View>
-            <IconButton label={newAlerts ? `Notifications, ${newAlerts} new` : "Notifications"} onPress={() => router.push("/notifications")} style={{ backgroundColor: c.surface }}>
+            <IconButton label={newAlerts ? t("Notifications, {n} new", { n: newAlerts }) : t("Notifications")} onPress={() => router.push("/notifications")} style={{ backgroundColor: c.surface }}>
               {newAlerts ? <BellRinging size={20} color={c.ink} weight="bold" /> : <Bell size={20} color={c.ink} weight="bold" />}
             </IconButton>
             {newAlerts ? (
@@ -82,7 +83,7 @@ function ChatsContent() {
               </View>
             ) : null}
           </View>
-          <IconButton label="New chat" filled onPress={() => router.push("/new-chat")}>
+          <IconButton label={t("New chat")} filled onPress={() => router.push("/new-chat")}>
             <NotePencil size={19} color={c.onAccent} weight="bold" />
           </IconButton>
         </View>
@@ -93,15 +94,15 @@ function ChatsContent() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search chats"
+          placeholder={t("Search chats")}
           placeholderTextColor={c.muted}
-          accessibilityLabel="Search chats"
+          accessibilityLabel={t("Search chats")}
           style={{ flex: 1, fontSize: 17, color: c.ink }}
           returnKeyType="search"
           clearButtonMode="never"
         />
         {query ? (
-          <Pressable onPress={() => setQuery("")} accessibilityLabel="Clear search" hitSlop={8}>
+          <Pressable onPress={() => setQuery("")} accessibilityLabel={t("Clear search")} hitSlop={8}>
             <XCircle size={18} color={c.muted} weight="fill" />
           </Pressable>
         ) : null}
@@ -110,7 +111,7 @@ function ChatsContent() {
       <View style={{ flexDirection: "row", gap: 4, paddingHorizontal: 12, marginTop: 10 }}>
         {(["all", "unread", "groups"] as Filter[]).map((f) => (
           <Pill key={f} active={filter === f} onPress={() => setFilter(f)}>
-            {f === "all" ? "All" : f === "unread" ? "Unread" : "Groups"}
+            {f === "all" ? t("All") : f === "unread" ? t("Unread") : t("Groups")}
           </Pill>
         ))}
       </View>
@@ -118,7 +119,7 @@ function ChatsContent() {
       {showStrip ? (
         <View style={{ marginTop: 14 }}>
           <Text variant="footnote" tone="muted" weight="600" style={{ paddingHorizontal: 20, marginBottom: 8 }}>
-            Pinned
+            {t("Pinned")}
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 14, gap: 12 }}>
             {pinned.map((ch) => (
@@ -126,7 +127,7 @@ function ChatsContent() {
                 key={ch.id}
                 onPress={() => open(ch.id)}
                 onLongPress={() => menu(ch)}
-                accessibilityLabel={`${ch.name}${ch.unread ? `, ${ch.unread} unread` : ""}`}
+                accessibilityLabel={`${ch.name}${ch.unread ? `, ${t("{n} unread", { n: ch.unread })}` : ""}`}
                 style={({ pressed }) => ({ alignItems: "center", width: 76, opacity: pressed ? 0.7 : 1 })}
               >
                 <View style={{ borderRadius: 24, padding: 3, borderWidth: 2.5, borderColor: ch.unread && !ch.muted ? c.accent : "transparent" }}>
@@ -148,7 +149,7 @@ function ChatsContent() {
 
       {rows.length ? (
         <Text variant="footnote" tone="muted" weight="600" style={{ paddingHorizontal: 20, marginTop: 18, marginBottom: 4 }}>
-          {showStrip ? "All chats" : "Recent"}
+          {showStrip ? t("All chats") : t("Recent")}
         </Text>
       ) : null}
     </View>
@@ -165,22 +166,29 @@ function ChatsContent() {
       ListHeaderComponent={header}
       ListEmptyComponent={
         !loaded ? (
-          <Empty title="Syncing your chats" body="Opening your encrypted storage…" />
+          <Empty title={t("Syncing your chats")} body={t("Opening your encrypted storage…")} />
         ) : chats.length === 0 ? (
           <Empty
             icon={<NotePencil size={34} color={c.accentInk} />}
-            title="No chats yet"
-            body="Start one, or share your invite link from You."
+            title={t("No chats yet")}
+            body={t("Watch a 30-second demo chat, start one, or share your invite link from You.")}
             action={
-              <Pressable onPress={() => router.push("/new-chat")} style={{ height: 44, paddingHorizontal: 20, borderRadius: radius.pill, backgroundColor: c.accent, justifyContent: "center" }}>
-                <Text weight="600" tone="onAccent">
-                  Start a chat
-                </Text>
-              </Pressable>
+              <View style={{ alignItems: "center", gap: 8 }}>
+                <Pressable onPress={() => open(startDemo())} accessibilityRole="button" style={{ height: 44, paddingHorizontal: 20, borderRadius: radius.pill, backgroundColor: c.accent, justifyContent: "center" }}>
+                  <Text weight="600" tone="onAccent">
+                    {t("See how Lynk works")}
+                  </Text>
+                </Pressable>
+                <Pressable onPress={() => router.push("/new-chat")} accessibilityRole="button" style={{ height: 44, paddingHorizontal: 20, justifyContent: "center" }}>
+                  <Text weight="600" tone="accent">
+                    {t("Start a chat")}
+                  </Text>
+                </Pressable>
+              </View>
             }
           />
         ) : rows.length === 0 && !showStrip ? (
-          <Empty title={query ? `Nothing matches “${query}”` : "Nothing here right now"} body={query ? "Try Ask Lynk to search inside messages." : "Switch the filter back to All."} />
+          <Empty title={query ? t("Nothing matches “{query}”", { query }) : t("Nothing here right now")} body={query ? t("Try Ask Lynk to search inside messages.") : t("Switch the filter back to All.")} />
         ) : null
       }
       renderItem={({ item }) => <ChatRow chat={item} now={now} selected={split && selected?.id === item.id} onPress={() => open(item.id)} onLongPress={() => menu(item)} />}
@@ -198,7 +206,7 @@ function ChatsContent() {
           <ChatView key={selected.id} id={selected.id} jumpTo={selected.m} embedded />
         ) : (
           <View style={{ flex: 1, justifyContent: "center" }}>
-            <Empty icon={<NotePencil size={34} color={c.accentInk} />} title="Pick a chat" body="Your conversation opens here, next to the list." />
+            <Empty icon={<NotePencil size={34} color={c.accentInk} />} title={t("Pick a chat")} body={t("Your conversation opens here, next to the list.")} />
           </View>
         )
       }
@@ -210,7 +218,7 @@ function ChatRow({ chat, now, selected, onPress, onLongPress }: { chat: Chat; no
   const c = useColors();
   const last = chat.messages.at(-1);
   const mine = last?.from === "me";
-  const who = !last ? "" : mine ? "You: " : chat.kind === "dm" ? "" : `${firstName(last.from)}: `;
+  const who = !last ? "" : mine ? `${t("You")}: ` : chat.kind === "dm" ? "" : `${firstName(last.from)}: `;
   const hot = chat.unread > 0 && !chat.muted;
   return (
     <Pressable
@@ -220,7 +228,7 @@ function ChatRow({ chat, now, selected, onPress, onLongPress }: { chat: Chat; no
       }}
       onLongPress={onLongPress}
       accessibilityRole="button"
-      accessibilityLabel={`${chat.name}${chat.unread ? `, ${chat.unread} unread` : ""}`}
+      accessibilityLabel={`${chat.name}${chat.unread ? `, ${t("{n} unread", { n: chat.unread })}` : ""}`}
       accessibilityState={{ selected }}
       style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: pressed ? c.surface2 : selected ? c.accentSoft : "transparent" })}
     >
@@ -243,7 +251,7 @@ function ChatRow({ chat, now, selected, onPress, onLongPress }: { chat: Chat; no
             <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6 }}>
               {mine && last?.status ? <StatusNode status={last.status} size={9} /> : null}
               <Text variant="subhead" tone={hot ? "ink" : "muted"} numberOfLines={2} style={{ flex: 1 }}>
-                {!last ? "No messages yet" : last.deleted ? "Message deleted" : `${mine && last.status === "waiting" ? "Waiting to send · " : who}${messagePreview(last)}`}
+                {!last ? t("No messages yet") : last.deleted ? t("Message deleted") : `${mine && last.status === "waiting" ? `${t("Waiting to send")} · ` : who}${messagePreview(last)}`}
               </Text>
             </View>
           )}

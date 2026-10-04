@@ -9,6 +9,7 @@ import { Avatar, Empty, Text } from "@/components/ui";
 import { FoldSplit } from "@/components/FoldSplit";
 import { SideSafe } from "@/components/SideSafe";
 import { useTopMargin } from "@/lib/layout";
+import { t } from "@shared/i18n";
 
 type Entry = { chat: Chat; threadId: string; sideName?: string; message: Message };
 
@@ -38,21 +39,21 @@ function SavedContent() {
       keyboardShouldPersistTaps="handled"
       ListHeaderComponent={
         !withHeader ? null : <View style={{ gap: 12, marginBottom: 6 }}>
-          <Text variant="largeTitle">Saved</Text>
+          <Text variant="largeTitle">{t("Saved")}</Text>
           <Text variant="subhead" tone="muted">
-            Messages you bookmarked, from every chat. Hold a message and choose Save.
+            {t("Messages you bookmarked, from every chat. Hold a message and choose Save.")}
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 40, borderRadius: radius.pill, backgroundColor: c.surface2, paddingHorizontal: 12 }}>
             <MagnifyingGlass size={18} color={c.muted} />
-            <TextInput value={query} onChangeText={setQuery} placeholder="Search saved" placeholderTextColor={c.muted} style={{ flex: 1, fontSize: 17, color: c.ink }} />
+            <TextInput value={query} onChangeText={setQuery} placeholder={t("Search saved")} placeholderTextColor={c.muted} style={{ flex: 1, fontSize: 17, color: c.ink }} />
           </View>
         </View>
       }
       ListEmptyComponent={
         !withHeader ? null : <Empty
           icon={<BookmarkSimple size={40} color={c.accentInk} weight="fill" />}
-          title={query ? `Nothing saved matches “${query}”` : "Nothing saved yet"}
-          body={query ? undefined : "Addresses, recipes, that link you'll need later: hold a message and choose Save to keep it here."}
+          title={query ? t("Nothing saved matches “{query}”", { query }) : t("Nothing saved yet")}
+          body={query ? undefined : t("Addresses, recipes, that link you'll need later: hold a message and choose Save to keep it here.")}
         />
       }
       renderItem={({ item: e }) => (
@@ -77,7 +78,7 @@ function SavedContent() {
             <Avatar id={e.message.from} name={personName(e.message.from)} size={32} />
             <View style={{ flex: 1 }}>
               <Text variant="footnote" weight="700">
-                {e.message.from === "me" ? "You" : personName(e.message.from)}
+                {personName(e.message.from)}
               </Text>
               <Text style={{ marginTop: 2 }}>{messagePreview(e.message)}</Text>
             </View>
@@ -85,13 +86,13 @@ function SavedContent() {
           <View style={{ flexDirection: "row", gap: 8 }}>
             <Pressable onPress={() => router.push({ pathname: "/chat/[id]", params: { id: e.threadId, m: e.message.id } })} style={{ height: 34, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: c.surface2, justifyContent: "center" }}>
               <Text variant="footnote" weight="600">
-                Show in chat
+                {t("Show in chat")}
               </Text>
             </Pressable>
             <Pressable onPress={() => toggleSave(e.threadId, e.message.id)} style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 34, paddingHorizontal: 14, borderRadius: radius.pill }}>
               <BookmarkSimple size={15} color={c.accentInk} weight="fill" />
               <Text variant="footnote" weight="600" tone="muted">
-                Unsave
+                {t("Unsave")}
               </Text>
             </Pressable>
           </View>

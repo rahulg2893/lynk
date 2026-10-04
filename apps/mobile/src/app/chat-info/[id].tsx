@@ -4,13 +4,14 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BellSlash, CalendarPlus, LockSimple, PencilSimple, Plus, PushPin, SignOut, UserMinus, UserPlus, X } from "phosphor-react-native";
 import { PEOPLE, personName, type Memory } from "@shared/chat";
-import { applyListOp, editMemory, removeMemory, setRsvp } from "@shared/chat-ops";
+import { applyListOp, editMemory, removeMemory, setChatSmart, setRsvp } from "@shared/chat-ops";
 import { useAccount } from "@/lib/account";
 import { actionSheet, confirm } from "@/lib/sheet";
 import { change, changeMembers, leaveChat, renameChat, setDecision, setTask, toggleMute, togglePin, useChatStore } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
 import { Lists, PlanCard, SmallButton, TaskCard } from "@/components/chat/Cards";
 import { Avatar, Button, ChatAvatar, Row, Section, Segmented, SwitchRow, Text } from "@/components/ui";
+import { t } from "@shared/i18n";
 
 type Tab = "plans" | "tasks" | "lists" | "memory" | "info";
 
@@ -34,7 +35,7 @@ export default function ChatInfo() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <View style={{ alignItems: "center", paddingTop: 20, paddingHorizontal: 16, gap: 8 }}>
         <View style={{ position: "absolute", right: 12, top: 12 }}>
-          <Pressable onPress={() => router.back()} accessibilityLabel="Close" style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: c.surface2, alignItems: "center", justifyContent: "center" }}>
+          <Pressable onPress={() => router.back()} accessibilityLabel={t("Close")} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: c.surface2, alignItems: "center", justifyContent: "center" }}>
             <X size={15} color={c.muted} weight="bold" />
           </Pressable>
         </View>
@@ -45,7 +46,7 @@ export default function ChatInfo() {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
           <LockSimple size={12} color={c.muted} weight="fill" />
           <Text variant="caption" tone="muted">
-            End-to-end encrypted{chat.kind === "group" ? ` · ${chat.members.length + 1} members` : ""}
+            {t("End-to-end encrypted")}{chat.kind === "group" ? ` · ${t("{n} members", { n: chat.members.length + 1 })}` : ""}
           </Text>
         </View>
         <View style={{ alignSelf: "stretch", marginTop: 8 }}>
@@ -53,11 +54,11 @@ export default function ChatInfo() {
             value={tab}
             onChange={setTab}
             options={[
-              { value: "plans", label: "Plans" },
-              { value: "tasks", label: "To-dos" },
-              { value: "lists", label: "Lists" },
-              { value: "memory", label: "Memories" },
-              { value: "info", label: "Info" },
+              { value: "plans", label: t("Plans") },
+              { value: "tasks", label: t("To-dos") },
+              { value: "lists", label: t("Lists") },
+              { value: "memory", label: t("Memories") },
+              { value: "info", label: t("Info") },
             ]}
           />
         </View>
@@ -66,10 +67,10 @@ export default function ChatInfo() {
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32, gap: 12 }} keyboardShouldPersistTaps="handled">
         {tab === "plans" ? (
           <>
-            <Button title="New plan" variant="primary" icon={<CalendarPlus size={18} color={c.onAccent} weight="bold" />} onPress={() => router.push({ pathname: "/plan", params: { chatId: chat.id } })} />
+            <Button title={t("New plan")} variant="primary" icon={<CalendarPlus size={18} color={c.onAccent} weight="bold" />} onPress={() => router.push({ pathname: "/plan", params: { chatId: chat.id } })} />
             {chat.decisions.length === 0 ? (
               <Text variant="subhead" tone="muted" style={{ textAlign: "center", paddingVertical: 24 }}>
-                No plans yet. Make one, or Lynk suggests one when everyone agrees on a time or place.
+                {t("No plans yet. Make one, or Lynk suggests one when everyone agrees on a time or place.")}
               </Text>
             ) : (
               chat.decisions.map((d) => (
@@ -90,10 +91,10 @@ export default function ChatInfo() {
 
         {tab === "tasks" ? (
           <>
-            <Button title="New to-do" variant="primary" icon={<Plus size={18} color={c.onAccent} weight="bold" />} onPress={() => router.push({ pathname: "/todo", params: { chatId: chat.id } })} />
+            <Button title={t("New to-do")} variant="primary" icon={<Plus size={18} color={c.onAccent} weight="bold" />} onPress={() => router.push({ pathname: "/todo", params: { chatId: chat.id } })} />
             {chat.tasks.length === 0 ? (
               <Text variant="subhead" tone="muted" style={{ textAlign: "center", paddingVertical: 24 }}>
-                Nothing to do. Make one, or asks like “can you bring the snacks?” show up here to confirm.
+                {t("Nothing to do. Make one, or asks like “can you bring the snacks?” show up here to confirm.")}
               </Text>
             ) : (
               chat.tasks.map((t) => <TaskCard key={t.id} task={t} onStatus={(s) => setTask(chat.id, t.id, s)} onJump={jump} />)
@@ -106,7 +107,7 @@ export default function ChatInfo() {
         {tab === "memory" ? (
           chat.memory.length === 0 ? (
             <Text variant="subhead" tone="muted" style={{ textAlign: "center", paddingVertical: 24 }}>
-              Nothing remembered yet. Birthdays, favourite places and other little things collect here.
+              {t("Nothing remembered yet. Birthdays, favourite places and other little things collect here.")}
             </Text>
           ) : (
             chat.memory.map((m) => (
@@ -115,7 +116,7 @@ export default function ChatInfo() {
                 memory={m}
                 onJump={jump}
                 onSave={(v) => change(chat.id, (ch) => editMemory(ch, m.id, v))}
-                onForget={() => confirm(`Forget “${m.value}”?`, "Lynk stops remembering this in this chat.", "Forget", () => change(chat.id, (ch) => removeMemory(ch, m.id)))}
+                onForget={() => confirm(t("Forget “{value}”?", { value: m.value }), t("Lynk stops remembering this in this chat."), t("Forget"), () => change(chat.id, (ch) => removeMemory(ch, m.id)))}
               />
             ))
           )
@@ -139,10 +140,10 @@ function MemoryCard({ memory, onJump, onSave, onForget }: { memory: Memory; onJu
         </Text>
         {!editing ? (
           <>
-            <Pressable onPress={() => setEditing(true)} accessibilityLabel={`Edit ${memory.kind}`} hitSlop={8} style={{ padding: 4 }}>
+            <Pressable onPress={() => setEditing(true)} accessibilityLabel={t("Edit {name}", { name: t(memory.kind) })} hitSlop={8} style={{ padding: 4 }}>
               <PencilSimple size={16} color={c.muted} />
             </Pressable>
-            <Pressable onPress={onForget} accessibilityLabel={`Forget ${memory.kind}`} hitSlop={8} style={{ padding: 4, marginLeft: 6 }}>
+            <Pressable onPress={onForget} accessibilityLabel={t("Forget {name}", { name: t(memory.kind) })} hitSlop={8} style={{ padding: 4, marginLeft: 6 }}>
               <X size={16} color={c.muted} weight="bold" />
             </Pressable>
           </>
@@ -152,9 +153,9 @@ function MemoryCard({ memory, onJump, onSave, onForget }: { memory: Memory; onJu
         <View style={{ marginTop: 8, gap: 10 }}>
           <TextInput value={draft} onChangeText={setDraft} autoFocus style={{ borderWidth: 1, borderColor: c.accent, borderRadius: 12, padding: 10, fontSize: 17, color: c.ink }} />
           <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 8 }}>
-            <SmallButton label="Cancel" onPress={() => setEditing(false)} />
+            <SmallButton label={t("Cancel")} onPress={() => setEditing(false)} />
             <SmallButton
-              label="Save"
+              label={t("Save")}
               primary
               onPress={() => {
                 if (draft.trim()) onSave(draft.trim());
@@ -170,7 +171,7 @@ function MemoryCard({ memory, onJump, onSave, onForget }: { memory: Memory; onJu
       )}
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 4, marginTop: 10 }}>
         <Text variant="caption" tone="muted">
-          Sources
+          {t("Sources")}
         </Text>
         {memory.sources.map((s, i) => (
           <Pressable key={s} onPress={() => onJump(s)} style={{ minWidth: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: c.line, alignItems: "center", justifyContent: "center" }}>
@@ -193,13 +194,17 @@ function InfoTab({ chatId, meIsAdmin, blocked }: { chatId: string; meIsAdmin: bo
 
   return (
     <View style={{ marginHorizontal: -16 }}>
+      <Section title={t("Lynk in this chat")} footnote={t("Only for this chat. Settings › Smart features still applies everywhere.")}>
+        <SwitchRow label={t("Suggest plans")} detail={t("When a day and time come up")} value={chat.smart?.plans !== false} onChange={(on) => change(chatId, (ch) => setChatSmart(ch, "plans", on))} />
+        <SwitchRow label={t("Suggest to-dos")} detail={t("When someone asks you to do something")} value={chat.smart?.todos !== false} onChange={(on) => change(chatId, (ch) => setChatSmart(ch, "todos", on))} last />
+      </Section>
       {chat.kind === "group" ? (
-        <Section title="Group">
+        <Section title={t("Group")}>
           {renaming ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 12 }}>
               <TextInput value={name} onChangeText={setName} autoFocus style={{ flex: 1, fontSize: 17, color: c.ink }} />
               <SmallButton
-                label="Save"
+                label={t("Save")}
                 primary
                 onPress={() => {
                   if (name.trim()) renameChat(chatId, name.trim());
@@ -208,34 +213,34 @@ function InfoTab({ chatId, meIsAdmin, blocked }: { chatId: string; meIsAdmin: bo
               />
             </View>
           ) : (
-            <Row label="Group name" detail={chat.name} onPress={meIsAdmin ? () => setRenaming(true) : undefined} right={meIsAdmin ? <PencilSimple size={18} color={c.muted} /> : undefined} last />
+            <Row label={t("Group name")} detail={chat.name} onPress={meIsAdmin ? () => setRenaming(true) : undefined} right={meIsAdmin ? <PencilSimple size={18} color={c.muted} /> : undefined} last />
           )}
         </Section>
       ) : null}
 
-      <Section title={chat.kind === "group" ? `${chat.members.length + 1} members` : "Person"} footnote={chat.kind === "group" && !meIsAdmin ? "Only admins can add or remove people." : undefined}>
-        <Row label="You" icon={<Avatar id="me" name="You" size={32} />} detail={chat.admins?.includes("me") ? "Admin" : undefined} />
+      <Section title={chat.kind === "group" ? t("{n} members", { n: chat.members.length + 1 }) : t("Person")} footnote={chat.kind === "group" && !meIsAdmin ? t("Only admins can add or remove people.") : undefined}>
+        <Row label={t("You")} icon={<Avatar id="me" name="You" size={32} />} detail={chat.admins?.includes("me") ? t("Admin") : undefined} />
         {chat.members.map((m, i) => (
           <Row
             key={m}
             label={personName(m)}
-            detail={chat.admins?.includes(m) ? "Admin" : `@${PEOPLE[m]?.handle ?? m}`}
+            detail={chat.admins?.includes(m) ? t("Admin") : `@${PEOPLE[m]?.handle ?? m}`}
             icon={<Avatar id={m} name={personName(m)} size={32} />}
             last={i === chat.members.length - 1 && !(meIsAdmin && chat.kind === "group")}
             onPress={() =>
               actionSheet(personName(m), [
-                { label: "View profile", onPress: () => router.push({ pathname: "/person/[id]", params: { id: m } }) },
-                ...(meIsAdmin && chat.kind === "group" ? [{ label: "Remove from group", destructive: true, onPress: () => changeMembers(chatId, [], [m]) }] : []),
+                { label: t("View profile"), onPress: () => router.push({ pathname: "/person/[id]", params: { id: m } }) },
+                ...(meIsAdmin && chat.kind === "group" ? [{ label: t("Remove from group"), destructive: true, onPress: () => changeMembers(chatId, [], [m]) }] : []),
               ])
             }
             right={meIsAdmin && chat.kind === "group" ? <UserMinus size={18} color={c.muted} /> : undefined}
           />
         ))}
-        {meIsAdmin && chat.kind === "group" ? <Row label="Add people" icon={<UserPlus size={22} color={c.accentInk} />} onPress={() => setAdding((a) => !a)} last /> : null}
+        {meIsAdmin && chat.kind === "group" ? <Row label={t("Add people")} icon={<UserPlus size={22} color={c.accentInk} />} onPress={() => setAdding((a) => !a)} last /> : null}
       </Section>
 
       {adding ? (
-        <Section title="Add to the group">
+        <Section title={t("Add to the group")}>
           {candidates.length ? (
             candidates.map((p, i) => (
               <Row
@@ -252,14 +257,14 @@ function InfoTab({ chatId, meIsAdmin, blocked }: { chatId: string; meIsAdmin: bo
               />
             ))
           ) : (
-            <Row label="Everyone you know is already here" last />
+            <Row label={t("Everyone you know is already here")} last />
           )}
         </Section>
       ) : null}
 
       <Section>
-        <SwitchRow label="Pin chat" value={Boolean(chat.pinned)} onChange={() => togglePin(chatId)} />
-        <SwitchRow label="Mute notifications" detail={chat.muted ? "No alerts from this chat." : undefined} value={chat.muted} onChange={() => toggleMute(chatId)} last />
+        <SwitchRow label={t("Pin chat")} value={Boolean(chat.pinned)} onChange={() => togglePin(chatId)} />
+        <SwitchRow label={t("Mute notifications")} detail={chat.muted ? t("No alerts from this chat.") : undefined} value={chat.muted} onChange={() => toggleMute(chatId)} last />
       </Section>
       <View style={{ flexDirection: "row", gap: 16, paddingHorizontal: 24, marginTop: 10 }}>
         {chat.pinned ? <PushPin size={14} color={c.muted} weight="fill" /> : null}
@@ -269,12 +274,12 @@ function InfoTab({ chatId, meIsAdmin, blocked }: { chatId: string; meIsAdmin: bo
       {chat.kind === "group" ? (
         <Section>
           <Row
-            label="Leave group"
+            label={t("Leave group")}
             destructive
             icon={<SignOut size={22} color={c.dangerInk} />}
             last
             onPress={() =>
-              confirm(`Leave ${chat.name}?`, "You'll stop getting its messages, and it disappears from your chats.", "Leave", () => {
+              confirm(t("Leave {name}?", { name: chat.name }), t("You'll stop getting its messages, and it disappears from your chats."), t("Leave"), () => {
                 router.dismissAll();
                 leaveChat(chatId);
               })
@@ -283,7 +288,7 @@ function InfoTab({ chatId, meIsAdmin, blocked }: { chatId: string; meIsAdmin: bo
         </Section>
       ) : (
         <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
-          <Button title="View profile" onPress={() => router.push({ pathname: "/person/[id]", params: { id: chat.members[0] } })} />
+          <Button title={t("View profile")} onPress={() => router.push({ pathname: "/person/[id]", params: { id: chat.members[0] } })} />
         </View>
       )}
     </View>

@@ -4,12 +4,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check } from "phosphor-react-native";
-import { removePlan, setRsvp, upsertPlan } from "@shared/chat-ops";
+import { decidePoll, removePlan, setRsvp, upsertPlan } from "@shared/chat-ops";
 import { askForReminders } from "@/lib/reminders";
 import { confirm } from "@/lib/sheet";
 import { change, setDecision, simulateRsvp, useChatStore } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
 import { Button, ChatAvatar, Field, Text } from "@/components/ui";
+import { t } from "@shared/i18n";
 
 /**
  * Make or edit a plan by hand: what, when and where. The time is optional;
@@ -17,14 +18,15 @@ import { Button, ChatAvatar, Field, Text } from "@/components/ui";
  * message, a suggestion card or the calendar (which asks which chat).
  */
 export default function PlanScreen() {
-  const params = useLocalSearchParams<{ chatId?: string; planId?: string; title?: string; sources?: string; when?: string; confirmOnSave?: string }>();
+  const params = useLocalSearchParams<{ chatId?: string; planId?: string; title?: string; sources?: string; when?: string; where?: string; confirmOnSave?: string; poll?: string }>();
   const insets = useSafeAreaInsets();
   const c = useColors();
   const { chats } = useChatStore();
   const existing = params.chatId && params.planId ? chats.find((x) => x.id === params.chatId)?.decisions.find((d) => d.id === params.planId) : undefined;
 
   const [title, setTitle] = useState(existing?.title ?? params.title ?? "");
-  const [where, setWhere] = useState(existing?.where ?? "");
+  const [where, setWhere] = useState(existing?.where ?? params.where ?? "");
+  const [weekly, setWeekly] = useState(existing?.repeat === "weekly");
   const [chatId, setChatId] = useState(params.chatId ?? chats[0]?.id ?? "");
   const start = existing?.when ?? (params.when ? Number(params.when) : null);
   const [date, setDate] = useState<Date | null>(start ? new Date(start) : null);
@@ -42,8 +44,9 @@ export default function PlanScreen() {
     DateTimePickerAndroid.open({ value: when, mode, is24Hour: false, onValueChange: (_, d) => setDate(d) });
 
   const save = () => {
-    if (!title.trim()) return setError("Say what the plan is.");
-    if (!chatId) return setError("Pick a chat for this plan.");
+    if (!title.trim()) return setError(t("Say what the plan is."));
+    if (!chatId) return setError(t("Pick a chat for this plan."));
+    if (weekly && !date) return setError(t("Pick a date for the first week."));
     const at = date ? new Date(date) : null;
     if (at && !hasTime) at.setHours(9, 0, 0, 0);
     const input = {
@@ -52,11 +55,15 @@ export default function PlanScreen() {
       when: at?.getTime(),
       allDay: Boolean(at && !hasTime),
       where: where.trim() || undefined,
+      repeat: weekly ? ("weekly" as const) : undefined,
       sources: params.sources ? params.sources.split(",").filter(Boolean) : undefined,
     };
     const before = chats.find((x) => x.id === chatId)?.decisions.length ?? 0;
     change(chatId, (ch) => upsertPlan(ch, input));
     if (existing && params.confirmOnSave) setDecision(chatId, existing.id, "confirmed");
+    // Made from a poll: close it, remembering which option won.
+    const [pollMessage, pollOption] = params.poll?.split(":") ?? [];
+    if (pollMessage && pollOption) change(chatId, (ch) => decidePoll(ch, pollMessage, pollOption));
     // Someone in the chat answers shortly after a new plan appears.
     if (!existing)
       simulateRsvp(chatId, "", (ch, _id, who) => {
@@ -71,29 +78,29 @@ export default function PlanScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 24, gap: 18 }} keyboardShouldPersistTaps="handled">
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text tone="accent">Cancel</Text>
+          <Text tone="accent">{t("Cancel")}</Text>
         </Pressable>
-        <Text variant="headline">{existing ? "Edit plan" : "New plan"}</Text>
+        <Text variant="headline">{existing ? t("Edit plan") : t("New plan")}</Text>
         <Pressable onPress={save} hitSlop={8}>
           <Text tone="accent" weight="700">
-            {existing ? "Save" : "Make"}
+            {existing ? t("Save") : t("Make")}
           </Text>
         </Pressable>
       </View>
       {!existing ? (
         <Text variant="subhead" tone="muted">
-          Everyone in the chat sees it and can say if they&apos;re coming.
+          {t("Everyone in the chat sees it and can say if they're coming.")}
         </Text>
       ) : null}
 
       <Field
-        label="What"
+        label={t("What")}
         value={title}
         onChangeText={(t) => {
           setTitle(t);
           setError(null);
         }}
-        placeholder="Climbing at Boulder Barn"
+        placeholder={t("Climbing at Boulder Barn")}
         maxLength={80}
         autoFocus={!existing}
         error={error}
@@ -101,11 +108,11 @@ export default function PlanScreen() {
 
       <View style={{ borderRadius: radius.lg, backgroundColor: c.surface, padding: 14, gap: 12 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text weight="600">Date</Text>
+          <Text weight="600">{t("Date")}</Text>
           {date ? null : (
             <Pressable onPress={() => setDate(when)}>
               <Text tone="accent" weight="600">
-                Add a date
+                {t("Add a date")}
               </Text>
             </Pressable>
           )}
@@ -119,12 +126,12 @@ export default function PlanScreen() {
         {date ? (
           <>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Text weight="600">At a time</Text>
+              <Text weight="600">{t("At a time")}</Text>
               <Switch value={hasTime} onValueChange={setHasTime} trackColor={{ true: c.accent, false: c.surface2 }} />
             </View>
             {hasTime ? (
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Text weight="600">Time</Text>
+                <Text weight="600">{t("Time")}</Text>
                 {Platform.OS === "ios" ? (
                   <DateTimePicker value={date} mode="time" display="compact" onValueChange={(_, d) => setDate(d)} accentColor={c.accent} />
                 ) : (
@@ -135,19 +142,30 @@ export default function PlanScreen() {
               </View>
             ) : (
               <Text variant="footnote" tone="muted">
-                All day in your calendar.
+                {t("All day in your calendar.")}
               </Text>
             )}
           </>
         ) : null}
       </View>
 
-      <Field label="Where" value={where} onChangeText={setWhere} placeholder="Add a place" optional maxLength={80} />
+      {/* The whole row flips the switch; the switch stays the control VoiceOver reads. */}
+      <Pressable accessible={false} onPress={() => setWeekly((w) => !w)} style={{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: radius.lg, backgroundColor: c.surface, padding: 14 }}>
+        <View style={{ flex: 1 }}>
+          <Text weight="600">{t("Every week")}</Text>
+          <Text variant="footnote" tone="muted">
+            {t("Same day and time; people answer for each week")}
+          </Text>
+        </View>
+        <Switch value={weekly} onValueChange={setWeekly} trackColor={{ true: c.accent, false: c.surface2 }} accessibilityLabel={t("Every week")} />
+      </Pressable>
+
+      <Field label={t("Where")} value={where} onChangeText={setWhere} placeholder={t("Add a place")} optional maxLength={80} />
 
       {!params.chatId ? (
         <View>
           <Text variant="footnote" weight="600" style={{ paddingHorizontal: 16, marginBottom: 6 }}>
-            Chat
+            {t("Chat")}
           </Text>
           <View style={{ borderRadius: radius.lg, backgroundColor: c.surface, overflow: "hidden" }}>
             {chats.map((ch, i) => (
@@ -161,13 +179,13 @@ export default function PlanScreen() {
         </View>
       ) : null}
 
-      <Button title={existing ? "Save plan" : "Make plan"} variant="primary" size="lg" onPress={save} />
+      <Button title={existing ? t("Save plan") : t("Make plan")} variant="primary" size="lg" onPress={save} />
       {existing && params.chatId ? (
         <Button
-          title="Remove plan"
+          title={t("Remove plan")}
           variant="dangerQuiet"
           onPress={() =>
-            confirm("Remove this plan?", "It's removed for everyone in the chat.", "Remove", () => {
+            confirm(t("Remove this plan?"), t("It's removed for everyone in the chat."), t("Remove"), () => {
               change(params.chatId!, (ch) => removePlan(ch, existing.id));
               router.back();
             })

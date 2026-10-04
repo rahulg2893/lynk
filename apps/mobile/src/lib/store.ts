@@ -1,12 +1,16 @@
 import { useSyncExternalStore } from "react";
 import {
   createMockChats,
+  DEMO_MEMBERS,
+  DEMO_SCRIPT,
   newId,
   PEOPLE,
   REPLIES,
   resolveChat,
+  rollRepeats,
   SIDE_REPLIES,
   sideChatId,
+  smartIn,
   splitChatId,
   threadsOf,
   type Attachment,
@@ -16,7 +20,7 @@ import {
   type Status,
   type Task,
 } from "@shared/chat";
-import { addSideChat, suggestPlan, togglePinned, updateThread } from "@shared/chat-ops";
+import { addSideChat, suggestPlan, togglePinned, updateThread, vote } from "@shared/chat-ops";
 import { spotPlan } from "@shared/spot";
 import { getAccount } from "./account";
 import { isOnline, onConnectionChange } from "./connection";
@@ -77,14 +81,22 @@ export async function loadChats(username: string, seeded: boolean) {
   set({ loaded: false, username, chats: [] }, false);
   const now = Date.now();
   const saved = await getJSON<Chat[]>(`chats:${username}`).catch(() => null);
-  const chats = (saved ?? (seeded ? createMockChats(now) : [])).map((c) => ({
+  const loaded = (saved ?? (seeded ? createMockChats(now) : [])).map((c) => ({
     ...c,
     typing: null,
     messages: requeue(c.messages),
     sideChats: c.sideChats?.map((s) => ({ ...s, typing: null, messages: requeue(s.messages) })),
   }));
-  set({ chats, loaded: true, now }, !saved);
+  const chats = rollRepeats(loaded, now);
+  set({ chats, loaded: true, now }, !saved || chats !== loaded);
   flushOutbox();
+}
+
+/** The clock moved on: weekly plans whose date has passed move to their next one. */
+export function tick() {
+  const now = Date.now();
+  const chats = rollRepeats(state.chats, now);
+  set(chats === state.chats ? { now } : { now, chats }, chats !== state.chats);
 }
 
 export function resetStore() {
@@ -175,8 +187,47 @@ export function send(threadId: string, text: string, replyTo?: string, attachmen
   // Spot a plan in what you just wrote, as a suggestion to save.
   const smart = getAccount().smart;
   const chat = resolveChat(state.chats, threadId);
-  const plan = chat && !chat.side && smart.enabled && smart.plans ? spotPlan(text, id, Date.now()) : null;
+  const plan = chat && !chat.side && smartIn(chat, smart).plans ? spotPlan(text, id, Date.now()) : null;
   if (plan) later(900, () => change(threadId, (c) => suggestPlan(c, plan)));
+}
+
+/** Post a poll; the others in the chat vote over the next few seconds. */
+export function sendPoll(chatId: string, question: string, options: string[]) {
+  const id = newId();
+  const poll = { question, options: options.map((text) => ({ id: newId("o"), text, votes: [] as string[] })) };
+  const status: Status = isOnline() ? "sending" : "waiting";
+  append(chatId, { id, from: "me", text: "", at: Date.now(), status, poll });
+  if (status === "sending") setTimeout(() => deliver(chatId, id), 0);
+  const chat = state.chats.find((c) => c.id === chatId);
+  chat?.members.forEach((who, i) => {
+    const pick = poll.options[Math.random() < 0.6 ? 0 : Math.floor(Math.random() * poll.options.length)];
+    later(1600 + i * 1300, () => change(chatId, (c) => vote(c, id, pick.id, who)));
+  });
+}
+
+export const castVote = (chatId: string, messageId: string, optionId: string) => change(chatId, (c) => vote(c, messageId, optionId, "me"));
+
+/**
+ * The first-run demo: a group where friends agree on dinner, one message at a
+ * time with typing in between, and Lynk spots the plan on the last line.
+ * Returns the new chat's id.
+ */
+export function startDemo() {
+  const id = newId("c");
+  set({ chats: [blank({ id, kind: "group", name: "Lynk demo", topic: "A demo group to show what Lynk does", members: DEMO_MEMBERS, admins: ["me"] }), ...state.chats] });
+  let at = 0;
+  DEMO_SCRIPT.forEach((line, i) => {
+    at += line.after;
+    later(at - 900, () => setTyping(id, line.from));
+    later(at, () => {
+      const message: Message = { id: newId(), from: line.from, text: line.text, at: Date.now() };
+      setTyping(id, null);
+      append(id, message);
+      const plan = i === DEMO_SCRIPT.length - 1 && smartIn(undefined, getAccount().smart).plans ? spotPlan(line.text, message.id, Date.now()) : null;
+      if (plan) later(900, () => change(id, (c) => suggestPlan(c, plan)));
+    });
+  });
+  return id;
 }
 
 export const retry = (threadId: string, messageId: string) => isOnline() && deliver(threadId, messageId);

@@ -3,14 +3,15 @@ import { Platform } from "react-native";
 import type { Account as WebAccount } from "@shared/account";
 import { PEOPLE } from "@shared/chat";
 import { DEMO_PHONE } from "@shared/phone";
+import { locale, t, type Lang } from "@shared/i18n";
 import { getJSON, removeKey, setJSON } from "./storage";
 
 /**
  * The account, shaped exactly like the web app's (so shared code such as
- * notification grouping works unchanged), plus the theme choice, which the web
- * keeps separately. Stored in the encrypted database; nothing leaves the phone.
+ * notification grouping works unchanged), plus the theme and the app language,
+ * which the web keeps separately (the web is English only for now). Stored in the encrypted database; nothing leaves the phone.
  */
-export type Account = WebAccount & { appearance: "system" | "light" | "dark" };
+export type Account = WebAccount & { appearance: "system" | "light" | "dark"; language: Lang };
 
 const KEY = "account";
 const HOUR = 3_600_000;
@@ -46,6 +47,7 @@ function defaults(now = Date.now()): Account {
     deletionAt: null,
     seeded: true,
     appearance: "system",
+    language: "en",
   };
 }
 
@@ -166,14 +168,14 @@ export function suggestUsernames(username: string): string[] {
 
 export function timeAgo(at: number, now = Date.now()) {
   const mins = Math.round((now - at) / 60_000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 1) return t("Just now");
+  if (mins < 60) return t("{n} min ago", { n: mins });
   const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours} h ago`;
+  if (hours < 24) return t("{n} h ago", { n: hours });
   const days = Math.round(hours / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 30) return `${days} days ago`;
-  return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric" }).format(at);
+  if (days === 1) return t("Yesterday");
+  if (days < 30) return t("{n} days ago", { n: days });
+  return new Intl.DateTimeFormat(locale(), { day: "numeric", month: "short", year: "numeric" }).format(at);
 }
 
 export const DELETION_GRACE_DAYS = 30;

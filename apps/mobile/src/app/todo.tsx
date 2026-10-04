@@ -7,6 +7,7 @@ import { addTask } from "@shared/chat-ops";
 import { change, useChatStore } from "@/lib/store";
 import { useColors } from "@/lib/theme";
 import { Field, Pill, Text } from "@/components/ui";
+import { t } from "@shared/i18n";
 
 /** Make a to-do by hand: what, who it's for and roughly when. Opened from Up next, chat info or a message. */
 export default function TodoScreen() {
@@ -21,7 +22,7 @@ export default function TodoScreen() {
   if (!chat) return null;
 
   const save = () => {
-    if (!title.trim()) return setError("Say what needs doing.");
+    if (!title.trim()) return setError(t("Say what needs doing."));
     change(chat.id, (ch) => addTask(ch, { title: title.trim(), assignee, due, sources: params.sources ? [params.sources] : [] }));
     router.back();
   };
@@ -30,32 +31,32 @@ export default function TodoScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 24, gap: 18 }} keyboardShouldPersistTaps="handled">
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text tone="accent">Cancel</Text>
+          <Text tone="accent">{t("Cancel")}</Text>
         </Pressable>
-        <Text variant="headline">New to-do</Text>
+        <Text variant="headline">{t("New to-do")}</Text>
         <Pressable onPress={save} hitSlop={8}>
           <Text tone="accent" weight="700">
-            Add
+            {t("Add")}
           </Text>
         </Pressable>
       </View>
       <Text variant="subhead" tone="muted">
-        It shows in Up next in {chat.name} until it&apos;s done.
+        {t("It shows in Up next in {name} until it's done.", { name: chat.name })}
       </Text>
       <Field
-        label="What"
+        label={t("What")}
         value={title}
         onChangeText={(t) => {
           setTitle(t);
           setError(null);
         }}
-        placeholder="Book the table"
+        placeholder={t("Book the table")}
         maxLength={80}
         autoFocus
         error={error}
       />
-      <Choices label="For" value={assignee} onChange={setAssignee} options={["me", ...chat.members].map((id) => ({ value: id, label: firstName(id) }))} />
-      <Choices label="When" value={due} onChange={setDue} options={DUE_CHOICES.map((d) => ({ value: d, label: d }))} />
+      <Choices label={t("For")} value={assignee} onChange={setAssignee} options={["me", ...chat.members].map((id) => ({ value: id, label: firstName(id) }))} />
+      <Choices label={t("When")} value={due} onChange={setDue} options={DUE_CHOICES.map((d) => ({ value: d, label: d }))} />
     </ScrollView>
   );
 }

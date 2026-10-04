@@ -9,6 +9,7 @@ import { useAccount } from "@/lib/account";
 import { useChatStore } from "@/lib/store";
 import { radius, useColors } from "@/lib/theme";
 import { Avatar, Text } from "@/components/ui";
+import { t } from "@shared/i18n";
 
 /** "Find it again": the web's search and cited answers, over the chats on this phone. */
 export default function Ask() {
@@ -60,16 +61,16 @@ export default function Ask() {
           value={query}
           onChangeText={setQuery}
           onSubmitEditing={() => ask(query)}
-          placeholder={smart ? "Ask about your chats" : "Search your chats"}
+          placeholder={smart ? t("Ask about your chats") : t("Search your chats")}
           placeholderTextColor={c.muted}
           autoFocus
           returnKeyType="search"
           style={{ flex: 1, fontSize: 17, color: c.ink }}
         />
-        <Pressable onPress={() => ask(query)} disabled={!query.trim()} accessibilityLabel="Ask" style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: query.trim() ? c.accent : c.surface2, alignItems: "center", justifyContent: "center" }}>
+        <Pressable onPress={() => ask(query)} disabled={!query.trim()} accessibilityLabel={t("Ask")} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: query.trim() ? c.accent : c.surface2, alignItems: "center", justifyContent: "center" }}>
           <ArrowUp size={17} color={query.trim() ? c.onAccent : c.muted} weight="bold" />
         </Pressable>
-        <Pressable onPress={() => router.back()} accessibilityLabel="Close" hitSlop={8}>
+        <Pressable onPress={() => router.back()} accessibilityLabel={t("Close")} hitSlop={8}>
           <X size={20} color={c.muted} weight="bold" />
         </Pressable>
       </View>
@@ -78,7 +79,7 @@ export default function Ask() {
         {!asked ? (
           <>
             <Text variant="footnote" tone="muted" weight="700">
-              Try asking
+              {t("Try asking")}
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {SAMPLE_QUESTIONS.map((q) => (
@@ -89,8 +90,8 @@ export default function Ask() {
             </View>
             <Text variant="footnote" tone="muted">
               {smart
-                ? "Answers come from your chats on this phone, since every chat is end-to-end encrypted, and each one links to the messages it came from."
-                : "Smart features are off in Settings, so this shows matching messages without an answer."}
+                ? t("Answers come from your chats on this phone, since every chat is end-to-end encrypted, and each one links to the messages it came from.")
+                : t("Smart features are off in Settings, so this shows matching messages without an answer.")}
             </Text>
           </>
         ) : (
@@ -100,7 +101,7 @@ export default function Ask() {
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   <Sparkle size={13} color={c.accentInk} weight="fill" />
                   <Text variant="caption" tone="muted" weight="700">
-                    Answer
+                    {t("Answer")}
                   </Text>
                 </View>
                 {asked.result ? (
@@ -123,14 +124,14 @@ export default function Ask() {
                     {shown < full.length ? <Animated.Text style={{ opacity: cursor, color: c.accent }}>▍</Animated.Text> : null}
                   </Text>
                 ) : (
-                  <Text tone="muted">I couldn&apos;t find that in your chats. Try other words, or a name.</Text>
+                  <Text tone="muted">{t("I couldn't find that in your chats. Try other words, or a name.")}</Text>
                 )}
               </View>
             ) : null}
             {sources.length ? (
               <View style={{ gap: 8 }}>
                 <Text variant="footnote" tone="muted" weight="700">
-                  {smart && asked.result ? "Sources" : "Matching messages"}
+                  {smart && asked.result ? t("Sources") : t("Matching messages")}
                 </Text>
                 {sources.map((h, i) => (
                   <Pressable key={`${h.threadId}-${h.message.id}`} onPress={() => open(h)} style={({ pressed }) => ({ flexDirection: "row", gap: 10, padding: 12, borderRadius: radius.lg, backgroundColor: pressed ? c.surface2 : c.surface })}>
@@ -143,7 +144,7 @@ export default function Ask() {
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                         <Text variant="caption" weight="700">
-                          {h.message.from === "me" ? "You" : personName(h.message.from)}
+                          {h.message.from === "me" ? t("You") : personName(h.message.from)}
                         </Text>
                         {h.sideName ? <GitBranch size={11} color={c.muted} /> : null}
                         <Text variant="caption" tone="muted" numberOfLines={1} style={{ flex: 1 }}>

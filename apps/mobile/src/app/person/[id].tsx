@@ -9,6 +9,7 @@ import { startChat, useChatStore } from "@/lib/store";
 import { useColors } from "@/lib/theme";
 import { Avatar, Button, ChatAvatar, Row, Section, Text } from "@/components/ui";
 import { useTopMargin } from "@/lib/layout";
+import { t } from "@shared/i18n";
 
 /** Someone's profile: shared groups, memories from chats you're both in, block and report. */
 export default function Person() {
@@ -26,7 +27,7 @@ export default function Person() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ paddingTop: insets.top + topMargin + 4, paddingBottom: insets.bottom + 40 }}>
-      <Pressable onPress={() => router.back()} accessibilityLabel="Back" style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", marginLeft: 6 }}>
+      <Pressable onPress={() => router.back()} accessibilityLabel={t("Back")} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", marginLeft: 6 }}>
         <CaretLeft size={26} color={c.accentInk} weight="bold" />
       </Pressable>
       <View style={{ alignItems: "center", gap: 8, paddingHorizontal: 24 }}>
@@ -35,7 +36,7 @@ export default function Person() {
         <Text tone="muted">@{person.handle}</Text>
         {!blocked ? (
           <Button
-            title="Message"
+            title={t("Message")}
             variant="primary"
             icon={<ChatCircle size={18} color={c.onAccent} weight="fill" />}
             onPress={() => router.push({ pathname: "/chat/[id]", params: { id: startChat(id) } })}
@@ -43,21 +44,21 @@ export default function Person() {
           />
         ) : (
           <Text variant="footnote" tone="danger">
-            Blocked. They can&apos;t message you or see when you&apos;re online.
+            {t("Blocked. They can't message you or see when you're online.")}
           </Text>
         )}
       </View>
 
-      <Section title={`Groups you share (${shared.length})`}>
+      <Section title={t("Groups you share ({n})", { n: shared.length })}>
         {shared.length ? (
           shared.map((ch, i) => <Row key={ch.id} label={ch.name} detail={`${ch.members.length + 1} members`} icon={<ChatAvatar chat={ch} size={32} />} last={i === shared.length - 1} onPress={() => router.push({ pathname: "/chat/[id]", params: { id: ch.id } })} />)
         ) : (
-          <Row label="No shared groups yet" last />
+          <Row label={t("No shared groups yet")} last />
         )}
       </Section>
 
       {memories.length ? (
-        <Section title="Remembered in your chats" footnote="Each memory stays in the chat it came from.">
+        <Section title={t("Remembered in your chats")} footnote={t("Each memory stays in the chat it came from.")}>
           {memories.map((m, i) => (
             <Row key={m.id} label={m.value} detail={`${m.kind} · ${m.chat.name}`} last={i === memories.length - 1} />
           ))}
@@ -66,27 +67,27 @@ export default function Person() {
 
       <Section>
         <Row
-          label={blocked ? `Unblock ${person.name.split(" ")[0]}` : `Block ${person.name.split(" ")[0]}`}
+          label={t(blocked ? "Unblock {name}" : "Block {name}", { name: person.name.split(" ")[0] })}
           destructive={!blocked}
           icon={<Prohibit size={22} color={blocked ? c.accentInk : c.dangerInk} />}
           onPress={() =>
             blocked
               ? updateAccount((a) => ({ ...a, blocked: a.blocked.filter((b) => b !== id) }))
-              : confirm(`Block ${person.name}?`, "They won't be able to message you, add you to groups or see when you're online. They aren't told.", "Block", () =>
+              : confirm(t("Block {name}?", { name: person.name }), t("They won't be able to message you, add you to groups or see when you're online. They aren't told."), t("Block"), () =>
                   updateAccount((a) => ({ ...a, blocked: [...a.blocked, id] })),
                 )
           }
         />
         <Row
-          label="Report"
+          label={t("Report")}
           destructive
           icon={<Warning size={22} color={c.dangerInk} />}
           last
           onPress={() =>
             confirm(
-              `Report ${person.name}?`,
-              "Your phone sends the last few messages from them to Lynk's safety team, with proof they're genuine. Nothing else in your chats is shared.",
-              "Report",
+              t("Report {name}?", { name: person.name }),
+              t("Your phone sends the last few messages from them to Lynk's safety team, with proof they're genuine. Nothing else in your chats is shared."),
+              t("Report"),
               () => undefined,
             )
           }

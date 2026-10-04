@@ -21,6 +21,7 @@ import Svg, { Circle, ClipPath, Defs, LinearGradient as SvgGradient, Rect, Stop 
 import { UsersThree } from "phosphor-react-native";
 import { initials, PEOPLE, toneFor, type Chat, type Status } from "@shared/chat";
 import { radius, useColors, useScheme } from "@/lib/theme";
+import { getLang, t } from "@shared/i18n";
 
 /* ---------- Text ---------- */
 
@@ -46,7 +47,9 @@ export function Text({
 }: TextProps & { variant?: Variant; tone?: "ink" | "muted" | "accent" | "danger" | "onAccent"; weight?: TextStyle["fontWeight"] }) {
   const c = useColors();
   const color = { ink: c.ink, muted: c.muted, accent: c.accentInk, danger: c.dangerInk, onAccent: c.onAccent }[tone];
-  return <RNText {...props} style={[TYPE[variant], { color }, weight ? { fontWeight: weight } : null, style]} />;
+  // Devanagari needs room above and below the line for its vowel signs, and no added letter spacing.
+  const script = getLang() === "hi" ? { lineHeight: Math.round(TYPE[variant].fontSize! * 1.45), letterSpacing: 0 } : null;
+  return <RNText {...props} style={[TYPE[variant], script, { color }, weight ? { fontWeight: weight } : null, style]} />;
 }
 
 /* ---------- Buttons ---------- */
@@ -166,7 +169,7 @@ export function Field({ label, hint, error, optional, style, ...props }: TextInp
         </Text>
         {optional ? (
           <Text variant="footnote" tone="muted">
-            Optional
+            {t("Optional")}
           </Text>
         ) : null}
       </View>
@@ -281,24 +284,34 @@ export function Row({
 
 export function SwitchRow({ label, detail, value, onChange, disabled, last }: { label: string; detail?: string; value: boolean; onChange: (v: boolean) => void; disabled?: boolean; last?: boolean }) {
   const c = useColors();
+  // The whole row flips the switch, as in Settings; the switch stays the control VoiceOver reads.
   return (
-    <Row
-      label={label}
-      detail={detail}
-      last={last}
-      right={
-        <RNSwitch
-          value={value}
-          disabled={disabled}
-          onValueChange={(v) => {
-            tap();
-            onChange(v);
-          }}
-          trackColor={{ true: c.accent, false: c.surface2 }}
-          accessibilityLabel={label}
-        />
-      }
-    />
+    <Pressable
+      accessible={false}
+      disabled={disabled}
+      onPress={() => {
+        tap();
+        onChange(!value);
+      }}
+    >
+      <Row
+        label={label}
+        detail={detail}
+        last={last}
+        right={
+          <RNSwitch
+            value={value}
+            disabled={disabled}
+            onValueChange={(v) => {
+              tap();
+              onChange(v);
+            }}
+            trackColor={{ true: c.accent, false: c.surface2 }}
+            accessibilityLabel={label}
+          />
+        }
+      />
+    </Pressable>
   );
 }
 
@@ -379,7 +392,7 @@ export function Avatar({ id, name, size = 40, online, group, photo }: { id: stri
       )}
       {online ? (
         <View
-          accessibilityLabel="Online"
+          accessibilityLabel={t("Online")}
           style={{ position: "absolute", right: -2, bottom: -2, width: 13, height: 13, borderRadius: 4, borderWidth: 2, borderColor: c.surface, backgroundColor: c.positive }}
         />
       ) : null}
@@ -423,7 +436,7 @@ export function StatusNode({ status, size = 10 }: { status: Status; size?: numbe
   }[status] as ViewStyle;
   return (
     <Animated.View
-      accessibilityLabel={STATUS_LABEL[status]}
+      accessibilityLabel={t(STATUS_LABEL[status])}
       style={[
         { width: size, height: size, borderRadius: 2.5 },
         look,

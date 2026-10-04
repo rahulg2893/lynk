@@ -13,8 +13,9 @@ import { IconButton, Text, tap } from "@/components/ui";
 import { FoldSplit } from "@/components/FoldSplit";
 import { SideSafe } from "@/components/SideSafe";
 import { useTopMargin } from "@/lib/layout";
+import { getLang, locale, t } from "@shared/i18n";
 
-const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
+const WEEKDAYS = () => (getLang() === "hi" ? ["सो", "मं", "बु", "गु", "शु", "श", "र"] : ["M", "T", "W", "T", "F", "S", "S"]);
 const startOfDay = (at: number) => new Date(at).setHours(0, 0, 0, 0);
 const sameDay = (a: number, b: number) => startOfDay(a) === startOfDay(b);
 
@@ -34,7 +35,7 @@ function CalendarTabContent() {
 
   const plans = useMemo(() => allPlans(chats), [chats]);
   const byDay = useMemo(() => {
-    const m = new Map<number, { chat: Chat; plan: Decision }[]>();
+    const m = new Map<number, { chat: Chat; plan: Decision; later: boolean }[]>();
     for (const e of plans) {
       const k = startOfDay(e.plan.when!);
       m.set(k, [...(m.get(k) ?? []), e]);
@@ -69,7 +70,7 @@ function CalendarTabContent() {
   const onDay = byDay.get(selected) ?? [];
   const upcoming = plans.filter((e) => e.plan.when! >= startOfDay(now) && !sameDay(e.plan.when!, selected)).slice(0, 5);
   const exportable = plans.filter((e) => e.plan.status === "confirmed" && e.plan.when! >= startOfDay(now));
-  const label = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(new Date(cursor.year, cursor.month, 1));
+  const label = new Intl.DateTimeFormat(locale(), { month: "long", year: "numeric" }).format(new Date(cursor.year, cursor.month, 1));
   const newPlan = (day: number) => router.push({ pathname: "/plan", params: { when: String(day + 19 * 3_600_000) } });
 
   const head = (
@@ -77,30 +78,30 @@ function CalendarTabContent() {
         <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
           <View>
             <Text variant="footnote" tone="muted" weight="600">
-              Calendar
+              {t("Calendar")}
             </Text>
             <Text variant="largeTitle">{label}</Text>
           </View>
           <View style={{ flexDirection: "row", gap: 6, paddingBottom: 4 }}>
-            <IconButton label="Export upcoming plans" onPress={() => exportable.length && void shareIcs(exportable)} style={{ backgroundColor: c.surface, opacity: exportable.length ? 1 : 0.4 }}>
+            <IconButton label={t("Export upcoming plans")} onPress={() => exportable.length && void shareIcs(exportable)} style={{ backgroundColor: c.surface, opacity: exportable.length ? 1 : 0.4 }}>
               <DownloadSimple size={19} color={c.ink} weight="bold" />
             </IconButton>
-            <IconButton label="New plan" filled onPress={() => newPlan(selected)}>
+            <IconButton label={t("New plan")} filled onPress={() => newPlan(selected)}>
               <Plus size={19} color={c.onAccent} weight="bold" />
             </IconButton>
           </View>
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <IconButton label="Previous month" onPress={() => shift(-1)}>
+          <IconButton label={t("Previous month")} onPress={() => shift(-1)}>
             <CaretLeft size={20} color={c.accentInk} weight="bold" />
           </IconButton>
           <Pressable onPress={() => goTo(now)} style={{ paddingHorizontal: 14, height: 32, borderRadius: radius.pill, backgroundColor: c.surface, justifyContent: "center" }}>
             <Text variant="footnote" weight="600">
-              Today
+              {t("Today")}
             </Text>
           </Pressable>
-          <IconButton label="Next month" onPress={() => shift(1)}>
+          <IconButton label={t("Next month")} onPress={() => shift(1)}>
             <CaretRight size={20} color={c.accentInk} weight="bold" />
           </IconButton>
         </View>
@@ -108,7 +109,7 @@ function CalendarTabContent() {
         <GestureDetector gesture={swipe}>
         <View style={{ borderRadius: radius.xl, backgroundColor: c.surface, padding: 8 }}>
           <View style={{ flexDirection: "row" }}>
-            {WEEKDAYS.map((w, i) => (
+            {WEEKDAYS().map((w, i) => (
               <Text key={i} variant="caption" tone="muted" weight="700" style={{ flex: 1, textAlign: "center", paddingVertical: 6 }}>
                 {w}
               </Text>
@@ -127,7 +128,7 @@ function CalendarTabContent() {
                     tap();
                     setSelected(d);
                   }}
-                  accessibilityLabel={`${new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "long" }).format(d)}${items.length ? `, ${items.length} plans` : ""}`}
+                  accessibilityLabel={`${new Intl.DateTimeFormat(locale(), { weekday: "long", day: "numeric", month: "long" }).format(d)}${items.length ? `, ${t(items.length === 1 ? "{n} plan" : "{n} plans", { n: items.length })}` : ""}`}
                   accessibilityState={{ selected: on }}
                   style={{ width: "14.28%", height: 52, alignItems: "center", paddingTop: 4, opacity: inMonth ? 1 : 0.35 }}
                 >
@@ -152,14 +153,15 @@ function CalendarTabContent() {
   const rest = (
     <>
         <View style={{ gap: 10 }}>
-          <Text variant="title2">{sameDay(selected, now) ? "Today" : new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "long" }).format(selected)}</Text>
+          <Text variant="title2">{sameDay(selected, now) ? t("Today") : new Intl.DateTimeFormat(locale(), { weekday: "long", day: "numeric", month: "long" }).format(selected)}</Text>
           {onDay.length ? (
-            onDay.map(({ chat, plan }) => (
+            onDay.map(({ chat, plan, later }) => (
               <PlanCard
-                key={`${chat.id}-${plan.id}`}
+                key={`${chat.id}-${plan.id}-${plan.when}`}
                 chat={chat}
                 plan={plan}
                 showChat
+                answersLater={later}
                 onRsvp={(a) => change(chat.id, (ch) => setRsvp(ch, plan.id, "me", a))}
                 onEdit={() => router.push({ pathname: "/plan", params: { chatId: chat.id, planId: plan.id } })}
                 onConfirm={() => setDecision(chat.id, plan.id, "confirmed")}
@@ -170,11 +172,11 @@ function CalendarTabContent() {
           ) : (
             <View style={{ alignItems: "center", gap: 8, padding: 22, borderRadius: radius.lg, borderWidth: 1, borderStyle: "dashed", borderColor: c.line }}>
               <CalendarBlank size={26} color={c.muted} />
-              <Text tone="muted">Nothing planned.</Text>
+              <Text tone="muted">{t("Nothing planned.")}</Text>
               <Pressable onPress={() => newPlan(selected)} style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 36, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: c.surface2 }}>
                 <Plus size={14} color={c.ink} weight="bold" />
                 <Text variant="footnote" weight="600">
-                  Plan something
+                  {t("Plan something")}
                 </Text>
               </Pressable>
             </View>
@@ -184,13 +186,13 @@ function CalendarTabContent() {
         {upcoming.length ? (
           <View style={{ gap: 6 }}>
             <Text variant="footnote" tone="muted" weight="700">
-              Coming up
+              {t("Coming up")}
             </Text>
             {upcoming.map(({ chat, plan }) => (
-              <Pressable key={`${chat.id}-${plan.id}`} onPress={() => goTo(plan.when!)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 10, borderRadius: radius.lg, backgroundColor: pressed ? c.surface2 : "transparent" })}>
+              <Pressable key={`${chat.id}-${plan.id}-${plan.when}`} onPress={() => goTo(plan.when!)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 10, borderRadius: radius.lg, backgroundColor: pressed ? c.surface2 : "transparent" })}>
                 <View style={{ width: 48, paddingVertical: 4, borderRadius: 12, backgroundColor: c.surface, alignItems: "center" }}>
                   <Text variant="caption" tone="accent" weight="700">
-                    {new Intl.DateTimeFormat(undefined, { month: "short" }).format(plan.when).toUpperCase()}
+                    {new Intl.DateTimeFormat(locale(), { month: "short" }).format(plan.when).toUpperCase()}
                   </Text>
                   <Text variant="title2">{new Date(plan.when!).getDate()}</Text>
                 </View>
@@ -199,8 +201,8 @@ function CalendarTabContent() {
                     {plan.title}
                   </Text>
                   <Text variant="footnote" tone="muted" numberOfLines={1}>
-                    {plan.allDay ? "All day" : formatTime(plan.when!)} · {chat.name}
-                    {plan.status === "proposed" ? " · suggested" : ""}
+                    {plan.allDay ? t("All day") : formatTime(plan.when!)} · {chat.name}
+                    {plan.status === "proposed" ? ` · ${t("suggested")}` : ""}
                   </Text>
                 </View>
               </Pressable>

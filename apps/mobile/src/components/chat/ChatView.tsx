@@ -4,7 +4,8 @@ import { router, useFocusEffect } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { CaretLeft, GitBranch, Info, LockSimple } from "phosphor-react-native";
-import { displayName, firstName, messagePreview, personName, presence, type Attachment, type Decision, type Message, type Task } from "@shared/chat";
+import { displayName, firstName, messagePreview, personName, presence, smartIn, type Attachment, type Decision, type Message, type Task } from "@shared/chat";
+import { planFromPoll } from "@shared/spot";
 import { useAccount } from "@/lib/account";
 import { useTopMargin } from "@/lib/layout";
 import { useOnline } from "@/lib/connection";
@@ -22,6 +23,7 @@ import {
   setTask,
   sideChatFor,
   toggleSave,
+  castVote,
   togglePinnedMessage,
   useChatStore,
   useThread,
@@ -35,6 +37,7 @@ import { MessageItem, type Translation } from "@/components/chat/MessageItem";
 import { MessageMenu, type MenuAction } from "@/components/chat/MessageMenu";
 import { PhotoViewer } from "@/components/chat/PhotoViewer";
 import { Avatar, ChatAvatar, Text } from "@/components/ui";
+import { t } from "@shared/i18n";
 
 type Item = { type: "message"; m: Message; i: number } | { type: "plan"; plan: Decision } | { type: "task"; task: Task };
 
@@ -84,9 +87,10 @@ export function ChatView({ id, jumpTo, embedded = false }: { id: string; jumpTo?
   const items: Item[] = useMemo(() => {
     if (!chat) return [];
     const byLastSource = new Map<string, Item[]>();
-    if (smart?.enabled && !chat.side) {
-      for (const d of chat.decisions) if (d.status === "proposed" && d.sources.length && smart.plans) byLastSource.set(d.sources.at(-1)!, [...(byLastSource.get(d.sources.at(-1)!) ?? []), { type: "plan", plan: d }]);
-      for (const t of chat.tasks) if (t.status === "proposed" && t.sources.length && smart.todos) byLastSource.set(t.sources.at(-1)!, [...(byLastSource.get(t.sources.at(-1)!) ?? []), { type: "task", task: t }]);
+    const allowed = smartIn(chat, smart ?? null);
+    if (!chat.side) {
+      for (const d of chat.decisions) if (d.status === "proposed" && d.sources.length && allowed.plans) byLastSource.set(d.sources.at(-1)!, [...(byLastSource.get(d.sources.at(-1)!) ?? []), { type: "plan", plan: d }]);
+      for (const t of chat.tasks) if (t.status === "proposed" && t.sources.length && allowed.todos) byLastSource.set(t.sources.at(-1)!, [...(byLastSource.get(t.sources.at(-1)!) ?? []), { type: "task", task: t }]);
     }
     return chat.messages.flatMap((m, i) => [{ type: "message" as const, m, i }, ...(byLastSource.get(m.id) ?? [])]);
   }, [chat, smart]);
@@ -108,7 +112,7 @@ export function ChatView({ id, jumpTo, embedded = false }: { id: string; jumpTo?
   if (!chat) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: c.bg }}>
-        <Text tone="muted">This chat isn&apos;t here any more.</Text>
+        <Text tone="muted">{t("This chat isn't here any more.")}</Text>
       </View>
     );
   }
@@ -146,7 +150,7 @@ export function ChatView({ id, jumpTo, embedded = false }: { id: string; jumpTo?
       setEditing(m);
       setEditText(m.text);
     }
-    if (a === "delete") confirm("Delete this message?", "It's removed for everyone in the chat. A note shows where it was.", "Delete", () => deleteMessage(chat.id, m.id));
+    if (a === "delete") confirm(t("Delete this message?"), t("It's removed for everyone in the chat. A note shows where it was."), t("Delete"), () => deleteMessage(chat.id, m.id));
   };
 
   const value = editing ? editText : chat.draft;
@@ -159,11 +163,11 @@ export function ChatView({ id, jumpTo, embedded = false }: { id: string; jumpTo?
       {/* Header */}
       <View style={{ paddingTop: embedded ? 10 + topMargin : insets.top + 4 + topMargin, paddingBottom: 8, paddingHorizontal: embedded ? 12 : 6, flexDirection: "row", alignItems: "center", gap: 6, borderBottomWidth: 0.5, borderBottomColor: c.line, backgroundColor: c.bg }}>
         {embedded ? null : (
-          <Pressable onPress={() => router.back()} accessibilityLabel={chat.side ? `Back to ${chat.side.parentName}` : "Back to chats"} hitSlop={8} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
+          <Pressable onPress={() => router.back()} accessibilityLabel={chat.side ? t("Back to {name}", { name: chat.side.parentName }) : t("Back to chats")} hitSlop={8} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
             <CaretLeft size={26} color={c.accentInk} weight="bold" />
           </Pressable>
         )}
-        <Pressable onPress={openInfo} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }} accessibilityRole="button" accessibilityLabel={`${displayName(chat)}, chat info`}>
+        <Pressable onPress={openInfo} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }} accessibilityRole="button" accessibilityLabel={t("{name}, chat info", { name: displayName(chat) })}>
           {chat.side ? (
             <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: c.accentSoft, alignItems: "center", justifyContent: "center" }}>
               <GitBranch size={20} color={c.accentInk} weight="bold" />
@@ -176,11 +180,11 @@ export function ChatView({ id, jumpTo, embedded = false }: { id: string; jumpTo?
               {displayName(chat)}
             </Text>
             <Text variant="caption" tone={chat.typing ? "accent" : "muted"} numberOfLines={1}>
-              {chat.side && !chat.typing ? `Side chat in ${chat.side.parentName}` : presence(chat)}
+              {chat.side && !chat.typing ? t("Side chat in {name}", { name: chat.side.parentName }) : presence(chat)}
             </Text>
           </View>
         </Pressable>
-        <Pressable onPress={openInfo} accessibilityLabel="Chat info" style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
+        <Pressable onPress={openInfo} accessibilityLabel={t("Chat info")} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
           <Info size={24} color={c.accentInk} />
         </Pressable>
       </View>
@@ -200,7 +204,7 @@ export function ChatView({ id, jumpTo, embedded = false }: { id: string; jumpTo?
             <View style={{ alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.pill, backgroundColor: c.surface2, marginBottom: 14, maxWidth: "95%" }}>
               <LockSimple size={12} color={c.muted} weight="fill" />
               <Text variant="caption" tone="muted" style={{ flexShrink: 1 }}>
-                End-to-end encrypted. Only people in this chat can read it, not even Lynk.
+                {t("End-to-end encrypted. Only people in this chat can read it, not even Lynk.")}
               </Text>
             </View>
             {chat.side ? (
@@ -208,7 +212,7 @@ export function ChatView({ id, jumpTo, embedded = false }: { id: string; jumpTo?
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <GitBranch size={13} color={c.accentInk} weight="bold" />
                   <Text variant="caption" tone="muted" weight="700">
-                    Started from
+                    {t("Started from")}
                   </Text>
                 </View>
                 {root ? (
@@ -216,7 +220,7 @@ export function ChatView({ id, jumpTo, embedded = false }: { id: string; jumpTo?
                     <Avatar id={root.from} name={personName(root.from)} size={24} />
                     <Text variant="subhead" style={{ flex: 1 }}>
                       <Text variant="subhead" weight="700">
-                        {root.from === "me" ? "You" : personName(root.from)}{" "}
+                        {root.from === "me" ? t("You") : personName(root.from)}{" "}
                       </Text>
                       <Text variant="subhead" tone="muted">
                         {messagePreview(root)}
@@ -226,7 +230,7 @@ export function ChatView({ id, jumpTo, embedded = false }: { id: string; jumpTo?
                 ) : null}
                 <Pressable onPress={() => router.back()} style={{ marginTop: 10 }}>
                   <Text variant="footnote" tone="accent" weight="600">
-                    See it in {chat.side.parentName}
+                    {t("See it in {name}", { name: chat.side.parentName })}
                   </Text>
                 </Pressable>
               </View>
@@ -235,10 +239,10 @@ export function ChatView({ id, jumpTo, embedded = false }: { id: string; jumpTo?
               <View style={{ alignItems: "center", paddingHorizontal: 24, paddingTop: chat.side ? 8 : 40, gap: 10 }}>
                 {chat.side ? null : <ChatAvatar chat={chat} size={72} />}
                 <Text variant="title2" style={{ textAlign: "center" }}>
-                  {chat.side ? "" : chat.kind === "group" ? `You created ${chat.name}` : `This is the start of your chat with ${firstName(chat.members[0])}`}
+                  {chat.side ? "" : chat.kind === "group" ? t("You created {name}", { name: chat.name }) : t("This is the start of your chat with {name}", { name: firstName(chat.members[0]) })}
                 </Text>
                 <Text variant="subhead" tone="muted" style={{ textAlign: "center" }}>
-                  {chat.side ? `Talk it through here so ${chat.side.parentName} stays on topic.` : chat.kind === "group" ? `${chat.members.length + 1} people are here. Say hi.` : "Say hi. Plans and lists you make here stay in this chat."}
+                  {chat.side ? t("Talk it through here so {name} stays on topic.", { name: chat.side.parentName }) : chat.kind === "group" ? t("{n} people are here. Say hi.", { n: chat.members.length + 1 }) : t("Say hi. Plans and lists you make here stay in this chat.")}
                 </Text>
               </View>
             ) : null}
@@ -292,6 +296,16 @@ export function ChatView({ id, jumpTo, embedded = false }: { id: string; jumpTo?
               onSideChat={openSide}
               onRetry={(msg) => retry(chat.id, msg.id)}
               onToggleTranslation={toggleTranslation}
+              onVote={(msg, optionId) => castVote(chat.id, msg.id, optionId)}
+              onDecidePoll={(msg, optionId) => {
+                const option = msg.poll?.options.find((o) => o.id === optionId);
+                if (!msg.poll || !option) return;
+                const plan = planFromPoll(msg.poll.question, option.text, Date.now());
+                router.push({
+                  pathname: "/plan",
+                  params: { chatId: chat.id, title: plan.title, when: plan.when ? String(plan.when) : undefined, where: plan.where, sources: msg.id, poll: `${msg.id}:${optionId}` },
+                });
+              }}
             />
           );
         }}

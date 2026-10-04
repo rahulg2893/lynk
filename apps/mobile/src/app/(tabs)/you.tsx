@@ -9,6 +9,7 @@ import { Avatar, Button, LogoMark, Row, Section, Text } from "@/components/ui";
 import { FoldSplit } from "@/components/FoldSplit";
 import { SideSafe } from "@/components/SideSafe";
 import { useTopMargin } from "@/lib/layout";
+import { t } from "@shared/i18n";
 
 const PANES = [
   { id: "account", label: "Account", detail: "Profile, email, sign out", icon: UserCircle },
@@ -16,7 +17,7 @@ const PANES = [
   { id: "privacy", label: "Privacy", detail: "Who can reach you, last seen, blocked", icon: Eye },
   { id: "notifications", label: "Notifications", detail: "Chats, groups, previews", icon: Bell },
   { id: "smart-features", label: "Smart features", detail: "Plans, to-dos, memories, catch-up", icon: Sparkle },
-  { id: "appearance", label: "Appearance", detail: "Light, dark or match system", icon: PaintBrush },
+  { id: "appearance", label: "Appearance", detail: "Theme and language", icon: PaintBrush },
   { id: "data", label: "Your data", detail: "Export or delete your account", icon: Database },
 ] as const;
 
@@ -36,7 +37,7 @@ function YouContent() {
     <>
         <View style={{ alignItems: "center", paddingHorizontal: 24, gap: 8 }}>
           <Pressable
-            accessibilityLabel="Change profile photo"
+            accessibilityLabel={t("Change profile photo")}
             onPress={async () => {
               const photo = await pickProfilePhoto();
               if (photo) updateAccount((a) => ({ ...a, profile: { ...a.profile, photo } }));
@@ -53,7 +54,7 @@ function YouContent() {
             <View style={{ alignSelf: "stretch", gap: 8 }}>
               <TextInput value={bio} onChangeText={setBio} maxLength={140} multiline autoFocus style={{ borderWidth: 1, borderColor: c.accent, borderRadius: 14, padding: 12, fontSize: 17, color: c.ink, minHeight: 70 }} />
               <Button
-                title="Save"
+                title={t("Save")}
                 variant="primary"
                 size="sm"
                 onPress={() => {
@@ -65,38 +66,38 @@ function YouContent() {
           ) : (
             <Pressable onPress={() => setEditing(true)}>
               <Text variant="subhead" tone={p.bio ? "ink" : "accent"} style={{ textAlign: "center" }}>
-                {p.bio || "Add an about line"}
+                {p.bio || t("Add an about line")}
               </Text>
             </Pressable>
           )}
-          <Button title="Share invite link" size="sm" icon={<ShareNetwork size={16} color={c.ink} weight="bold" />} onPress={() => void Share.share({ message: `Chat with me on Lynk: ${link}` })} style={{ marginTop: 8 }} />
+          <Button title={t("Share invite link")} size="sm" icon={<ShareNetwork size={16} color={c.ink} weight="bold" />} onPress={() => void Share.share({ message: t("Chat with me on Lynk: {link}", { link }) })} style={{ marginTop: 8 }} />
         </View>
 
-        <Section title="What Lynk remembers about you" footnote="Things people said in chats you're in. Remove anything you'd rather Lynk didn't keep.">
+        <Section title={t("What Lynk remembers about you")} footnote={t("Things people said in chats you're in. Remove anything you'd rather Lynk didn't keep.")}>
           {memories.length ? (
             memories.map((m, i) => (
               <Row
                 key={m.id}
                 label={m.value}
-                detail={`${m.kind} · from ${m.chatName}`}
+                detail={t("{kind} · from {chat}", { kind: t(m.kind), chat: m.chatName })}
                 last={i === memories.length - 1}
                 right={
                   <Pressable onPress={() => updateAccount((a) => ({ ...a, removedMemories: [...a.removedMemories, m.id] }))} hitSlop={8}>
                     <Text variant="footnote" tone="accent" weight="600">
-                      Remove
+                      {t("Remove")}
                     </Text>
                   </Pressable>
                 }
               />
             ))
           ) : (
-            <Row label="Nothing yet" last />
+            <Row label={t("Nothing yet")} last />
           )}
         </Section>
         {account.removedMemories.some((id) => MEMORIES_ABOUT_ME.some((m) => m.id === id)) && account.seeded ? (
           <Pressable onPress={() => updateAccount((a) => ({ ...a, removedMemories: [] }))} style={{ alignSelf: "center", marginTop: 10 }}>
             <Text variant="footnote" tone="accent">
-              Undo removals
+              {t("Undo removals")}
             </Text>
           </Pressable>
         ) : null}
@@ -104,12 +105,12 @@ function YouContent() {
   );
   const rest = (
     <>
-        <Section title="Settings">
+        <Section title={t("Settings")}>
           {PANES.map((pane, i) => (
             <Row
               key={pane.id}
-              label={pane.label}
-              detail={pane.detail}
+              label={t(pane.label)}
+              detail={t(pane.detail)}
               icon={
                 <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: c.accentSoft, alignItems: "center", justifyContent: "center" }}>
                   <pane.icon size={18} color={c.accentInk} />
@@ -124,7 +125,7 @@ function YouContent() {
         <View style={{ alignItems: "center", marginTop: 28, gap: 6 }}>
           <LogoMark height={22} />
           <Text variant="caption" tone="muted">
-            Lynk 1.0 · every chat end-to-end encrypted
+            {t("Lynk 1.0 · every chat end-to-end encrypted")}
           </Text>
         </View>
     </>

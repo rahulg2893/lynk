@@ -12,6 +12,7 @@ import { Avatar, Button, ChatAvatar, Text } from "@/components/ui";
 import { FoldSplit } from "@/components/FoldSplit";
 import { SideSafe } from "@/components/SideSafe";
 import { useTopMargin } from "@/lib/layout";
+import { t } from "@shared/i18n";
 
 const SERIF = Platform.select({ ios: "Georgia", default: "serif" });
 
@@ -47,33 +48,33 @@ function CatchUpContent() {
     const mentions = chats.filter((ch) => ch.mentions > 0).map((ch) => ({ chat: ch, msg: [...ch.messages].reverse().find((m) => m.from !== "me") }));
     const deck: Card[] = [
       ...chats.flatMap((ch) => ch.decisions.filter((d) => d.status === "proposed").map((d) => ({ kind: "plan" as const, key: `p-${d.id}`, chat: ch, id: d.id, title: d.title, detail: d.detail }))),
-      ...chats.flatMap((ch) => ch.tasks.filter((t) => t.assignee === "me" && t.status === "proposed").map((t) => ({ kind: "todo" as const, key: `t-${t.id}`, chat: ch, id: t.id, title: t.title, detail: t.due }))),
+      ...chats.flatMap((ch) => ch.tasks.filter((task) => task.assignee === "me" && task.status === "proposed").map((task) => ({ kind: "todo" as const, key: `t-${task.id}`, chat: ch, id: task.id, title: task.title, detail: t(task.due) }))),
     ];
-    const tasks = chats.flatMap((ch) => ch.tasks.filter((t) => t.assignee === "me" && t.status === "confirmed").map((t) => ({ chat: ch, t })));
+    const tasks = chats.flatMap((ch) => ch.tasks.filter((task) => task.assignee === "me" && task.status === "confirmed").map((task) => ({ chat: ch, task })));
     const unread = chats.reduce((n, ch) => n + (ch.muted ? 0 : ch.unread), 0);
     return { mentions, deck, tasks, unread };
   }, [chats]);
 
   const hour = new Date().getHours();
-  const greeting = hour < 5 ? "Up late" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const greeting = t(hour < 5 ? "Up late" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
   const open = (id: string, m?: string) => router.push({ pathname: "/chat/[id]", params: m ? { id, m } : { id } });
 
   const head = (
     <>
         <View>
           <Text variant="footnote" weight="600" tone="muted">
-            {chats.length ? "While you were away" : "Welcome to Lynk"}
+            {chats.length ? t("While you were away") : t("Welcome to Lynk")}
           </Text>
           <Text style={{ fontFamily: SERIF, fontSize: 40, lineHeight: 44, marginTop: 6 }}>
-            {chats.length ? `${greeting}, ${name}.` : "Bring your people over."}
+            {chats.length ? `${greeting}, ${name}.` : t("Bring your people over.")}
           </Text>
           {chats.length ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 20 }}>
               {[
-                { label: "Unread", value: data.unread },
-                { label: "Mentions", value: data.mentions.length },
-                { label: "Waiting on you", value: data.deck.length },
-                { label: "On your list", value: data.tasks.length },
+                { label: t("Unread"), value: data.unread },
+                { label: t("Mentions"), value: data.mentions.length },
+                { label: t("Waiting on you"), value: data.deck.length },
+                { label: t("On your list"), value: data.tasks.length },
               ].map((s) => (
                 <View key={s.label} style={{ width: "47%", flexGrow: 1, padding: 14, borderRadius: radius.lg, backgroundColor: c.surface }}>
                   <Text variant="caption" tone="muted">
@@ -85,7 +86,7 @@ function CatchUpContent() {
             </View>
           ) : (
             <View style={{ gap: 10, marginTop: 20 }}>
-              <Button title="Start a chat" onPress={() => router.push("/new-chat")} />
+              <Button title={t("Start a chat")} onPress={() => router.push("/new-chat")} />
             </View>
           )}
         </View>
@@ -98,10 +99,10 @@ function CatchUpContent() {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 }}>
               <Sparkle size={18} color={c.accentInk} weight="fill" />
               <Text variant="title2" style={{ flex: 1 }}>
-                Waiting on you
+                {t("Waiting on you")}
               </Text>
               <Text variant="caption" tone="muted">
-                Swipe right to save
+                {t("Swipe right to save")}
               </Text>
             </View>
             <Deck cards={data.deck} onOpen={open} />
@@ -110,14 +111,14 @@ function CatchUpContent() {
 
         {data.tasks.length ? (
           <View style={{ gap: 8 }}>
-            <Text variant="title2">On your list</Text>
-            {data.tasks.map(({ chat, t }) => (
-              <Pressable key={t.id} onPress={() => open(chat.id, t.sources[0])} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: c.surface }}>
-                <Pressable onPress={() => setTask(chat.id, t.id, "done")} accessibilityLabel={`Mark ${t.title} done`} hitSlop={8} style={{ width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: c.muted }} />
+            <Text variant="title2">{t("On your list")}</Text>
+            {data.tasks.map(({ chat, task }) => (
+              <Pressable key={task.id} onPress={() => open(chat.id, task.sources[0])} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: c.surface }}>
+                <Pressable onPress={() => setTask(chat.id, task.id, "done")} accessibilityLabel={t("Mark {title} done", { title: task.title })} hitSlop={8} style={{ width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: c.muted }} />
                 <View style={{ flex: 1 }}>
-                  <Text weight="600">{t.title}</Text>
+                  <Text weight="600">{task.title}</Text>
                   <Text variant="footnote" tone="muted">
-                    {chat.name} · {t.due}
+                    {chat.name} · {t(task.due)}
                   </Text>
                 </View>
                 <ListChecks size={18} color={c.muted} />
@@ -128,7 +129,7 @@ function CatchUpContent() {
 
         {data.mentions.length ? (
           <View style={{ gap: 8 }}>
-            <Text variant="title2">Mentions</Text>
+            <Text variant="title2">{t("Mentions")}</Text>
             {data.mentions.map(({ chat, msg }) => (
               <Pressable key={chat.id} onPress={() => open(chat.id, msg?.id)} style={{ flexDirection: "row", gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: c.surface }}>
                 <ChatAvatar chat={chat} size={40} />
@@ -226,12 +227,12 @@ function Deck({ cards, onOpen }: { cards: Card[]; onOpen: (chatId: string) => vo
                   <>
                     <Animated.View style={{ position: "absolute", top: 16, right: 16, opacity: saveOpacity, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 2, borderColor: c.positive }}>
                       <Text weight="800" style={{ color: c.positive }}>
-                        SAVE
+                        {t("SAVE")}
                       </Text>
                     </Animated.View>
                     <Animated.View style={{ position: "absolute", top: 16, right: 16, opacity: skipOpacity, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 2, borderColor: c.muted }}>
                       <Text weight="800" tone="muted">
-                        SKIP
+                        {t("SKIP")}
                       </Text>
                     </Animated.View>
                   </>
@@ -239,7 +240,7 @@ function Deck({ cards, onOpen }: { cards: Card[]; onOpen: (chatId: string) => vo
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Sparkle size={13} color={c.accentInk} weight="fill" />
                   <Text variant="caption" tone="accent" weight="700">
-                    {card.kind === "plan" ? "Plan spotted" : "To-do for you"}
+                    {card.kind === "plan" ? t("Plan spotted") : t("To-do for you")}
                   </Text>
                 </View>
                 <Text variant="title2" numberOfLines={2} style={{ marginTop: 8 }}>
@@ -260,10 +261,10 @@ function Deck({ cards, onOpen }: { cards: Card[]; onOpen: (chatId: string) => vo
           })}
       </View>
       <View style={{ flexDirection: "row", justifyContent: "center", gap: 18, marginTop: 8 }}>
-        <Pressable onPress={() => decide(false)} accessibilityLabel="Dismiss" style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: c.line, backgroundColor: c.surface, alignItems: "center", justifyContent: "center" }}>
+        <Pressable onPress={() => decide(false)} accessibilityLabel={t("Dismiss")} style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: c.line, backgroundColor: c.surface, alignItems: "center", justifyContent: "center" }}>
           <X size={24} color={c.muted} weight="bold" />
         </Pressable>
-        <Pressable onPress={() => decide(true)} accessibilityLabel="Save" style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: c.accent, alignItems: "center", justifyContent: "center" }}>
+        <Pressable onPress={() => decide(true)} accessibilityLabel={t("Save")} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: c.accent, alignItems: "center", justifyContent: "center" }}>
           <Check size={26} color={c.onAccent} weight="bold" />
         </Pressable>
       </View>
