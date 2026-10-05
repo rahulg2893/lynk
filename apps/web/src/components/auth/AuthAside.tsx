@@ -1,11 +1,11 @@
-import Image from "next/image";
+import { Avatar } from "@/components/chat/primitives";
 import { CheckCircle } from "@phosphor-icons/react/ssr";
 import { FadeIn } from "@/components/motion/FadeIn";
 
 const LINES = [
-  { name: "Amara", photo: "/people/amara.jpg", text: "Saturday morning works for me" },
-  { name: "Jonas", photo: "/people/jonas.jpg", text: "Saturday 10am at Boulder Barn then?" },
-  { name: "Tomás", photo: "/people/tomas.jpg", text: "Perfect, see you there" },
+  { id: "amara", name: "Amara", text: "Saturday morning works for me" },
+  { id: "jonas", name: "Jonas", text: "Saturday 10am at Boulder Barn then?" },
+  { id: "tomas", name: "Tomás", text: "Perfect, see you there" },
 ];
 
 /**
@@ -31,7 +31,7 @@ export function AuthAside() {
             {LINES.map((line, i) => (
               <FadeIn key={line.name} delay={0.25 + i * 0.35} y={10}>
                 <div className="flex items-start gap-3">
-                  <Image src={line.photo} alt="" width={72} height={72} className="size-9 rounded-[11px] object-cover" />
+                  <Avatar id={line.id} name={line.name} size={36} />
                   <div>
                     <p className="text-[13px] font-semibold">{line.name}</p>
                     <p className="text-[15px] text-on-stage-muted">{line.text}</p>

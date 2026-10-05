@@ -2,7 +2,7 @@
 
 How Lynk is built today, and where the planned server fits. For the product plan, phases and the full encryption design, see [`roadmap.html`](../roadmap.html). For why things are the way they are, see [`DECISIONS.md`](DECISIONS.md).
 
-_Last updated: 4 Oct 2026 (roadmap v5.5)._
+_Last updated: 5 Oct 2026 (roadmap v5.5)._
 
 ## Today at a glance
 

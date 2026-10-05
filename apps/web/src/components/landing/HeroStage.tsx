@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { Avatar } from "@/components/chat/primitives";
 import {
   motion,
   useMotionTemplate,
@@ -17,11 +17,11 @@ import { PhoneMock } from "./PhoneMock";
 import { Magnetic, SPRING_LAZY, SplitWords } from "@/components/motion/physics";
 
 const FRIENDS = [
-  { photo: "/people/amara.jpg", name: "Amara", x: "-8%", y: "14%", depth: 38, size: 64 },
-  { photo: "/people/jonas.jpg", name: "Jonas", x: "88%", y: "6%", depth: 52, size: 56 },
-  { photo: "/people/mei.jpg", name: "Mei", x: "94%", y: "58%", depth: 30, size: 60 },
-  { photo: "/people/tomas.jpg", name: "Tomás", x: "-12%", y: "66%", depth: 46, size: 52 },
-  { photo: "/people/sofia.jpg", name: "Sofia", x: "-24%", y: "88%", depth: 24, size: 44 },
+  { id: "amara", name: "Amara", x: "-8%", y: "14%", depth: 38, size: 64 },
+  { id: "jonas", name: "Jonas", x: "88%", y: "6%", depth: 52, size: 56 },
+  { id: "mei", name: "Mei", x: "94%", y: "58%", depth: 30, size: 60 },
+  { id: "tomas", name: "Tomás", x: "-12%", y: "66%", depth: 46, size: 52 },
+  { id: "sofia", name: "Sofia", x: "-24%", y: "88%", depth: 24, size: 44 },
 ];
 
 const CHIPS = [
@@ -127,7 +127,9 @@ export function HeroStage() {
           >
             <div className="flex -space-x-2.5">
               {FRIENDS.slice(0, 4).map((f) => (
-                <Image key={f.name} src={f.photo} alt="" width={72} height={72} className="size-9 rounded-[11px] object-cover ring-2 ring-[#07090f]" />
+                <span key={f.name} className="inline-flex rounded-[13px] ring-2 ring-[#07090f]">
+                  <Avatar id={f.id} name={f.name} size={36} />
+                </span>
               ))}
             </div>
             <p className="text-[14px] leading-snug text-white/60">
@@ -157,15 +159,9 @@ export function HeroStage() {
           <div aria-hidden className="pointer-events-none absolute inset-0 hidden sm:block">
             {FRIENDS.map((f, i) => (
               <Floater key={f.name} x={f.x} y={f.y} depth={f.depth} sx={sx} sy={sy} delay={0.9 + i * 0.12} constraints={stage}>
-                <Image
-                  src={f.photo}
-                  alt=""
-                  width={f.size * 2}
-                  height={f.size * 2}
-                  draggable={false}
-                  className="rounded-[30%] object-cover shadow-[0_20px_40px_-12px_rgb(0_0_0/0.6)] ring-2 ring-white/20"
-                  style={{ width: f.size, height: f.size }}
-                />
+                <span className="inline-flex rounded-[32%] shadow-[0_20px_40px_-12px_rgb(0_0_0/0.6)] ring-2 ring-white/20">
+                  <Avatar id={f.id} name={f.name} size={f.size} />
+                </span>
               </Floater>
             ))}
             {CHIPS.map((c, i) => (

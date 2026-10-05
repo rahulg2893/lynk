@@ -1,3 +1,7 @@
+The phone app was started from Expo's app template, which is MIT-licensed.
+This notice covers what remains of that template. The rest of Lynk is not
+open source; see LICENSE at the root of the repository.
+
 The MIT License (MIT)
 
 Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)

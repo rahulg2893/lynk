@@ -19,7 +19,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import Svg, { Circle, ClipPath, Defs, LinearGradient as SvgGradient, Rect, Stop } from "react-native-svg";
 import { UsersThree } from "phosphor-react-native";
-import { initials, PEOPLE, toneFor, type Chat, type Status } from "@shared/chat";
+import { initials, toneFor, type Chat, type Status } from "@shared/chat";
 import { radius, useColors, useScheme } from "@/lib/theme";
 import { getLang, t } from "@shared/i18n";
 
@@ -355,14 +355,6 @@ export function Segmented<T extends string>({ value, options, onChange }: { valu
 
 /* ---------- People ---------- */
 
-const PHOTOS: Record<string, number> = {
-  amara: require("@/assets/people/amara.jpg"),
-  tomas: require("@/assets/people/tomas.jpg"),
-  jonas: require("@/assets/people/jonas.jpg"),
-  mei: require("@/assets/people/mei.jpg"),
-  sofia: require("@/assets/people/sofia.jpg"),
-};
-
 /** Graphite monograms, like Apple Contacts; Lynk avatars are rounded squares. */
 const GREYS: [string, string][] = [
   ["#707075", "#4d4d52"],
@@ -376,7 +368,7 @@ const GREYS: [string, string][] = [
 export function Avatar({ id, name, size = 40, online, group, photo }: { id: string; name: string; size?: number; online?: boolean; group?: boolean; photo?: string | null }) {
   const c = useColors();
   const r = size * 0.32;
-  const source = !group ? (photo ? { uri: photo } : PHOTOS[id] && PEOPLE[id]?.photo ? PHOTOS[id] : null) : null;
+  const source = !group && photo ? { uri: photo } : null;
   return (
     <View style={{ width: size, height: size }}>
       {source ? (

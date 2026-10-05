@@ -56,7 +56,7 @@ export default function TodoScreen() {
         error={error}
       />
       <Choices label={t("For")} value={assignee} onChange={setAssignee} options={["me", ...chat.members].map((id) => ({ value: id, label: firstName(id) }))} />
-      <Choices label={t("When")} value={due} onChange={setDue} options={DUE_CHOICES.map((d) => ({ value: d, label: d }))} />
+      <Choices label={t("When")} value={due} onChange={setDue} options={DUE_CHOICES.map((d) => ({ value: d, label: t(d) }))} />
     </ScrollView>
   );
 }

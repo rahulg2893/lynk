@@ -154,13 +154,13 @@ export type Chat = {
 export const ME: Person = { id: "me", name: "Rahul", handle: "rahul" };
 
 export const PEOPLE: Record<string, Person> = {
-  amara: { id: "amara", name: "Amara Okafor", handle: "amara.ok", photo: "/people/amara.jpg" },
-  tomas: { id: "tomas", name: "Tomás Rivera", handle: "tomasr", photo: "/people/tomas.jpg" },
+  amara: { id: "amara", name: "Amara Okafor", handle: "amara.ok" },
+  tomas: { id: "tomas", name: "Tomás Rivera", handle: "tomasr" },
   priya: { id: "priya", name: "Priya Natarajan", handle: "priyan" },
-  jonas: { id: "jonas", name: "Jonas Weber", handle: "jweber", photo: "/people/jonas.jpg" },
-  mei: { id: "mei", name: "Mei Lin", handle: "meilin", photo: "/people/mei.jpg" },
+  jonas: { id: "jonas", name: "Jonas Weber", handle: "jweber" },
+  mei: { id: "mei", name: "Mei Lin", handle: "meilin" },
   kwame: { id: "kwame", name: "Kwame Mensah", handle: "kwame.m" },
-  sofia: { id: "sofia", name: "Sofia Lindqvist", handle: "sofial", photo: "/people/sofia.jpg" },
+  sofia: { id: "sofia", name: "Sofia Lindqvist", handle: "sofial" },
 };
 
 export const personName = (id: string) => (id === "me" ? t("You") : PEOPLE[id]?.name ?? "Unknown");

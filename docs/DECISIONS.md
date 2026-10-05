@@ -146,3 +146,10 @@ The roadmap keeps a short list of the same decisions as ADRs; this file holds th
 - **Weekly plans keep one record whose date rolls forward** once a week is over (`rollRepeats()`), clearing RSVPs. The calendar shows the next eight weeks; those later weeks can't be answered yet.
 - **Hindi is phone-first.** Strings are keyed by their English wording in one shared dictionary, so anything untranslated stays readable, and the web can adopt it later. Messages themselves are never translated by this. The Ask Lynk sample questions stay English because they search English sample chats.
 - **The widget is built with `expo-widgets`,** which adds an app extension and needed a patch for the space in the project path. Data reaches it as a timeline, so it advances while Lynk is closed.
+
+### 18. Public repository: no demo photos, all rights reserved
+
+**Date:** 5 Oct 2026
+**Decision:** before the repository goes public, the five demo-friend photos are replaced by monogram avatars and removed from the whole git history, and the code is published under "all rights reserved" (`LICENSE`).
+**Why:** the photos' origin couldn't be confirmed; if any showed a real person, publishing them would share a face without permission. A portfolio repository is for reading, not reuse, so no open-source licence is granted.
+**Consequences:** README and landing-page screenshots were retaken without faces. The history was rewritten (a local backup bundle was kept). Expo's MIT notice stays in `apps/mobile/NOTICE-expo-template.txt` for what remains of its template; the unused template tab icons were deleted.

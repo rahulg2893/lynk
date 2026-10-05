@@ -46,6 +46,10 @@ When a group agrees on a time and place, Lynk turns it into a plan with RSVPs an
 
 The phone app imports the web app's chat logic (`apps/web/src/lib`: plan spotting, search, notifications, calendar export, phone-number rules) through the `@shared/*` path, so both apps behave the same.
 
+## Licence
+
+All rights reserved; see [`LICENSE`](LICENSE). You are welcome to read the code, but not to reuse it without permission.
+
 ## Docs
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): how the apps are built, the shared logic layer, storage, key flows and the planned server

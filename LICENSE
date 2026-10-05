@@ -1,0 +1,10 @@
+Copyright (c) 2026 Rahul Gandhi. All rights reserved.
+
+This repository is published so the work can be read and reviewed. No licence
+is granted to copy, modify, distribute or use the code, designs, images or
+text, in whole or in part, without written permission from the copyright
+holder.
+
+Third-party components keep their own licences: npm dependencies under their
+own terms, and the remains of Expo's app template under the MIT notice in
+apps/mobile/NOTICE-expo-template.txt.
